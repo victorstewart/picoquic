@@ -99,6 +99,7 @@ void picoquic_store_addr(struct sockaddr_storage * stored_addr, const struct soc
 void picoquic_get_ip_addr(struct sockaddr * addr, uint8_t ** ip_addr, uint8_t * ip_addr_len);
 int picoquic_store_text_addr(struct sockaddr_storage* stored_addr, const char* ip_address_text, uint16_t port);
 char const* picoquic_addr_text(struct sockaddr* addr, char* text, size_t text_size);
+int picoquic_store_loopback_addr(struct sockaddr_storage* stored_addr, int addr_family, uint16_t port);
 
 /* Setting the solution dir when not executing from default location */
 void picoquic_set_solution_dir(char const* solution_dir);
@@ -173,7 +174,7 @@ uint8_t* picoquic_frames_uint32_encode(uint8_t* bytes, const uint8_t* bytes_max,
 uint8_t* picoquic_frames_uint64_encode(uint8_t* bytes, const uint8_t* bytes_max, uint64_t n);
 uint8_t* picoquic_frames_length_data_encode(uint8_t* bytes, const uint8_t* bytes_max, size_t l, const uint8_t* v);
 uint8_t* picoquic_frames_cid_encode(uint8_t* bytes, const uint8_t* bytes_max, const picoquic_connection_id_t* cid);
-
+uint8_t* picoquic_frames_charz_encode(uint8_t * bytes, const uint8_t * bytes_max, char const* s);
 
 /* Constant time memory comparison may be required on some platforms for testing reset secrets */
 int picoquic_constant_time_memcmp(const uint8_t* x, const uint8_t* y, size_t l);

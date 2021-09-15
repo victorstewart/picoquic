@@ -591,6 +591,7 @@ typedef struct st_picoquic_quic_t {
     uint32_t padding_multiple_default;
     uint32_t padding_minsize_default;
     uint32_t sequence_hole_pseudo_period; /* Optimistic ack defense */
+    picoquic_pmtud_policy_enum default_pmtud_policy;
     picoquic_spinbit_version_enum default_spin_policy;
     picoquic_lossbit_version_enum default_lossbit_policy;
     uint32_t default_multipath_option;
@@ -1123,7 +1124,6 @@ typedef struct st_picoquic_cnx_t {
     unsigned int initial_repeat_needed : 1; /* Path has not been validated, repeated initial was received */
     unsigned int is_loss_bit_enabled_incoming : 1; /* Read the loss bits in incoming packets */
     unsigned int is_loss_bit_enabled_outgoing : 1; /* Insert the loss bits in outgoing packets */
-    unsigned int is_pmtud_required : 1; /* Force PMTU discovery */
     unsigned int is_ack_frequency_negotiated : 1; /* Ack Frequency extension negotiated */
     unsigned int is_ack_frequency_updated : 1; /* Should send an ack frequency frame asap. */
     unsigned int recycle_sooner_needed : 1; /* There may be a need to recycle "sooner" packets */
@@ -1147,6 +1147,8 @@ typedef struct st_picoquic_cnx_t {
     unsigned int send_receive_bdp_frame : 1; /* enable sending and receiving BDP frame */
     unsigned int cwin_notified_from_seed : 1; /* cwin was reset from a seeded value */
 
+    /* PMTUD policy */
+    picoquic_pmtud_policy_enum pmtud_policy;
     /* Spin bit policy */
     picoquic_spinbit_version_enum spin_policy;
     /* Idle timeout in microseconds */
@@ -1190,6 +1192,7 @@ typedef struct st_picoquic_cnx_t {
     int64_t phase_delay;
     uint64_t application_error;
     uint64_t local_error;
+    char const * local_error_reason;
     uint64_t remote_application_error;
     uint64_t remote_error;
     uint64_t offending_frame_type;
@@ -1411,7 +1414,9 @@ void picoquic_reset_packet_context(picoquic_cnx_t* cnx,
     picoquic_packet_context_enum pc);
 
 /* Notify error on connection */
-int picoquic_connection_error(picoquic_cnx_t* cnx, uint64_t local_error, uint64_t frame_type);
+int picoquic_connection_error(picoquic_cnx_t* cnx, uint64_t local_error, uint64_t frame_type); 
+int picoquic_connection_error_ex(picoquic_cnx_t* cnx, uint64_t local_error, uint64_t frame_type, char const* local_reason);
+
 
 void picoquic_connection_disconnect(picoquic_cnx_t* cnx);
 

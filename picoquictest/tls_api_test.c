@@ -3708,11 +3708,15 @@ int stop_sending_test()
 }
 
 /*
-* MTU discovery test. Perform a moderate transmission.
-* Verify that MTU was properly set to expected value
+* MTU discovery tests. Perform a moderate transmission.
+* Verify that MTU was properly set to expected value,
+* according to the specified option.
 */
 
-int mtu_discovery_test()
+int mtu_discovery_test_one(picoquic_pmtud_policy_enum pmtud_policy, 
+    size_t mtu_expected_client, size_t mtu_expected_server,
+    test_api_stream_desc_t * scenario, size_t scenario_size,
+    uint32_t mtu_max)
 {
     uint64_t simulated_time = 0;
     uint64_t loss_mask = 0;
@@ -3721,12 +3725,20 @@ int mtu_discovery_test()
         PICOQUIC_TEST_SNI, PICOQUIC_TEST_ALPN, &simulated_time, NULL, NULL, 0, 0, 0);
 
     if (ret == 0) {
+        picoquic_set_default_pmtud_policy(test_ctx->qserver, pmtud_policy);
+        picoquic_cnx_set_pmtud_policy(test_ctx->cnx_client, pmtud_policy);
+        if (mtu_max > 0) {
+            picoquic_set_mtu_max(test_ctx->qserver, mtu_max);
+        }
+    }
+
+    if (ret == 0) {
         ret = tls_api_connection_loop(test_ctx, &loss_mask, 0, &simulated_time);
     }
 
     /* Prepare to send data */
     if (ret == 0) {
-        ret = test_api_init_send_recv_scenario(test_ctx, test_scenario_mtu_discovery, sizeof(test_scenario_mtu_discovery));
+        ret = test_api_init_send_recv_scenario(test_ctx, scenario, scenario_size);
     }
 
     /* Perform a data sending loop */
@@ -3735,9 +3747,9 @@ int mtu_discovery_test()
     }
 
     if (ret == 0) {
-        if (test_ctx->cnx_client->path[0]->send_mtu != test_ctx->cnx_server->local_parameters.max_packet_size) {
+        if (test_ctx->cnx_client->path[0]->send_mtu != mtu_expected_client) {
             ret = -1;
-        } else if (test_ctx->cnx_server->path[0]->send_mtu != test_ctx->cnx_client->local_parameters.max_packet_size) {
+        } else if (test_ctx->cnx_server->path[0]->send_mtu != mtu_expected_server) {
             ret = -1;
         }
     }
@@ -3750,8 +3762,43 @@ int mtu_discovery_test()
     return ret;
 }
 
+int mtu_discovery_test()
+{
+    int ret = mtu_discovery_test_one(picoquic_pmtud_basic, 1440, 1440, 
+        test_scenario_mtu_discovery, sizeof(test_scenario_mtu_discovery), 0);
+    return ret;
+}
+
+int mtu_blocked_test()
+{
+    int ret = mtu_discovery_test_one(picoquic_pmtud_blocked, 1252, 1252, 
+        test_scenario_mtu_discovery, sizeof(test_scenario_mtu_discovery), 0);
+    return ret;
+}
+
+int mtu_delayed_test()
+{
+    int ret = mtu_discovery_test_one(picoquic_pmtud_delayed, 1252, 1440, 
+        test_scenario_very_long, sizeof(test_scenario_very_long), 0);
+    return ret;
+}
+
+int mtu_required_test()
+{
+    int ret = mtu_discovery_test_one(picoquic_pmtud_required, 1440, 1440, 
+        test_scenario_q_and_r, sizeof(test_scenario_q_and_r), 0);
+    return ret;
+}
+
+int mtu_max_test()
+{
+    int ret = mtu_discovery_test_one(picoquic_pmtud_basic, 1392, 1392,
+        test_scenario_mtu_discovery, sizeof(test_scenario_mtu_discovery), 1420);
+    return ret;
+}
+
 /*
-* MTU discovery test. Perform a long duration transmission.
+* MTU drop test. Perform a long duration transmission.
 * Verify that MTU was properly set to expected value, then
 * simulate a routing event that causes the MTU to drop.
 * Check that the MTU gets reduced, and the transmission
@@ -3858,8 +3905,6 @@ int mtu_drop_test()
 
     return ret;
 }
-
-
 
 /*
  * Trying to reproduce the scenario that resulted in
@@ -8113,165 +8158,6 @@ int bbr_asym400_test()
     return ret;
 }
 
-/* This is similar to the long rtt test, but operating at a higher speed.
- * We allow for loss simulation and jitter simulation to simulate wi-fi + satellite.
- * Also, we want to check overhead targets, such as ratio of data bytes over control bytes.
- *
- * The satellite link that we define here corresponds to models suggested by 
- * John Border of Hughes: 250 Mbps for the server to client link, 3 Mbps for the client
- * to server link. We reverse the role, as our test sends data from the cleint to the
- * server. John suggested tested with a 1GB download; we compromise here to 100MB,
- * in order to execut the test in reasonable time. There should be two test
- * variants: 0% loss, and 1 %loss.
- */
-static int satellite_test_one(picoquic_congestion_algorithm_t* ccalgo, size_t data_size, uint64_t max_completion_time, 
-    uint64_t mbps_up, uint64_t mbps_down, uint64_t jitter, int has_loss, int do_preemptive, int seed_bw)
-{
-    uint64_t simulated_time = 0;
-    uint64_t latency = 300000;
-    uint64_t picoseq_per_byte_up = (1000000ull * 8) / mbps_up;
-    uint64_t picoseq_per_byte_down = (1000000ull * 8) / mbps_down;
-    picoquic_tp_t client_parameters;
-    picoquic_tp_t server_parameters;
-    picoquic_connection_id_t initial_cid = { {0x5a, 0x4e, 0, 0, 0, 0, 0, 0}, 8 };
-    picoquic_test_tls_api_ctx_t* test_ctx = NULL;
-    int ret = 0;
-
-    initial_cid.id[2] = ccalgo->congestion_algorithm_number;
-    initial_cid.id[3] = (mbps_up > 0xff) ? 0xff : (uint8_t)mbps_up;
-    initial_cid.id[4] = (mbps_down > 0xff) ? 0xff : (uint8_t)mbps_down;
-    initial_cid.id[5] = (latency > 2550000) ? 0xff : (uint8_t)(latency / 10000);
-    initial_cid.id[6] = (jitter > 255000) ? 0xff : (uint8_t)(jitter / 1000);
-    initial_cid.id[7] = (has_loss)?0x30:0x00;
-    if (seed_bw) {
-        initial_cid.id[7] |= 0x80;
-    }
-    if (do_preemptive) {
-        initial_cid.id[7] ^= 0x0f;
-    }
-
-    memset(&client_parameters, 0, sizeof(picoquic_tp_t));
-    picoquic_init_transport_parameters(&client_parameters, 1);
-    client_parameters.enable_time_stamp = 3;
-    memset(&server_parameters, 0, sizeof(picoquic_tp_t));
-    picoquic_init_transport_parameters(&server_parameters, 0);
-    server_parameters.enable_time_stamp = 3;
-
-    ret = tls_api_one_scenario_init_ex(&test_ctx, &simulated_time, PICOQUIC_INTERNAL_TEST_VERSION_1, &client_parameters, &server_parameters, &initial_cid, 0);
-
-    if (ret == 0 && test_ctx == NULL) {
-        ret = -1;
-    }
-
-    /* Simulate satellite links: 250 mbps, 300ms delay in each direction */
-    /* Set the congestion algorithm to specified value. Also, request a packet trace */
-    if (ret == 0) {
-        picoquic_set_default_congestion_algorithm(test_ctx->qserver, ccalgo);
-        picoquic_set_congestion_algorithm(test_ctx->cnx_client, ccalgo);
-        picoquic_set_preemptive_repeat_policy(test_ctx->qserver, do_preemptive);
-        picoquic_set_preemptive_repeat_per_cnx(test_ctx->cnx_client, do_preemptive);
-
-        test_ctx->c_to_s_link->jitter = jitter;
-        test_ctx->c_to_s_link->microsec_latency = latency;
-        test_ctx->c_to_s_link->picosec_per_byte = picoseq_per_byte_up;
-        test_ctx->s_to_c_link->microsec_latency = latency;
-        test_ctx->s_to_c_link->picosec_per_byte = picoseq_per_byte_down;
-        test_ctx->s_to_c_link->jitter = jitter;
-        test_ctx->stream0_flow_release = 1;
-        test_ctx->immediate_exit = 1;
-
-        if (seed_bw) {
-            uint8_t * ip_addr;
-            uint8_t ip_addr_length;
-            uint64_t estimated_rtt = 2 * latency;
-            uint64_t estimated_bdp = (125000ull* mbps_up) * estimated_rtt / 1000000ull;
-            picoquic_get_ip_addr((struct sockaddr*) & test_ctx->server_addr, &ip_addr, &ip_addr_length);
-
-            picoquic_seed_bandwidth(test_ctx->cnx_client, estimated_rtt, estimated_bdp,
-                  ip_addr, ip_addr_length);
-        }
-
-        picoquic_cnx_set_pmtud_required(test_ctx->cnx_client, 1);
-
-        /* set the binary log on the client side */
-        picoquic_set_binlog(test_ctx->qclient, ".");
-        test_ctx->qclient->use_long_log = 1;
-        /* Since the client connection was created before the binlog was set, force log of connection header */
-        binlog_new_connection(test_ctx->cnx_client);
-
-        if (ret == 0) {
-            ret = tls_api_one_scenario_body(test_ctx, &simulated_time,
-                NULL, 0, data_size, (has_loss) ? 0x10000000:0, 0, 2 * latency, max_completion_time);
-        }
-
-        if (ret == 00 && do_preemptive) {
-            DBG_PRINTF("Preemptive repeats: %" PRIu64, test_ctx->cnx_client->nb_preemptive_repeat);
-            if (test_ctx->cnx_client->nb_preemptive_repeat == 0) {
-                ret = -1;
-            }
-        }
-    }
-
-    /* Free the resource, which will close the log file.
-     */
-
-    if (test_ctx != NULL) {
-        tls_api_delete_ctx(test_ctx);
-        test_ctx = NULL;
-    }
-
-    return ret;
-}
-
-int satellite_basic_test()
-{
-    /* Should be less than 7 sec per draft etosat. */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 6300000, 250, 3, 0, 0, 0, 0);
-}
-
-int satellite_seeded_test()
-{
-    /* Simulate remembering RTT and BW from previous connection */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 4800000, 250, 3, 0, 0, 0, 1);
-}
-
-int satellite_loss_test()
-{
-    /* Should be less than 10 sec per draft etosat. */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 8000000, 250, 3, 0, 1, 0, 0);
-}
-
-int satellite_preemptive_test()
-{
-    /* Variation of the loss test, using preemptive repeat*/
-    /* Should be less than 10 sec per draft etosat.  */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 7000000, 250, 3, 0, 1, 1, 0);
-}
-
-int satellite_jitter_test()
-{
-    /* Should be less than 7 sec per draft etosat. */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 6200000, 250, 3, 3000, 0, 0, 0);
-}
-
-int satellite_medium_test()
-{
-    /* Should be less than 20 sec per draft etosat. */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 18000000, 50, 10, 0, 0, 0, 0);
-}
-
-int satellite_small_test()
-{
-    /* Should be less than 85 sec per draft etosat. */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 81000000, 10, 2, 0, 0, 0, 0);
-}
-
-int satellite_small_up_test()
-{
-    /* Should be less than 420 sec per draft etosat. */
-    return satellite_test_one(picoquic_bbr_algorithm, 100000000, 400000000, 2, 10, 0, 0, 0, 0);
-}
-
 /* Set the CID length to specified value */
 int set_cid_length_in_context(picoquic_test_tls_api_ctx_t* test_ctx, uint8_t length, int delayed_init)
 {
@@ -10438,14 +10324,14 @@ int pacing_cc_test()
     };
     uint64_t algo_time[5] = {
         1050000,
-        900000,
+        910000,
         900000,
         1000000,
         900000
     };
     uint64_t algo_loss[5] = {
         70,
-        110,
+        140,
         230,
         200,
         210
@@ -10693,8 +10579,6 @@ int excess_repeat_test()
 
     return ret;
 }
-
-
 
 /* Connection DDOS
 * Simulate attack on server by sending tons of connection requests. See
@@ -11445,4 +11329,93 @@ int bdp_reno_test()
 int bdp_cubic_test()
 {
     return bdp_option_test_one(bdp_test_option_cubic);
+}
+
+/* Test closing a connection with a specific error message.
+ */
+
+char const* error_reason_text_log = "error_reason_log.txt";
+
+int error_reason_test()
+{
+    uint64_t simulated_time = 0;
+    uint64_t loss_mask = 0;
+    picoquic_test_tls_api_ctx_t* test_ctx = NULL;
+    picoquic_connection_id_t initial_cid = { {0xe8, 0x80, 0x88, 0xea, 0x50, 0, 0, 0}, 8 };
+    int ret = tls_api_init_ctx_ex(&test_ctx, PICOQUIC_INTERNAL_TEST_VERSION_1, PICOQUIC_TEST_SNI, PICOQUIC_TEST_ALPN,
+        &simulated_time, NULL, NULL, 0, 1, 0, &initial_cid);
+
+    if (ret == 0 && test_ctx == NULL) {
+        ret = -1;
+    }
+
+    if (ret == 0) {
+        /* Request the logs on the server side, so manual inspection can verify that
+         * the error reason is properly displayed. */
+        picoquic_set_textlog(test_ctx->qserver, error_reason_text_log);
+        test_ctx->qserver->use_long_log = 1;
+        picoquic_set_qlog(test_ctx->qserver, ".");
+        /* Now, start the client connection */
+        ret = picoquic_start_client_cnx(test_ctx->cnx_client);
+    }
+
+    if (ret == 0) {
+        /* Perform a connection loop to verify it goes OK */
+        ret = tls_api_connection_loop(test_ctx, &loss_mask,
+            2 * test_ctx->c_to_s_link->microsec_latency, &simulated_time);
+
+        if (ret != 0)
+        {
+            DBG_PRINTF("Connection loop returns %d\n", ret);
+        }
+    }
+
+    if (ret == 0) {
+        /* force closure of the client connection with an internal error */
+        int local_error_ret = picoquic_connection_error_ex(test_ctx->cnx_client, PICOQUIC_TRANSPORT_INTERNAL_ERROR,
+            0, "error reason test");
+        if (local_error_ret != PICOQUIC_ERROR_DETECTED) {
+            DBG_PRINTF("picoquic_connection_error_ex returns %d\n", ret);
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        /* verify that the connection will be closed */
+        int nb_trials = 0;
+        int nb_inactive = 0;
+        while (ret == 0 && nb_trials < 1024 && nb_inactive < 512 ) {
+            int was_active = 0;
+            nb_trials++;
+
+            ret = tls_api_one_sim_round(test_ctx, &simulated_time, 0, &was_active);
+
+            if (test_ctx->cnx_client->cnx_state == picoquic_state_disconnected &&
+                (test_ctx->cnx_server == NULL || test_ctx->cnx_server->cnx_state == picoquic_state_disconnected)) {
+                break;
+            }
+
+            if (nb_trials == 512) {
+                DBG_PRINTF("After %d trials, client state = %d, server state = %d",
+                    nb_trials, (int)test_ctx->cnx_client->cnx_state,
+                    (test_ctx->cnx_server == NULL) ? -1 : test_ctx->cnx_server->cnx_state);
+            }
+
+            if (was_active) {
+                nb_inactive = 0;
+            }
+            else {
+                nb_inactive++;
+            }
+        }
+    }
+    /* Close the contexts, which will close the logs.
+     */
+
+    if (test_ctx != NULL) {
+        tls_api_delete_ctx(test_ctx);
+        test_ctx = NULL;
+    }
+
+    return ret;
 }

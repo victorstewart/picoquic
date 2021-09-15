@@ -515,6 +515,19 @@ char const* picoquic_addr_text(struct sockaddr* addr, char* text, size_t text_si
     return ret_text;
 }
 
+/* get a loopback address of the required type */
+int picoquic_store_loopback_addr(struct sockaddr_storage* stored_addr, int addr_family, uint16_t port)
+{
+    int ret = -1;
+    if (addr_family == AF_INET) {
+        ret = picoquic_store_text_addr(stored_addr, "128.0.0.1", port);
+    }
+    else if (addr_family == AF_INET6) {
+        ret = picoquic_store_text_addr(stored_addr, "::1", port);
+    }
+    return ret;
+}
+
 /* Return a directory path based on solution dir and file name */
 char const* picoquic_solution_dir = NULL;
 
@@ -873,6 +886,19 @@ uint8_t* picoquic_frames_cid_encode(uint8_t* bytes, const uint8_t* bytes_max, co
 {
     return picoquic_frames_length_data_encode(bytes, bytes_max, cid->id_len, cid->id);
 }
+
+uint8_t* picoquic_frames_charz_encode(uint8_t* bytes, const uint8_t* bytes_max, char const * s)
+{
+    if (s == NULL) {
+        bytes = picoquic_frames_varlen_encode(bytes, bytes_max, 0);
+    }
+    else {
+        size_t l = strlen(s);
+        bytes = picoquic_frames_length_data_encode(bytes, bytes_max, l, (const uint8_t*)s);
+    }
+    return bytes;
+}
+
 
 /* Constant time memory comparison. This is only required now for
  * the comparison of 16 bytes long stateless reset secrets, so we have
