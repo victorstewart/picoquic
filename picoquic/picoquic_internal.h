@@ -669,6 +669,7 @@ typedef struct st_picoquic_quic_t {
     unsigned int is_port_blocking_disabled : 1; /* Do not check client port on incoming connections */
     unsigned int are_path_callbacks_enabled : 1; /* Enable path specific callbacks by default */
     unsigned int use_predictable_random : 1; /* For logging tests */
+    unsigned int disable_pacing_slack : 1; /* Disable pacing slack heuristic by default */
     picoquic_stateless_packet_t* pending_stateless_packet;
 
     picoquic_congestion_algorithm_t const* default_congestion_alg;
@@ -1120,6 +1121,7 @@ typedef struct st_picoquic_path_t {
     unsigned int path_cid_rotated : 1;
     unsigned int is_nat_challenge : 1;
     unsigned int is_cc_data_updated : 1;
+    unsigned int pacing_app_limited : 1;
     unsigned int is_multipath_probe_needed : 1;
     unsigned int is_ssthresh_initialized : 1;
     unsigned int is_token_published : 1;
@@ -1207,6 +1209,8 @@ typedef struct st_picoquic_path_t {
     uint64_t last_time_acked_data_frame_sent;
     void* congestion_alg_state;
     picoquic_pacing_t pacing;
+    uint64_t pacing_slack_window_start;
+    int64_t pacing_slack_min;
 
     /* MTU safety tracking */
     uint64_t nb_mtu_losses;
@@ -1331,6 +1335,7 @@ typedef struct st_picoquic_cnx_t {
     unsigned int is_address_discovery_receiver : 1; /* receive the address discovery extension */
     unsigned int is_subscribed_to_path_allowed : 1; /* application wants to be advised if it is now possible to create a path */
     unsigned int is_notified_that_path_is_allowed : 1; /* application wants to be advised if it is now possible to create a path */
+    unsigned int disable_pacing_slack : 1; /* Force legacy app-limited behavior */
     
     /* PMTUD policy */
     picoquic_pmtud_policy_enum pmtud_policy;
@@ -1699,6 +1704,9 @@ void picoquic_update_pacing_after_send(picoquic_path_t* path_x, size_t length, u
 int picoquic_is_sending_authorized_by_pacing(picoquic_cnx_t* cnx, picoquic_path_t* path_x, uint64_t current_time, uint64_t* next_time);
 /* Reset pacing data if congestion algorithm computes it directly */
 void picoquic_update_pacing_rate(picoquic_cnx_t* cnx, picoquic_path_t* path_x, double pacing_rate, uint64_t quantum);
+void picoquic_pacing_slack_record_send(picoquic_path_t* path_x, uint64_t current_time);
+void picoquic_pacing_slack_note_idle(picoquic_path_t* path_x, uint64_t current_time);
+int picoquic_is_path_app_limited(const picoquic_path_t* path_x);
 /* Manage path quality updates */
 void picoquic_refresh_path_quality_thresholds(picoquic_path_t* path_x);
 int picoquic_issue_path_quality_update(picoquic_cnx_t* cnx, picoquic_path_t* path_x);

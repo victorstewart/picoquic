@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stdio.h>
 #include "picoquic.h"
 #include "picoquic_internal.h"
 #include "picoquictest_internal.h"
@@ -80,6 +81,10 @@ typedef struct st_app_limited_test_config_t {
     uint64_t cwin_max;
     uint64_t data_rate_max;
     uint64_t nb_losses_max;
+    int disable_pacing_slack;
+    uint64_t data_rate_observed;
+    uint64_t cwin_observed;
+    uint64_t rtt_observed;
 } app_limited_test_config_t;
 
 typedef struct st_app_limited_stream_ctx_t {
@@ -456,6 +461,9 @@ static int app_limited_test_one(app_limited_test_config_t * config)
 
         if (ret == 0) {
             al_ctx.client_cnx_ctx.cnx = test_ctx->cnx_client;
+            picoquic_set_default_pacing_slack_disabled(test_ctx->qserver, config->disable_pacing_slack);
+            picoquic_set_default_pacing_slack_disabled(test_ctx->qclient, config->disable_pacing_slack);
+            picoquic_set_pacing_slack_disabled(test_ctx->cnx_client, config->disable_pacing_slack);
 
             picoquic_set_default_congestion_algorithm(test_ctx->qserver, config->ccalgo);
             picoquic_set_congestion_algorithm(test_ctx->cnx_client, config->ccalgo);
@@ -499,6 +507,10 @@ static int app_limited_test_one(app_limited_test_config_t * config)
             break;
         }
 
+        if (test_ctx->cnx_server != NULL) {
+            picoquic_set_pacing_slack_disabled(test_ctx->cnx_server, config->disable_pacing_slack);
+        }
+
         if (picoquic_is_cnx_backlog_empty(test_ctx->cnx_client) &&
             al_ctx.nb_client_streams_completed >= 3) {
             ret = picoquic_close(test_ctx->cnx_client, 0);
@@ -520,6 +532,10 @@ static int app_limited_test_one(app_limited_test_config_t * config)
         }
     }
 
+    config->data_rate_observed = al_ctx.data_rate_max;
+    config->cwin_observed = al_ctx.cwin_max;
+    config->rtt_observed = al_ctx.rtt_max;
+
     if (ret == 0 && test_ctx->qclient->nb_data_nodes_allocated > test_ctx->qclient->nb_data_nodes_in_pool) {
         ret = -1;
     }
@@ -529,22 +545,23 @@ static int app_limited_test_one(app_limited_test_config_t * config)
 
     if (ret == 0) {
         /* check CWIN, losses, etc againt targets */
-        if (al_ctx.rtt_max > config->rtt_max) {
+        if (config->rtt_max != 0 && al_ctx.rtt_max > config->rtt_max) {
             DBG_PRINTF("Max RTT %llu microsec instead of %llu", al_ctx.rtt_max, config->rtt_max);
             ret = -1;
         }
 
-        if (al_ctx.cwin_max > config->cwin_max) {
+        if (config->cwin_max != 0 && al_ctx.cwin_max > config->cwin_max) {
             DBG_PRINTF("Max CWIN %llu instead of %llu", al_ctx.cwin_max, config->cwin_max);
             ret = -1;
         }
 
-        if (al_ctx.data_rate_max > config->data_rate_max) {
+        if (config->data_rate_max != 0 && al_ctx.data_rate_max > config->data_rate_max) {
             DBG_PRINTF("Data rate max %llu instead of %llu", al_ctx.data_rate_max, config->data_rate_max);
             ret = -1;
         }
 
-        if (test_ctx->cnx_server != NULL && test_ctx->cnx_server->nb_retransmission_total > config->nb_losses_max) {
+        if (config->nb_losses_max != 0 && test_ctx->cnx_server != NULL &&
+            test_ctx->cnx_server->nb_retransmission_total > config->nb_losses_max) {
             DBG_PRINTF("Nb retransmission %llu instead of %llu", test_ctx->cnx_server->nb_retransmission_total, config->nb_losses_max);
             ret = -1;
         }
@@ -574,6 +591,7 @@ static void app_limited_config_set_default( app_limited_test_config_t* config, u
     config->cwin_max = 100000;
     config->data_rate_max = 4000000;
     config->nb_losses_max = 10;
+    config->disable_pacing_slack = 0;
 }
 
 int app_limited_reno_test()
@@ -617,6 +635,56 @@ int app_limited_rpr_test()
     config.rtt_max = 275000;
 
     return app_limited_test_one(&config);
+}
+
+int app_limited_bbr_compare_test()
+{
+    app_limited_test_config_t legacy;
+    app_limited_test_config_t updated;
+    int ret;
+
+    app_limited_config_set_default(&legacy, 6);
+    legacy.ccalgo = picoquic_bbr_algorithm;
+    legacy.disable_pacing_slack = 1;
+    legacy.completion_target = 0;
+    legacy.rtt_max = 0;
+    legacy.cwin_max = 0;
+    legacy.data_rate_max = 0;
+    legacy.nb_losses_max = 0;
+
+    ret = app_limited_test_one(&legacy);
+    if (ret != 0) {
+        return ret;
+    }
+
+    app_limited_config_set_default(&updated, 7);
+    updated.ccalgo = picoquic_bbr_algorithm;
+    updated.disable_pacing_slack = 0;
+    updated.completion_target = 0;
+    updated.rtt_max = 0;
+    updated.cwin_max = 0;
+    updated.data_rate_max = 0;
+    updated.nb_losses_max = 0;
+
+    ret = app_limited_test_one(&updated);
+    if (ret != 0) {
+        return ret;
+    }
+
+    double legacy_mbps = ((double)legacy.data_rate_observed * 8.0) / 1000000.0;
+    double updated_mbps = ((double)updated.data_rate_observed * 8.0) / 1000000.0;
+
+    printf("BBR pacing (legacy heuristic disabled) : %.2f Mbps, cwin_max=%" PRIu64 ", rtt_max=%" PRIu64 " us\n",
+        legacy_mbps, legacy.cwin_observed, legacy.rtt_observed);
+    printf("BBR pacing (slack heuristic enabled) : %.2f Mbps, cwin_max=%" PRIu64 ", rtt_max=%" PRIu64 " us\n",
+        updated_mbps, updated.cwin_observed, updated.rtt_observed);
+
+    if (updated.data_rate_observed < legacy.data_rate_observed) {
+        printf("New pacing heuristic did not improve throughput.\n");
+        ret = -1;
+    }
+
+    return ret;
 }
 
 #if 0

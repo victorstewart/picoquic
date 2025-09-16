@@ -134,6 +134,37 @@ static void picoquic_report_pacing_update(picoquic_pacing_t* pacing, picoquic_pa
     }
 }
 
+static uint64_t picoquic_pacing_slack_window(const picoquic_path_t* path_x)
+{
+    uint64_t window = path_x->smoothed_rtt;
+
+    if (window < PICOQUIC_BANDWIDTH_TIME_INTERVAL_MIN) {
+        window = PICOQUIC_BANDWIDTH_TIME_INTERVAL_MIN;
+    }
+
+    return window;
+}
+
+static uint64_t picoquic_pacing_slack_threshold(const picoquic_pacing_t* pacing)
+{
+    uint64_t threshold = (pacing->packet_time_nanosec > 0) ? (uint64_t)pacing->packet_time_nanosec : 1;
+    uint64_t bucket_max = (pacing->bucket_max > 0) ? (uint64_t)pacing->bucket_max : (uint64_t)(-pacing->bucket_max);
+    uint64_t bucket_limit = bucket_max / 4;
+
+    if (bucket_limit == 0) {
+        bucket_limit = threshold;
+    }
+
+    if (threshold > bucket_limit) {
+        threshold = bucket_limit;
+        if (threshold == 0) {
+            threshold = 1;
+        }
+    }
+
+    return threshold;
+}
+
 /* Reset the pacing data after recomputing the pacing rate
 */
 void picoquic_update_pacing_parameters(picoquic_pacing_t * pacing, double pacing_rate, uint64_t quantum, size_t send_mtu, uint64_t smoothed_rtt,
@@ -248,6 +279,7 @@ void picoquic_update_pacing_data_after_send(picoquic_pacing_t * pacing, size_t l
 void picoquic_update_pacing_after_send(picoquic_path_t* path_x, size_t length, uint64_t current_time)
 {
     picoquic_update_pacing_data_after_send(&path_x->pacing, length, path_x->send_mtu, current_time);
+    picoquic_pacing_slack_record_send(path_x, current_time);
 }
 
 int picoquic_is_sending_authorized_by_pacing(picoquic_cnx_t* cnx, picoquic_path_t* path_x, uint64_t current_time, uint64_t* next_time)
@@ -267,4 +299,80 @@ void picoquic_update_pacing_data(picoquic_cnx_t* cnx, picoquic_path_t* path_x, i
 {
     picoquic_update_pacing_window(&path_x->pacing, slow_start, path_x->cwin, path_x->send_mtu, path_x->smoothed_rtt,
         path_x);
+}
+
+void picoquic_pacing_slack_record_send(picoquic_path_t* path_x, uint64_t current_time)
+{
+    if (path_x->cnx->disable_pacing_slack) {
+        path_x->pacing_app_limited = 1;
+        return;
+    }
+
+    picoquic_pacing_t* pacing = &path_x->pacing;
+    uint64_t window = picoquic_pacing_slack_window(path_x);
+    uint64_t threshold = picoquic_pacing_slack_threshold(pacing);
+    int64_t bucket = pacing->bucket_nanosec;
+
+    if (path_x->pacing_slack_window_start == 0) {
+        path_x->pacing_slack_window_start = current_time;
+        path_x->pacing_slack_min = bucket;
+        path_x->pacing_app_limited = (bucket > (int64_t)threshold);
+        return;
+    }
+
+    if (bucket < path_x->pacing_slack_min) {
+        path_x->pacing_slack_min = bucket;
+    }
+
+    if (bucket <= 0 || (uint64_t)bucket <= threshold) {
+        path_x->pacing_app_limited = 0;
+    }
+
+    if (current_time - path_x->pacing_slack_window_start >= window) {
+        path_x->pacing_app_limited = (path_x->pacing_slack_min > (int64_t)threshold);
+        path_x->pacing_slack_window_start = current_time;
+        path_x->pacing_slack_min = bucket;
+    }
+}
+
+void picoquic_pacing_slack_note_idle(picoquic_path_t* path_x, uint64_t current_time)
+{
+    if (path_x->cnx->disable_pacing_slack) {
+        path_x->pacing_app_limited = 1;
+        return;
+    }
+
+    picoquic_pacing_t* pacing = &path_x->pacing;
+    picoquic_update_pacing_bucket(pacing, current_time);
+    uint64_t window = picoquic_pacing_slack_window(path_x);
+    uint64_t threshold = picoquic_pacing_slack_threshold(pacing);
+    int64_t bucket = pacing->bucket_nanosec;
+
+    if (bucket > (int64_t)threshold) {
+        path_x->pacing_app_limited = 1;
+    }
+
+    if (path_x->pacing_slack_window_start == 0) {
+        path_x->pacing_slack_window_start = current_time;
+        path_x->pacing_slack_min = bucket;
+        path_x->pacing_app_limited = (bucket > (int64_t)threshold);
+        return;
+    }
+
+    if (current_time - path_x->pacing_slack_window_start >= window) {
+        path_x->pacing_slack_min = bucket;
+        path_x->pacing_app_limited = (bucket > (int64_t)threshold) ? 1 : 0;
+        path_x->pacing_slack_window_start = current_time;
+    }
+    else if (bucket < path_x->pacing_slack_min) {
+        path_x->pacing_slack_min = bucket;
+    }
+}
+
+int picoquic_is_path_app_limited(const picoquic_path_t* path_x)
+{
+    if (path_x->cnx->disable_pacing_slack) {
+        return 1;
+    }
+    return (path_x->pacing_app_limited != 0);
 }

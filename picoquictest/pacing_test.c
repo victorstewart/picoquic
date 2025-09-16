@@ -131,6 +131,97 @@ int pacing_test()
     return ret;
 }
 
+int pacing_app_limited_test()
+{
+   int ret = 0;
+   uint64_t current_time = 0;
+   picoquic_quic_t* quic = NULL;
+   picoquic_cnx_t* cnx = NULL;
+   struct sockaddr_in saddr;
+
+   quic = picoquic_create(8, NULL, NULL, NULL, NULL, NULL,
+      NULL, NULL, NULL, NULL, current_time,
+      &current_time, NULL, NULL, 0);
+
+   memset(&saddr, 0, sizeof(struct sockaddr_in));
+   saddr.sin_family = AF_INET;
+   saddr.sin_port = 1001;
+
+   if (quic == NULL) {
+      DBG_PRINTF("%s", "Cannot create QUIC context\n");
+      ret = -1;
+   }
+   else {
+      cnx = picoquic_create_cnx(quic,
+         picoquic_null_connection_id, picoquic_null_connection_id, (struct sockaddr*)&saddr,
+         current_time, 0, "test-sni", "test-alpn", 1);
+
+      if (cnx == NULL) {
+         DBG_PRINTF("%s", "Cannot create connection\n");
+         ret = -1;
+      }
+   }
+
+   if (ret == 0) {
+      picoquic_path_t* path_x = cnx->path[0];
+      uint64_t send_mtu = path_x->send_mtu;
+      double pacing_rate = (double)(send_mtu * 4000); /* about 32 Mbps */
+      uint64_t quantum = send_mtu * 8;
+      int burst_index;
+
+      picoquic_update_pacing_rate(cnx, path_x, pacing_rate, quantum);
+
+      for (burst_index = 0; burst_index < 8 && ret == 0; burst_index++) {
+         int64_t bucket_max = path_x->pacing.bucket_max;
+         uint64_t fill_time = (bucket_max > 0) ? (((uint64_t)bucket_max) + 999ull) / 1000ull : 0;
+         current_time += fill_time;
+
+         while (ret == 0) {
+            uint64_t next_time = current_time + 1000000;
+
+            if (picoquic_is_sending_authorized_by_pacing(cnx, path_x, current_time, &next_time)) {
+               picoquic_update_pacing_after_send(path_x, send_mtu, current_time);
+            }
+            else {
+               current_time = next_time;
+                break;
+            }
+         }
+      }
+
+      if (ret == 0 && picoquic_is_path_app_limited(path_x)) {
+         DBG_PRINTF("%s", "Pacing heuristic still reports app limited after bursts.\n");
+         ret = -1;
+      }
+
+      if (ret == 0) {
+         uint64_t wait_time = path_x->smoothed_rtt;
+         int64_t bucket_max = path_x->pacing.bucket_max;
+         uint64_t fill_delay = (bucket_max > 0) ? (((uint64_t)bucket_max) + 999ull) / 1000ull : 0;
+
+         if (wait_time < PICOQUIC_BANDWIDTH_TIME_INTERVAL_MIN) {
+            wait_time = PICOQUIC_BANDWIDTH_TIME_INTERVAL_MIN;
+         }
+
+         current_time += fill_delay + wait_time;
+         picoquic_pacing_slack_note_idle(path_x, current_time);
+         current_time += wait_time;
+         picoquic_pacing_slack_note_idle(path_x, current_time);
+
+         if (!picoquic_is_path_app_limited(path_x)) {
+            DBG_PRINTF("%s", "Pacing heuristic did not return to app-limited state after idle.\n");
+            ret = -1;
+         }
+      }
+   }
+
+   if (quic != NULL) {
+      picoquic_free(quic);
+   }
+
+   return ret;
+}
+
 /* Test effects of leaky bucket pacer
 */
 

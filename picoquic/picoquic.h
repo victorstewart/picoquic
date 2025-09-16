@@ -1530,6 +1530,8 @@ void picoquic_set_optimistic_ack_policy(picoquic_quic_t* quic, uint32_t sequence
  */
 void picoquic_set_preemptive_repeat_policy(picoquic_quic_t* quic, int do_repeat);
 void picoquic_set_preemptive_repeat_per_cnx(picoquic_cnx_t* cnx, int do_repeat);
+void picoquic_set_default_pacing_slack_disabled(picoquic_quic_t* quic, int disabled);
+void picoquic_set_pacing_slack_disabled(picoquic_cnx_t* cnx, int disabled);
 
 /* Enables keep alive for a connection.
  * Keep alive interval is expressed in microseconds.

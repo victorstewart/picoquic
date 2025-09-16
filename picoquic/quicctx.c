@@ -1716,6 +1716,9 @@ int picoquic_create_path(picoquic_cnx_t* cnx, uint64_t start_time, const struct 
 
                 /* Initialize per path pacing state */
                 picoquic_pacing_init(&path_x->pacing, start_time);
+                path_x->pacing_app_limited = 1;
+                path_x->pacing_slack_window_start = start_time;
+                path_x->pacing_slack_min = path_x->pacing.bucket_nanosec;
 
                 /* Initialize the MTU */
                 path_x->send_mtu = (peer_addr == NULL || peer_addr->sa_family == AF_INET) ? PICOQUIC_INITIAL_MTU_IPV4 : PICOQUIC_INITIAL_MTU_IPV6;
@@ -3917,6 +3920,7 @@ picoquic_cnx_t* picoquic_create_cnx(picoquic_quic_t* quic,
         }
         cnx->initial_cnxid = initial_cnx_id;
         cnx->quic = quic;
+        cnx->disable_pacing_slack = quic->disable_pacing_slack;
         cnx->pmtud_policy = quic->default_pmtud_policy;
         /* Create the connection ID number 0 */
         cnxid0 = picoquic_create_local_cnxid(cnx, 0, NULL, start_time);
@@ -5110,6 +5114,39 @@ void picoquic_set_preemptive_repeat_per_cnx(picoquic_cnx_t* cnx, int do_repeat)
     cnx->is_preemptive_repeat_enabled = (do_repeat) ? 1 : 0;
 }
 
+void picoquic_set_pacing_slack_disabled(picoquic_cnx_t* cnx, int disabled)
+{
+    if (cnx == NULL) {
+        return;
+    }
+
+    cnx->disable_pacing_slack = (disabled) ? 1 : 0;
+
+    for (int i = 0; i < cnx->nb_paths; i++) {
+        picoquic_path_t* path_x = cnx->path[i];
+        if (path_x != NULL) {
+            path_x->pacing_app_limited = 1;
+            path_x->pacing_slack_window_start = 0;
+            path_x->pacing_slack_min = path_x->pacing.bucket_nanosec;
+        }
+    }
+}
+
+void picoquic_set_default_pacing_slack_disabled(picoquic_quic_t* quic, int disabled)
+{
+    if (quic == NULL) {
+        return;
+    }
+
+    quic->disable_pacing_slack = (disabled) ? 1 : 0;
+
+    picoquic_cnx_t* cnx = quic->cnx_list;
+    while (cnx != NULL) {
+        picoquic_set_pacing_slack_disabled(cnx, disabled);
+        cnx = cnx->next_in_table;
+    }
+}
+
 void picoquic_set_congestion_algorithm_ex(picoquic_cnx_t* cnx, picoquic_congestion_algorithm_t const* alg, char const* alg_option_string)
 {
     if (cnx->congestion_alg != NULL) {
@@ -5318,4 +5355,3 @@ uint64_t picoquic_uniform_random(uint64_t rnd_max)
 {
     return picoquic_public_uniform_random(rnd_max);
 }
-
