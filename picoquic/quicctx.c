@@ -5139,12 +5139,6 @@ void picoquic_set_default_pacing_slack_disabled(picoquic_quic_t* quic, int disab
     }
 
     quic->disable_pacing_slack = (disabled) ? 1 : 0;
-
-    picoquic_cnx_t* cnx = quic->cnx_list;
-    while (cnx != NULL) {
-        picoquic_set_pacing_slack_disabled(cnx, disabled);
-        cnx = cnx->next_in_table;
-    }
 }
 
 void picoquic_set_congestion_algorithm_ex(picoquic_cnx_t* cnx, picoquic_congestion_algorithm_t const* alg, char const* alg_option_string)

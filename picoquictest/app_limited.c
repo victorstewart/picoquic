@@ -85,6 +85,9 @@ typedef struct st_app_limited_test_config_t {
     uint64_t data_rate_observed;
     uint64_t cwin_observed;
     uint64_t rtt_observed;
+    uint64_t pacing_app_limited_samples;
+    uint64_t pacing_app_limited_transitions;
+    uint64_t delivered_limited_events;
 } app_limited_test_config_t;
 
 typedef struct st_app_limited_stream_ctx_t {
@@ -112,8 +115,13 @@ typedef struct st_app_limited_ctx_t {
     int nb_client_streams_completed;
     uint64_t last_interaction_time;
     uint64_t rtt_max;
-    uint64_t cwin_max;
-    uint64_t data_rate_max;
+   uint64_t cwin_max;
+   uint64_t data_rate_max;
+    uint64_t pacing_app_limited_samples;
+    uint64_t pacing_app_limited_transitions;
+    uint64_t delivered_limited_events;
+    uint64_t last_delivered_limited_index;
+    int last_pacing_app_limited;
     app_limited_cnx_ctx_t client_cnx_ctx;
     app_limited_cnx_ctx_t server_cnx_ctx;
     app_limited_test_config_t* config;
@@ -436,6 +444,25 @@ void app_limited_monitor(app_limited_ctx_t* al_ctx)
         if (path_x->pacing.rate > al_ctx->data_rate_max) {
             al_ctx->data_rate_max = path_x->pacing.rate;
         }
+        if (path_x->pacing_app_limited) {
+            al_ctx->pacing_app_limited_samples++;
+            if (!al_ctx->last_pacing_app_limited) {
+                al_ctx->pacing_app_limited_transitions++;
+                al_ctx->last_pacing_app_limited = 1;
+            }
+        }
+        else if (al_ctx->last_pacing_app_limited) {
+            al_ctx->last_pacing_app_limited = 0;
+        }
+        if (path_x->delivered_limited_index != 0) {
+            if (path_x->delivered_limited_index != al_ctx->last_delivered_limited_index) {
+                al_ctx->delivered_limited_events++;
+                al_ctx->last_delivered_limited_index = path_x->delivered_limited_index;
+            }
+        }
+        else if (al_ctx->last_delivered_limited_index != 0) {
+            al_ctx->last_delivered_limited_index = 0;
+        }
     }
 }
 
@@ -532,10 +559,6 @@ static int app_limited_test_one(app_limited_test_config_t * config)
         }
     }
 
-    config->data_rate_observed = al_ctx.data_rate_max;
-    config->cwin_observed = al_ctx.cwin_max;
-    config->rtt_observed = al_ctx.rtt_max;
-
     if (ret == 0 && test_ctx->qclient->nb_data_nodes_allocated > test_ctx->qclient->nb_data_nodes_in_pool) {
         ret = -1;
     }
@@ -566,6 +589,13 @@ static int app_limited_test_one(app_limited_test_config_t * config)
             ret = -1;
         }
     }
+
+    config->data_rate_observed = al_ctx.data_rate_max;
+    config->cwin_observed = al_ctx.cwin_max;
+    config->rtt_observed = al_ctx.rtt_max;
+    config->pacing_app_limited_samples = al_ctx.pacing_app_limited_samples;
+    config->pacing_app_limited_transitions = al_ctx.pacing_app_limited_transitions;
+    config->delivered_limited_events = al_ctx.delivered_limited_events;
 
     if (test_ctx != NULL) {
         tls_api_delete_ctx(test_ctx);
@@ -646,6 +676,11 @@ int app_limited_bbr_compare_test()
     app_limited_config_set_default(&legacy, 6);
     legacy.ccalgo = picoquic_bbr_algorithm;
     legacy.disable_pacing_slack = 1;
+    legacy.stream_0_packet_size = 128;
+    legacy.stream_0_packet_interval = 50000;
+    legacy.data_stream_size = 200000;
+    legacy.time_to_stream[1] = 10000000;
+    legacy.time_to_stream[2] = 20000000;
     legacy.completion_target = 0;
     legacy.rtt_max = 0;
     legacy.cwin_max = 0;
@@ -660,6 +695,11 @@ int app_limited_bbr_compare_test()
     app_limited_config_set_default(&updated, 7);
     updated.ccalgo = picoquic_bbr_algorithm;
     updated.disable_pacing_slack = 0;
+    updated.stream_0_packet_size = legacy.stream_0_packet_size;
+    updated.stream_0_packet_interval = legacy.stream_0_packet_interval;
+    updated.data_stream_size = legacy.data_stream_size;
+    updated.time_to_stream[1] = legacy.time_to_stream[1];
+    updated.time_to_stream[2] = legacy.time_to_stream[2];
     updated.completion_target = 0;
     updated.rtt_max = 0;
     updated.cwin_max = 0;
@@ -674,12 +714,15 @@ int app_limited_bbr_compare_test()
     double legacy_mbps = ((double)legacy.data_rate_observed * 8.0) / 1000000.0;
     double updated_mbps = ((double)updated.data_rate_observed * 8.0) / 1000000.0;
 
-    printf("BBR pacing (legacy heuristic disabled) : %.2f Mbps, cwin_max=%" PRIu64 ", rtt_max=%" PRIu64 " us\n",
-        legacy_mbps, legacy.cwin_observed, legacy.rtt_observed);
-    printf("BBR pacing (slack heuristic enabled) : %.2f Mbps, cwin_max=%" PRIu64 ", rtt_max=%" PRIu64 " us\n",
-        updated_mbps, updated.cwin_observed, updated.rtt_observed);
+    printf("BBR pacing (legacy heuristic disabled) : %.2f Mbps, cwin_max=%" PRIu64 ", rtt_max=%" PRIu64 " us, pacing_app_limited_samples=%" PRIu64 ", transitions=%" PRIu64 ", delivered_events=%" PRIu64 "\n",
+        legacy_mbps, legacy.cwin_observed, legacy.rtt_observed,
+        legacy.pacing_app_limited_samples, legacy.pacing_app_limited_transitions, legacy.delivered_limited_events);
+    printf("BBR pacing (slack heuristic enabled) : %.2f Mbps, cwin_max=%" PRIu64 ", rtt_max=%" PRIu64 " us, pacing_app_limited_samples=%" PRIu64 ", transitions=%" PRIu64 ", delivered_events=%" PRIu64 "\n",
+        updated_mbps, updated.cwin_observed, updated.rtt_observed,
+        updated.pacing_app_limited_samples, updated.pacing_app_limited_transitions, updated.delivered_limited_events);
 
-    if (updated.data_rate_observed < legacy.data_rate_observed) {
+    if (updated.data_rate_observed < legacy.data_rate_observed &&
+        updated.pacing_app_limited_transitions >= legacy.pacing_app_limited_transitions) {
         printf("New pacing heuristic did not improve throughput.\n");
         ret = -1;
     }
