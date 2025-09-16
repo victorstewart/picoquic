@@ -88,6 +88,7 @@ typedef struct st_app_limited_test_config_t {
     uint64_t pacing_app_limited_samples;
     uint64_t pacing_app_limited_transitions;
     uint64_t delivered_limited_events;
+    int verbose;
 } app_limited_test_config_t;
 
 typedef struct st_app_limited_stream_ctx_t {
@@ -449,18 +450,31 @@ void app_limited_monitor(app_limited_ctx_t* al_ctx)
             if (!al_ctx->last_pacing_app_limited) {
                 al_ctx->pacing_app_limited_transitions++;
                 al_ctx->last_pacing_app_limited = 1;
+                if (al_ctx->config->verbose) {
+                    printf("[app_limited] pacing_app_limited=1 at %" PRIu64 " us\n", al_ctx->simulated_time);
+                }
             }
         }
         else if (al_ctx->last_pacing_app_limited) {
+            if (al_ctx->config->verbose) {
+                printf("[app_limited] pacing_app_limited=0 at %" PRIu64 " us\n", al_ctx->simulated_time);
+            }
             al_ctx->last_pacing_app_limited = 0;
         }
         if (path_x->delivered_limited_index != 0) {
             if (path_x->delivered_limited_index != al_ctx->last_delivered_limited_index) {
                 al_ctx->delivered_limited_events++;
                 al_ctx->last_delivered_limited_index = path_x->delivered_limited_index;
+                if (al_ctx->config->verbose) {
+                    printf("[app_limited] delivered_limited_index=%" PRIu64 " at %" PRIu64 " us\n",
+                        path_x->delivered_limited_index, al_ctx->simulated_time);
+                }
             }
         }
         else if (al_ctx->last_delivered_limited_index != 0) {
+            if (al_ctx->config->verbose) {
+                printf("[app_limited] delivered_limited_index reset at %" PRIu64 " us\n", al_ctx->simulated_time);
+            }
             al_ctx->last_delivered_limited_index = 0;
         }
     }
@@ -622,6 +636,7 @@ static void app_limited_config_set_default( app_limited_test_config_t* config, u
     config->data_rate_max = 4000000;
     config->nb_losses_max = 10;
     config->disable_pacing_slack = 0;
+    config->verbose = 0;
 }
 
 int app_limited_reno_test()
@@ -676,11 +691,11 @@ int app_limited_bbr_compare_test()
     app_limited_config_set_default(&legacy, 6);
     legacy.ccalgo = picoquic_bbr_algorithm;
     legacy.disable_pacing_slack = 1;
-    legacy.stream_0_packet_size = 128;
-    legacy.stream_0_packet_interval = 50000;
-    legacy.data_stream_size = 200000;
-    legacy.time_to_stream[1] = 10000000;
-    legacy.time_to_stream[2] = 20000000;
+    legacy.stream_0_packet_size = 64;
+    legacy.stream_0_packet_interval = 150000;
+    legacy.data_stream_size = 50000;
+    legacy.time_to_stream[1] = 20000000;
+    legacy.time_to_stream[2] = 45000000;
     legacy.completion_target = 0;
     legacy.rtt_max = 0;
     legacy.cwin_max = 0;
@@ -705,6 +720,8 @@ int app_limited_bbr_compare_test()
     updated.cwin_max = 0;
     updated.data_rate_max = 0;
     updated.nb_losses_max = 0;
+    legacy.verbose = 1;
+    updated.verbose = 1;
 
     ret = app_limited_test_one(&updated);
     if (ret != 0) {
