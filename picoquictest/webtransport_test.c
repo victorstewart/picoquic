@@ -1466,6 +1466,90 @@ int picowt_connect_reset_lifecycle_test(void)
     return ret;
 }
 
+static int picowt_connect_fin_lifecycle_case(int fin_with_response)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    uint64_t simulated_time = 0;
+    uint64_t fin_stream_id = UINT64_MAX;
+    uint8_t frame[768];
+    size_t frame_length = 0;
+    picowt_connect_response_test_ctx_t response_ctx = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        picowt_connect_response_set_ready(cnx, h3_ctx);
+        stream_ctx = h3zero_find_or_create_stream(cnx, 0, h3_ctx, 1, 1);
+        if (stream_ctx == NULL ||
+            picoquic_set_app_stream_ctx(cnx, stream_ctx->stream_id,
+                stream_ctx) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        stream_ctx->is_open = 1;
+        stream_ctx->path_callback = picowt_connect_response_test_callback;
+        stream_ctx->path_callback_ctx = &response_ctx;
+        stream_ctx->ps.stream_state.is_upgrade_requested = 1;
+        stream_ctx->ps.stream_state.is_webtransport_requested = 1;
+    }
+    if (ret == 0) {
+        ret = picowt_build_response_header_frame("200", NULL,
+            frame, frame + sizeof(frame), &frame_length);
+    }
+    if (ret == 0) {
+        ret = h3zero_process_h3_client_data(cnx, stream_ctx->stream_id,
+            frame, frame_length, fin_with_response, h3_ctx, stream_ctx,
+            &fin_stream_id);
+    }
+    if (ret == 0 && !fin_with_response) {
+        if (!stream_ctx->is_upgraded ||
+            response_ctx.accepted != 1 ||
+            response_ctx.refused != 0 ||
+            response_ctx.post_fin != 0) {
+            ret = -1;
+        }
+        else {
+            ret = h3zero_process_h3_client_data(cnx, stream_ctx->stream_id,
+                NULL, 0, 1, h3_ctx, stream_ctx, &fin_stream_id);
+        }
+    }
+    if (ret == 0) {
+        if (!stream_ctx->is_upgraded ||
+            response_ctx.accepted != 1 ||
+            response_ctx.refused != 0 ||
+            response_ctx.post_fin != 1 ||
+            response_ctx.reset != 0 ||
+            response_ctx.stop_sending != 0 ||
+            fin_stream_id != UINT64_MAX) {
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int picowt_connect_fin_lifecycle_test(void)
+{
+    int ret = picowt_connect_fin_lifecycle_case(1);
+
+    if (ret == 0) {
+        ret = picowt_connect_fin_lifecycle_case(0);
+    }
+
+    return ret;
+}
+
 int picowt_baton_origin_test(void)
 {
     return picowt_baton_test_one_ex(16, "/baton?baton=240", 0, 2000000, NULL, NULL,

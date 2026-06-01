@@ -687,6 +687,7 @@ int picowt_connect_response_test(void);
 int picowt_connect_headers_fragment_test(void);
 int picowt_connect_stream_id_test(void);
 int picowt_connect_reset_lifecycle_test(void);
+int picowt_connect_fin_lifecycle_test(void);
 int picowt_baton_origin_test(void);
 int picowt_baton_origin_policy_test(void);
 int picowt_baton_settings_test(void);
