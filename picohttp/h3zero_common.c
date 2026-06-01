@@ -1149,6 +1149,18 @@ int h3zero_post_data_or_fin(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
 	return ret;
 }
 
+static int h3zero_remote_wt_prefix_incomplete(uint64_t stream_id,
+	h3zero_data_stream_state_t* stream_state)
+{
+	if (IS_BIDIR_STREAM_ID(stream_id)) {
+		return (stream_state->stream_type == UINT64_MAX ||
+			(stream_state->stream_type == h3zero_frame_webtransport_stream &&
+				stream_state->control_stream_id == UINT64_MAX));
+	}
+	return (stream_state->stream_type == h3zero_stream_type_webtransport &&
+		stream_state->control_stream_id == UINT64_MAX);
+}
+
 /* There are some streams, like unidir or server initiated bidir, that
 * require extra processing, such as tying to web transport
 * application.
@@ -1190,7 +1202,13 @@ int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
 			}
 		}
 		else if (bytes < bytes_max || fin_or_event == picoquic_callback_stream_fin) {
-			ret = h3zero_post_data_or_fin(cnx, bytes, bytes_max - bytes, fin_or_event, stream_ctx);
+			if (fin_or_event == picoquic_callback_stream_fin &&
+				h3zero_remote_wt_prefix_incomplete(stream_id, &stream_ctx->ps.stream_state)) {
+				ret = h3zero_reject_buffered_webtransport_stream(cnx, stream_id);
+			}
+			else {
+				ret = h3zero_post_data_or_fin(cnx, bytes, bytes_max - bytes, fin_or_event, stream_ctx);
+			}
 		}
 	}
 	return ret;

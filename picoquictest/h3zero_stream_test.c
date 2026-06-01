@@ -594,6 +594,70 @@ int h3zero_wt_prefix_fragment_test(void)
     return ret;
 }
 
+static int h3zero_wt_prefix_fin_case(int is_bidir, uint8_t* input, size_t input_length)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t stream_id = is_bidir ? 12 : 6;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    picoquic_stream_head_t* stream = NULL;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+    }
+    if (ret == 0) {
+        ret = h3zero_process_remote_stream(cnx, stream_id, input, input_length,
+            picoquic_callback_stream_fin, stream_ctx, h3_ctx);
+    }
+    stream = (cnx == NULL) ? NULL : picoquic_find_stream(cnx, stream_id);
+    if (ret != 0 || stream == NULL || !stream->stop_sending_requested ||
+        stream->local_stop_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED ||
+        (is_bidir && (!stream->reset_requested ||
+            stream->local_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED)) ||
+        (!is_bidir && stream->reset_requested) ||
+        cnx->application_error != 0) {
+        DBG_PRINTF("WT %s prefix FIN reject failed, ret=%d, app_error=%" PRIu64,
+            is_bidir ? "bidi" : "uni", ret,
+            (cnx == NULL) ? UINT64_MAX : cnx->application_error);
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int h3zero_wt_prefix_fin_test(void)
+{
+    uint8_t bidi_partial_type[] = { 0x40 };
+    uint8_t bidi_no_session[] = { 0x40, 0x41 };
+    uint8_t uni_no_session[] = { 0x40, 0x54 };
+    int ret = h3zero_wt_prefix_fin_case(1, bidi_partial_type,
+        sizeof(bidi_partial_type));
+
+    if (ret == 0) {
+        ret = h3zero_wt_prefix_fin_case(1, bidi_no_session,
+            sizeof(bidi_no_session));
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_prefix_fin_case(0, uni_no_session,
+            sizeof(uni_no_session));
+    }
+
+    return ret;
+}
+
 /*
 * A fraction of the control stream parsing is covered by normal usage :
 * -receive h3 settings on control stream,
