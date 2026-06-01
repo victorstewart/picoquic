@@ -485,6 +485,7 @@ int picomask_test_set_server_ctx(picomask_test_ctx_t* pt_ctx)
         picomask_ctx->is_proxy_server = 1;
         path_item->path_app_ctx = (void*)picomask_ctx;
         path_item->connect_protocol = "connect-udp";
+        path_item->connect_protocol_length = sizeof("connect-udp") - 1;
 
         pt_ctx->server_context.path_table = path_item;
         pt_ctx->server_context.path_table_nb = 1;

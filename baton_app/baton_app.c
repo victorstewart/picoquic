@@ -451,6 +451,7 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
     path_item_list[0].path_callback = wt_baton_callback;
     path_item_list[0].path_app_ctx = NULL; 
     path_item_list[0].connect_protocol = H3ZERO_WEBTRANSPORT_H3_PROTOCOL;
+    path_item_list[0].connect_protocol_length = sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1;
     picoquic_file_param.path_table = path_item_list;
     picoquic_file_param.path_table_nb = 1;
 

@@ -2433,7 +2433,8 @@ picohttp_server_path_item_t ping_test_item = {
     5,
     h3zero_test_ping_callback,
     NULL,
-    NULL
+    NULL,
+    0
 };
 
 picohttp_server_parameters_t ping_test_param = {

@@ -450,6 +450,23 @@ int h3zero_webtransport_is_ready(picoquic_cnx_t* cnx, const h3zero_settings_t* s
 	return ret;
 }
 
+static int h3zero_webtransport_legacy_is_ready(picoquic_cnx_t* cnx, const h3zero_settings_t* settings)
+{
+	int ret = 0;
+
+	/* Chrome's legacy token is paired with SETTINGS_ENABLE_WEBTRANSPORT, not ENABLE_CONNECT_PROTOCOL. */
+	if (cnx != NULL && settings != NULL &&
+		settings->h3_datagram != 0 &&
+		(settings->webtransport_enabled != 0 || settings->webtransport_max_sessions != 0)) {
+		picoquic_tp_t const* local_tp = picoquic_get_transport_parameters(cnx, 1);
+		picoquic_tp_t const* remote_tp = picoquic_get_transport_parameters(cnx, 0);
+
+		ret = (local_tp->max_datagram_frame_size > 0 &&
+			remote_tp->max_datagram_frame_size > 0);
+	}
+	return ret;
+}
+
 static int h3zero_process_goaway_frame(picoquic_cnx_t* cnx,
 	h3zero_callback_ctx_t* ctx, const uint8_t* bytes, const uint8_t* bytes_max,
 	uint64_t* error_found)
@@ -1248,6 +1265,43 @@ static int h3zero_protocol_is_n(const uint8_t* protocol, size_t protocol_length,
 #define h3zero_protocol_is_literal(protocol, protocol_length, expected_protocol) \
 	h3zero_protocol_is_n(protocol, protocol_length, expected_protocol, sizeof(expected_protocol) - 1)
 
+#define H3ZERO_PROTOCOL_WEBTRANSPORT_H3 1
+#define H3ZERO_PROTOCOL_WEBTRANSPORT_LEGACY 2
+
+static int h3zero_webtransport_protocol_class(const uint8_t* protocol, size_t protocol_length)
+{
+	if (h3zero_protocol_is_literal(protocol, protocol_length, H3ZERO_WEBTRANSPORT_H3_PROTOCOL)) {
+		return H3ZERO_PROTOCOL_WEBTRANSPORT_H3;
+	}
+	/* Chrome still sends the pre-draft-15 H3 token on the WebTransport API path. */
+	if (h3zero_protocol_is_literal(protocol, protocol_length, "webtransport")) {
+		return H3ZERO_PROTOCOL_WEBTRANSPORT_LEGACY;
+	}
+	return 0;
+}
+
+static int h3zero_path_connect_protocol_matches(
+	const picohttp_server_path_item_t* path_desc,
+	const uint8_t* protocol,
+	size_t protocol_length,
+	int wt_protocol_class)
+{
+	int ret = 0;
+
+	if (path_desc->connect_protocol != NULL) {
+		if (path_desc->connect_protocol_length == sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1 &&
+			memcmp(path_desc->connect_protocol, H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+				sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1) == 0) {
+			ret = (wt_protocol_class != 0);
+		}
+		else {
+			ret = h3zero_protocol_is_n(protocol, protocol_length,
+				path_desc->connect_protocol, path_desc->connect_protocol_length);
+		}
+	}
+	return ret;
+}
+
 int h3zero_process_request_frame(
 	picoquic_cnx_t* cnx,
 	h3zero_stream_ctx_t * stream_ctx,
@@ -1342,10 +1396,10 @@ int h3zero_process_request_frame(
 	}
 	else if (stream_ctx->ps.stream_state.header.method == h3zero_method_connect) {
 		/* The connect handling depends on the requested protocol */
-		int is_webtransport = h3zero_protocol_is_literal(
+		int wt_protocol_class = h3zero_webtransport_protocol_class(
 			stream_ctx->ps.stream_state.header.protocol,
-			stream_ctx->ps.stream_state.header.protocol_length,
-			H3ZERO_WEBTRANSPORT_H3_PROTOCOL);
+			stream_ctx->ps.stream_state.header.protocol_length);
+		int is_webtransport = (wt_protocol_class != 0);
 
 		stream_ctx->ps.stream_state.is_webtransport_requested = is_webtransport;
 		if (is_webtransport && !app_ctx->settings.settings_received) {
@@ -1353,8 +1407,10 @@ int h3zero_process_request_frame(
 			return 0;
 		}
 		else if (is_webtransport &&
-			!h3zero_webtransport_is_ready(cnx, &app_ctx->settings)) {
-			ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+			!((wt_protocol_class == H3ZERO_PROTOCOL_WEBTRANSPORT_LEGACY) ?
+				h3zero_webtransport_legacy_is_ready(cnx, &app_ctx->settings) :
+				h3zero_webtransport_is_ready(cnx, &app_ctx->settings))) {
+			return picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
 		}
 		else if (is_webtransport && !h3zero_protocol_is_literal(stream_ctx->ps.stream_state.header.scheme,
 			stream_ctx->ps.stream_state.header.scheme_length, "https")) {
@@ -1375,11 +1431,15 @@ int h3zero_process_request_frame(
 			int path_item = h3zero_find_path_item(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, app_ctx->path_table, app_ctx->path_table_nb);
 			if (path_item >= 0) {
 				picohttp_server_path_item_t* path_desc = &app_ctx->path_table[path_item];
-				if (path_desc->connect_protocol == NULL ||
-					!h3zero_protocol_is_n(stream_ctx->ps.stream_state.header.protocol,
-						stream_ctx->ps.stream_state.header.protocol_length,
-						path_desc->connect_protocol, strlen(path_desc->connect_protocol))) {
-					picoquic_log_app_message(cnx, "Unsupported CONNECT protocol on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, path_desc->path);
+				if (!h3zero_path_connect_protocol_matches(path_desc,
+					stream_ctx->ps.stream_state.header.protocol,
+					stream_ctx->ps.stream_state.header.protocol_length, wt_protocol_class)) {
+					char protocol_text[256];
+					picoquic_log_app_message(cnx, "Unsupported CONNECT protocol on stream: %"PRIu64 ", path:%s, protocol:%s",
+						stream_ctx->stream_id, path_desc->path,
+						picoquic_uint8_to_str(protocol_text, sizeof(protocol_text),
+							stream_ctx->ps.stream_state.header.protocol,
+							stream_ctx->ps.stream_state.header.protocol_length));
 					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
 				}
 				else {
@@ -1587,19 +1647,19 @@ int h3zero_process_h3_server_data(picoquic_cnx_t* cnx,
 					else {
 						stream_ctx->path_callback = stream_prefix->function_call;
 						stream_ctx->path_callback_ctx = stream_prefix->function_ctx;
-						(void)picoquic_set_app_stream_ctx(cnx, stream_id, stream_ctx);
 					}
 				}
 			}
 			/* If received a post command, verify that it can be accepted */
-			else if (stream_ctx->ps.stream_state.header_found && stream_ctx->post_received == 0) {
+			else if (stream_ctx->ps.stream_state.header.method == h3zero_method_post &&
+				stream_ctx->post_received == 0) {
 				int path_item = h3zero_find_path_item(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, ctx->path_table, ctx->path_table_nb);
 				if (path_item >= 0) {
 					stream_ctx->path_callback = ctx->path_table[path_item].path_callback;
+					stream_ctx->path_callback_ctx = ctx->path_table[path_item].path_app_ctx;
 					stream_ctx->path_callback(cnx, (uint8_t*)stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, picohttp_callback_post,
 						stream_ctx, ctx->path_table[path_item].path_app_ctx);
 				}
-				(void)picoquic_set_app_stream_ctx(cnx, stream_id, stream_ctx);
 			}
 
 			/* Received data for a POST or CONNECT command. */

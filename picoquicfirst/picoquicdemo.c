@@ -270,14 +270,16 @@ picohttp_server_path_item_t path_item_list[2] =
         5,
         demoserver_post_callback,
         NULL,
-        NULL
+        NULL,
+        0
     },
     {
         "/baton",
         6,
         wt_baton_callback,
         NULL,
-        H3ZERO_WEBTRANSPORT_H3_PROTOCOL
+        H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+        sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1
     }
 };
 

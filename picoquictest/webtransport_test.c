@@ -54,6 +54,14 @@
 int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx,
     const char* authority, const char* path, picohttp_post_data_cb_fn wt_callback, void* wt_ctx,
     char const* wt_available_protocols, uint8_t* extra, size_t extra_length);
+int h3zero_set_test_context(picoquic_quic_t** quic, picoquic_cnx_t** cnx, h3zero_callback_ctx_t** h3_ctx, uint64_t* simulated_time);
+int h3zero_process_request_frame(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* stream_ctx,
+    h3zero_callback_ctx_t* app_ctx);
+int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
+    uint64_t stream_id, uint8_t* bytes, size_t length,
+    picoquic_call_back_event_t fin_or_event,
+    h3zero_stream_ctx_t* stream_ctx,
+    h3zero_callback_ctx_t* ctx);
 
 wt_baton_app_ctx_t baton_test_ctx = {
     15
@@ -78,7 +86,8 @@ picohttp_server_path_item_t path_item_list[1] =
         6,
         wt_baton_callback,
         &baton_test_ctx,
-        H3ZERO_WEBTRANSPORT_H3_PROTOCOL
+        H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+        sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1
     }
 };
 
@@ -507,7 +516,8 @@ int picowt_baton_reset_test(void)
 int picowt_baton_wildcard_test(void)
 {
     picohttp_server_path_item_t wildcard_table[1] = {
-        { "*", 1, wt_baton_callback, NULL, H3ZERO_WEBTRANSPORT_H3_PROTOCOL }
+        { "*", 1, wt_baton_callback, NULL, H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+            sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1 }
     };
     /* /baton is not a specific entry in wildcard_table; the '*' handler must catch it */
     return picowt_baton_test_one_ex(1, "/baton?baton=240", 0, 2000000, ".", ".",
@@ -520,14 +530,102 @@ static int picowt_baton_protocol_refusal_test_one(uint8_t test_id, const char* c
         path_item_list, 1, "https", connect_protocol, NULL, NULL, 0, 0, 1);
 }
 
+static int picowt_accept_only_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
+    picohttp_call_back_event_t wt_event, h3zero_stream_ctx_t* stream_ctx, void* path_app_ctx)
+{
+    (void)cnx;
+    (void)bytes;
+    (void)length;
+    (void)wt_event;
+    (void)stream_ctx;
+    (void)path_app_ctx;
+    return 0;
+}
+
 int picowt_baton_protocol_test(void)
 {
-    int ret = picowt_baton_protocol_refusal_test_one(10, "webtransport");
+    int ret = picowt_baton_test_one_ex(10, "/baton?baton=240", 0, 2000000, NULL, NULL,
+        path_item_list, 1, "https", "webtransport", NULL, NULL, 0, 0, 0);
 
     if (ret == 0) {
-        ret = picowt_baton_protocol_refusal_test_one(11, NULL);
+        ret = picowt_baton_protocol_refusal_test_one(11, "not-webtransport");
+    }
+    if (ret == 0) {
+        ret = picowt_baton_protocol_refusal_test_one(12, NULL);
     }
 
+    return ret;
+}
+
+int picowt_chrome_legacy_connect_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint8_t path[] = "/baton";
+    const uint8_t protocol[] = "webtransport";
+    const uint8_t scheme[] = "https";
+    const uint8_t authority[] = "localhost:4433";
+    const uint8_t origin[] = "null";
+    picohttp_server_path_item_t chrome_path[1] = {
+        { "/baton", 6, picowt_accept_only_callback, NULL, H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+            sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1 }
+    };
+    h3zero_stream_ctx_t stream_ctx = { 0 };
+    int ret = picoquic_test_set_minimal_cnx_with_time(&quic, &cnx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->local_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->local_parameters.is_reset_stream_at_enabled = 0;
+        cnx->remote_parameters.is_reset_stream_at_enabled = 0;
+        h3_ctx = h3zero_callback_create_context(NULL);
+        if (h3_ctx == NULL || picoquic_create_stream(cnx, 0) == NULL) {
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        h3_ctx->path_table = chrome_path;
+        h3_ctx->path_table_nb = 1;
+        h3_ctx->settings.settings_received = 1;
+        h3_ctx->settings.h3_datagram = 1;
+        h3_ctx->settings.webtransport_max_sessions = 1;
+        picoquic_set_callback(cnx, NULL, h3_ctx);
+
+        stream_ctx.cnx = cnx;
+        stream_ctx.is_h3 = 1;
+        stream_ctx.stream_id = 0;
+        stream_ctx.ps.stream_state.h3_ctx = h3_ctx;
+        stream_ctx.ps.stream_state.header_found = 1;
+        stream_ctx.ps.stream_state.header.method = h3zero_method_connect;
+        stream_ctx.ps.stream_state.header.path = path;
+        stream_ctx.ps.stream_state.header.path_length = sizeof(path) - 1;
+        stream_ctx.ps.stream_state.header.protocol = protocol;
+        stream_ctx.ps.stream_state.header.protocol_length = sizeof(protocol) - 1;
+        stream_ctx.ps.stream_state.header.scheme = scheme;
+        stream_ctx.ps.stream_state.header.scheme_length = sizeof(scheme) - 1;
+        stream_ctx.ps.stream_state.header.authority = authority;
+        stream_ctx.ps.stream_state.header.authority_length = sizeof(authority) - 1;
+        stream_ctx.ps.stream_state.header.origin = origin;
+        stream_ctx.ps.stream_state.header.origin_length = sizeof(origin) - 1;
+
+        ret = h3zero_process_request_frame(cnx, &stream_ctx, h3_ctx);
+        if (ret == 0 && (!stream_ctx.is_upgraded ||
+            !stream_ctx.is_webtransport_session_counted ||
+            h3_ctx->nb_webtransport_sessions != 1)) {
+            ret = -1;
+        }
+        h3zero_untrack_webtransport_session(h3_ctx, &stream_ctx);
+        picoquic_unlink_app_stream_ctx(cnx, stream_ctx.stream_id);
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
     return ret;
 }
 
@@ -539,10 +637,10 @@ static int picowt_baton_scheme_refusal_test_one(uint8_t test_id, const char* con
 
 int picowt_baton_scheme_test(void)
 {
-    int ret = picowt_baton_scheme_refusal_test_one(12, "http");
+    int ret = picowt_baton_scheme_refusal_test_one(13, "http");
 
     if (ret == 0) {
-        ret = picowt_baton_scheme_refusal_test_one(13, NULL);
+        ret = picowt_baton_scheme_refusal_test_one(14, NULL);
     }
 
     return ret;
@@ -550,28 +648,29 @@ int picowt_baton_scheme_test(void)
 
 int picowt_baton_authority_test(void)
 {
-    return picowt_baton_test_one_ex(14, "/baton?baton=240", 0, 2000000, NULL, NULL,
+    return picowt_baton_test_one_ex(15, "/baton?baton=240", 0, 2000000, NULL, NULL,
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, "", NULL, 0, 0, 1);
 }
 
 int picowt_baton_origin_test(void)
 {
-    return picowt_baton_test_one_ex(15, "/baton?baton=240", 0, 2000000, NULL, NULL,
+    return picowt_baton_test_one_ex(16, "/baton?baton=240", 0, 2000000, NULL, NULL,
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, "", 0, 0, 1);
 }
 
 int picowt_baton_settings_test(void)
 {
-    return picowt_baton_test_one_ex(16, "/baton?baton=240", 0, 2000000, NULL, NULL,
+    return picowt_baton_test_one_ex(17, "/baton?baton=240", 0, 2000000, NULL, NULL,
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 1, 0, 0);
 }
 
 int picowt_baton_alpn_test(void)
 {
     picohttp_server_path_item_t bad_alpn_table[1] = {
-        { "/baton", 6, wt_baton_bad_alpn_callback, &baton_test_ctx, H3ZERO_WEBTRANSPORT_H3_PROTOCOL }
+        { "/baton", 6, wt_baton_bad_alpn_callback, &baton_test_ctx,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL, sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1 }
     };
-    return picowt_baton_test_one_ex(17, "/baton?baton=240", 0, 0, NULL, NULL,
+    return picowt_baton_test_one_ex(18, "/baton?baton=240", 0, 0, NULL, NULL,
         bad_alpn_table, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL,
         0, H3ZERO_WEBTRANSPORT_ALPN_ERROR, 0);
 }
@@ -721,15 +820,6 @@ int picowt_requirements_test(void)
 
     return ret;
 }
-
-int h3zero_set_test_context(picoquic_quic_t** quic, picoquic_cnx_t** cnx, h3zero_callback_ctx_t** h3_ctx, uint64_t* simulated_time);
-int h3zero_process_request_frame(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* stream_ctx,
-    h3zero_callback_ctx_t* app_ctx);
-int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
-    uint64_t stream_id, uint8_t* bytes, size_t length,
-    picoquic_call_back_event_t fin_or_event,
-    h3zero_stream_ctx_t* stream_ctx,
-    h3zero_callback_ctx_t* ctx);
 
 static int picowt_reset_error_case(uint64_t app_error, uint64_t h3_error, int expect_success)
 {
@@ -1593,7 +1683,8 @@ static int picowt_session_limit_case(uint64_t local_flow_control,
     uint64_t simulated_time = 0;
     picowt_session_limit_test_ctx_t test_ctx = { 0 };
     picohttp_server_path_item_t path_table[1] = {
-        { "/baton", 6, picowt_session_limit_callback, &test_ctx, H3ZERO_WEBTRANSPORT_H3_PROTOCOL }
+        { "/baton", 6, picowt_session_limit_callback, &test_ctx,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL, sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1 }
     };
     int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
 
