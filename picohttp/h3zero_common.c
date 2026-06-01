@@ -63,6 +63,14 @@ static int h3zero_webtransport_flow_control_is_enabled(const h3zero_callback_ctx
 		h3zero_settings_enable_webtransport_flow_control(&ctx->settings));
 }
 
+int h3zero_origin_validator_allow_all(
+	const uint8_t* UNUSED(origin), size_t UNUSED(origin_length),
+	const uint8_t* UNUSED(authority), size_t UNUSED(authority_length),
+	void* UNUSED(origin_validator_ctx))
+{
+	return 0;
+}
+
 static int h3zero_settings_validate_webtransport_0rtt(
 	const h3zero_settings_t* remembered, const h3zero_settings_t* received)
 {
@@ -1470,6 +1478,18 @@ int h3zero_process_request_frame(
 							stream_ctx->ps.stream_state.header.protocol,
 							stream_ctx->ps.stream_state.header.protocol_length));
 					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
+				}
+				else if (is_webtransport &&
+					(path_desc->origin_validator == NULL ||
+						path_desc->origin_validator(stream_ctx->ps.stream_state.header.origin,
+							stream_ctx->ps.stream_state.header.origin_length,
+							stream_ctx->ps.stream_state.header.authority,
+							stream_ctx->ps.stream_state.header.authority_length,
+							path_desc->origin_validator_ctx) != 0)) {
+					picoquic_log_app_message(cnx,
+						"WebTransport CONNECT origin rejected on stream: %"PRIu64 ", path:%s",
+						stream_ctx->stream_id, path_desc->path);
+					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "403", H3ZERO_USER_AGENT_STRING);
 				}
 				else {
 					if (is_webtransport && app_ctx->nb_webtransport_sessions > 0 &&

@@ -681,6 +681,7 @@ int picowt_baton_scheme_test(void);
 int picowt_baton_authority_test(void);
 int picowt_baton_path_test(void);
 int picowt_baton_origin_test(void);
+int picowt_baton_origin_policy_test(void);
 int picowt_baton_settings_test(void);
 int picowt_baton_alpn_test(void);
 int picowt_protocol_select_test(void);

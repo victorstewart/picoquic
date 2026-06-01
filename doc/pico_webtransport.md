@@ -73,7 +73,10 @@ requirements are:
    configuring a "path table". Each path specifies a local URL, a path callback
    function, a path callback context, and the required Extended CONNECT
    protocol `webtransport-h3`, per `picohttp_server_path_item_t` in
-   `h3zero_common.h`.
+   `h3zero_common.h`. WebTransport paths also need an Origin policy callback.
+   The demo baton app uses `h3zero_origin_validator_allow_all` as an explicit
+   test/demo policy; production applications should replace it with an
+   allowlist validator.
 
  * Run the server socket loop connected to the picoquic context.
 

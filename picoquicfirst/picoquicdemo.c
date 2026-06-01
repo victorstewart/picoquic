@@ -279,7 +279,10 @@ picohttp_server_path_item_t path_item_list[2] =
         wt_baton_callback,
         NULL,
         H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
-        sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1
+        sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1,
+        0,
+        h3zero_origin_validator_allow_all,
+        NULL
     }
 };
 

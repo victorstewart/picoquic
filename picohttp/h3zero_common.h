@@ -61,6 +61,10 @@ extern "C" {
         picohttp_call_back_event_t fin_or_event,
         struct st_h3zero_stream_ctx_t* stream_ctx,
         void * path_app_ctx);
+    typedef int (*picohttp_origin_validator_fn)(
+        const uint8_t* origin, size_t origin_length,
+        const uint8_t* authority, size_t authority_length,
+        void* origin_validator_ctx);
 
     /* Define the table of special-purpose paths used for POST, REST, or connect queries */
     /* TODO: is there a need for path context? */
@@ -73,7 +77,14 @@ extern "C" {
         char const* connect_protocol;
         size_t connect_protocol_length;
         unsigned int accept_legacy_webtransport : 1;
+        picohttp_origin_validator_fn origin_validator;
+        void* origin_validator_ctx;
     } picohttp_server_path_item_t;
+
+    int h3zero_origin_validator_allow_all(
+        const uint8_t* origin, size_t origin_length,
+        const uint8_t* authority, size_t authority_length,
+        void* origin_validator_ctx);
 
     /* Define stream context common to http 3 and http 09 callbacks
     */
