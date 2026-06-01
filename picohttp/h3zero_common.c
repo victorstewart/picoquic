@@ -1149,6 +1149,44 @@ int h3zero_post_data_or_fin(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
 	return ret;
 }
 
+static int h3zero_server_bidir_use_wt_parser(h3zero_callback_ctx_t* ctx,
+	h3zero_stream_ctx_t* stream_ctx, uint8_t* bytes, size_t length)
+{
+	int ret = 0;
+	h3zero_data_stream_state_t* stream_state = &stream_ctx->ps.stream_state;
+
+	if (stream_state->stream_type == h3zero_frame_webtransport_stream) {
+		ret = 1;
+	}
+	else if (stream_state->stream_type == UINT64_MAX &&
+		!stream_state->is_web_transport &&
+		!stream_state->header_found &&
+		!stream_state->frame_prefix_parsed &&
+		bytes != NULL &&
+		length > 0) {
+		uint64_t stream_type = UINT64_MAX;
+		uint8_t frame_header[sizeof(stream_state->frame_header)];
+		size_t frame_header_read = stream_state->frame_header_read;
+
+		if (frame_header_read <= sizeof(frame_header)) {
+			memcpy(frame_header, stream_state->frame_header, frame_header_read);
+			(void)h3zero_varint_from_stream(bytes, bytes + length, &stream_type,
+				frame_header, &frame_header_read);
+			/* WT_STREAM (0x41) is a two-byte varint. If QUIC reassembly releases
+			 * only the first byte, keep it in the WT prefix parser when this H3
+			 * connection already has a WebTransport session prefix. */
+			ret = (stream_type == h3zero_frame_webtransport_stream ||
+				(stream_type == UINT64_MAX &&
+					ctx != NULL &&
+					ctx->stream_prefixes.first != NULL &&
+					frame_header_read == 1 &&
+					frame_header[0] == 0x40));
+		}
+	}
+
+	return ret;
+}
+
 static int h3zero_remote_wt_prefix_incomplete(uint64_t stream_id,
 	h3zero_data_stream_state_t* stream_state)
 {
@@ -2006,8 +2044,14 @@ int h3zero_callback_data(picoquic_cnx_t* cnx,
 				}
 				else {
 					/* Process incoming H3 server data */
-					ret = h3zero_process_h3_server_data(cnx, stream_id, bytes, length, fin_or_event, ctx,
-						stream_ctx);
+					if (h3zero_server_bidir_use_wt_parser(ctx, stream_ctx, bytes, length)) {
+						ret = h3zero_process_remote_stream(cnx, stream_id, bytes, length,
+							fin_or_event, stream_ctx, ctx);
+					}
+					else {
+						ret = h3zero_process_h3_server_data(cnx, stream_id, bytes, length, fin_or_event, ctx,
+							stream_ctx);
+					}
 				}
 			}
 			else {
