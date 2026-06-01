@@ -660,6 +660,7 @@ int picomask_udp_path_test(void);
 int picowt_wire_harness_test(void);
 int picowt_wire_fragment_test(void);
 int picowt_wire_malformed_builder_test(void);
+int picowt_wire_network_controls_test(void);
 int picowt_baton_basic_test(void);
 int picowt_baton_error_test(void);
 int picowt_baton_long_test(void);

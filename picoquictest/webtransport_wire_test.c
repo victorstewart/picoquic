@@ -86,12 +86,145 @@ typedef struct st_picowt_wire_malformed_sample_t {
     size_t payload_length;
 } picowt_wire_malformed_sample_t;
 
+typedef enum {
+    picowt_wire_packet_stream,
+    picowt_wire_packet_datagram
+} picowt_wire_packet_type_t;
+
+typedef struct st_picowt_wire_network_config_t {
+    uint64_t stream_loss_mask;
+    uint64_t datagram_loss_mask;
+    uint64_t base_delay;
+} picowt_wire_network_config_t;
+
+#define PICOWT_WIRE_NETWORK_QUEUE_SIZE 8
+#define PICOWT_WIRE_NETWORK_PACKET_SIZE 64
+
+typedef struct st_picowt_wire_network_packet_t {
+    picowt_wire_packet_type_t packet_type;
+    uint64_t sequence;
+    uint64_t arrival_time;
+    uint8_t bytes[PICOWT_WIRE_NETWORK_PACKET_SIZE];
+    size_t length;
+} picowt_wire_network_packet_t;
+
+typedef struct st_picowt_wire_network_t {
+    picowt_wire_network_config_t config;
+    uint64_t stream_loss_mask;
+    uint64_t datagram_loss_mask;
+    uint64_t next_sequence;
+    uint64_t packets_sent;
+    uint64_t packets_dropped;
+    picowt_wire_network_packet_t queue[PICOWT_WIRE_NETWORK_QUEUE_SIZE];
+    size_t queue_size;
+} picowt_wire_network_t;
+
 static int picowt_wire_expect_uint64(char const* what, uint64_t expected, uint64_t actual)
 {
     int ret = 0;
 
     if (expected != actual) {
         DBG_PRINTF("%s: expected 0x%" PRIx64 ", got 0x%" PRIx64, what, expected, actual);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static void picowt_wire_network_init(picowt_wire_network_t* network,
+    const picowt_wire_network_config_t* config)
+{
+    memset(network, 0, sizeof(picowt_wire_network_t));
+    network->config = *config;
+    network->stream_loss_mask = config->stream_loss_mask;
+    network->datagram_loss_mask = config->datagram_loss_mask;
+}
+
+static uint64_t* picowt_wire_network_loss_mask(picowt_wire_network_t* network,
+    picowt_wire_packet_type_t packet_type)
+{
+    return (packet_type == picowt_wire_packet_datagram) ?
+        &network->datagram_loss_mask : &network->stream_loss_mask;
+}
+
+static int picowt_wire_network_should_drop(uint64_t* loss_mask)
+{
+    uint64_t loss_bit = *loss_mask & 1ull;
+
+    *loss_mask >>= 1;
+    *loss_mask |= loss_bit << 63;
+
+    return (int)loss_bit;
+}
+
+static int picowt_wire_network_submit(picowt_wire_network_t* network,
+    picowt_wire_packet_type_t packet_type, const uint8_t* bytes, size_t length,
+    uint64_t current_time, uint64_t extra_delay)
+{
+    int ret = 0;
+
+    if (length > PICOWT_WIRE_NETWORK_PACKET_SIZE) {
+        ret = -1;
+    }
+    else if (picowt_wire_network_should_drop(
+        picowt_wire_network_loss_mask(network, packet_type))) {
+        network->packets_dropped++;
+    }
+    else if (network->queue_size >= PICOWT_WIRE_NETWORK_QUEUE_SIZE) {
+        ret = -1;
+    }
+    else {
+        uint64_t sequence = network->next_sequence++;
+        uint64_t arrival_time = current_time + network->config.base_delay + extra_delay;
+        size_t insert_index = network->queue_size;
+
+        while (insert_index > 0 &&
+            (network->queue[insert_index - 1].arrival_time > arrival_time ||
+                (network->queue[insert_index - 1].arrival_time == arrival_time &&
+                    network->queue[insert_index - 1].sequence > sequence))) {
+            network->queue[insert_index] = network->queue[insert_index - 1];
+            insert_index--;
+        }
+
+        network->queue[insert_index].packet_type = packet_type;
+        network->queue[insert_index].sequence = sequence;
+        network->queue[insert_index].arrival_time = arrival_time;
+        network->queue[insert_index].length = length;
+        if (length > 0) {
+            memcpy(network->queue[insert_index].bytes, bytes, length);
+        }
+        network->queue_size++;
+        network->packets_sent++;
+    }
+
+    return ret;
+}
+
+static int picowt_wire_network_pop(picowt_wire_network_t* network,
+    uint64_t current_time, picowt_wire_network_packet_t* packet)
+{
+    int ret = 0;
+
+    if (network->queue_size > 0 && network->queue[0].arrival_time <= current_time) {
+        *packet = network->queue[0];
+        memmove(network->queue, network->queue + 1,
+            (network->queue_size - 1) * sizeof(picowt_wire_network_packet_t));
+        network->queue_size--;
+        ret = 1;
+    }
+
+    return ret;
+}
+
+static int picowt_wire_network_expect_packet(
+    const picowt_wire_network_packet_t* packet, picowt_wire_packet_type_t packet_type,
+    const uint8_t* bytes, size_t length)
+{
+    int ret = 0;
+
+    if (packet->packet_type != packet_type ||
+        packet->length != length ||
+        memcmp(packet->bytes, bytes, length) != 0) {
         ret = -1;
     }
 
@@ -516,6 +649,78 @@ int picowt_wire_malformed_builder_test(void)
     }
     if (ret == 0) {
         ret = picowt_wire_malformed_qpack_test(&sample);
+    }
+
+    return ret;
+}
+
+int picowt_wire_network_controls_test(void)
+{
+    picowt_wire_network_config_t config = { 1, 1, 100 };
+    picowt_wire_network_t network;
+    picowt_wire_network_packet_t packet;
+    uint8_t stream_drop[] = { 0x41 };
+    uint8_t stream_late[] = { 0x41, 0x00, 0xa1 };
+    uint8_t stream_early[] = { 0x41, 0x00, 0xa0 };
+    uint8_t datagram_drop[] = { 0x00, 0xd0 };
+    uint8_t datagram_deliver[] = { 0x00, 0xd1 };
+    int ret;
+
+    picowt_wire_network_init(&network, &config);
+
+    ret = picowt_wire_network_submit(&network, picowt_wire_packet_stream,
+        stream_drop, sizeof(stream_drop), 100, 0);
+    if (ret == 0) {
+        ret = picowt_wire_expect_uint64("stream drops", 1, network.packets_dropped);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_network_submit(&network, picowt_wire_packet_stream,
+            stream_late, sizeof(stream_late), 100, 400);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_network_submit(&network, picowt_wire_packet_stream,
+            stream_early, sizeof(stream_early), 100, 0);
+    }
+    if (ret == 0 && picowt_wire_network_pop(&network, 200, &packet) != 1) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = picowt_wire_network_expect_packet(&packet, picowt_wire_packet_stream,
+            stream_early, sizeof(stream_early));
+    }
+    if (ret == 0 && picowt_wire_network_pop(&network, 200, &packet) != 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = picowt_wire_network_submit(&network, picowt_wire_packet_datagram,
+            datagram_drop, sizeof(datagram_drop), 100, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_uint64("datagram drops", 2, network.packets_dropped);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_network_submit(&network, picowt_wire_packet_datagram,
+            datagram_deliver, sizeof(datagram_deliver), 100, 20);
+    }
+    if (ret == 0 && picowt_wire_network_pop(&network, 220, &packet) != 1) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = picowt_wire_network_expect_packet(&packet, picowt_wire_packet_datagram,
+            datagram_deliver, sizeof(datagram_deliver));
+    }
+    if (ret == 0 && picowt_wire_network_pop(&network, 600, &packet) != 1) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = picowt_wire_network_expect_packet(&packet, picowt_wire_packet_stream,
+            stream_late, sizeof(stream_late));
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_uint64("packets sent", 3, network.packets_sent);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_uint64("packets queued", 0, network.queue_size);
     }
 
     return ret;
