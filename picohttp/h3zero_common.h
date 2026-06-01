@@ -214,6 +214,7 @@ extern "C" {
         /* Settings */
         h3zero_settings_t settings;
         h3zero_settings_t local_settings;
+        h3zero_settings_t settings_0rtt;
         /* connection wide tracking of stream prefixes */
         h3zero_stream_prefixes_t stream_prefixes;
         uint64_t last_datagram_prefix;
@@ -222,6 +223,7 @@ extern "C" {
         unsigned int no_print : 1;
         unsigned int connection_closed : 1;
         unsigned int settings_sent : 1;
+        unsigned int settings_0rtt_received : 1;
         unsigned int goaway_received : 1;
         int nb_open_streams;
         int nb_open_files;

@@ -63,6 +63,20 @@ static int h3zero_webtransport_flow_control_is_enabled(const h3zero_callback_ctx
 		h3zero_settings_enable_webtransport_flow_control(&ctx->settings));
 }
 
+static int h3zero_settings_validate_webtransport_0rtt(
+	const h3zero_settings_t* remembered, const h3zero_settings_t* received)
+{
+	/* Draft-15 inherits HTTP/3 0-RTT SETTINGS safety: a server that
+	 * accepts 0-RTT must not reduce remembered WebTransport session or
+	 * initial flow-control limits.
+	 */
+	return (remembered != NULL && received != NULL &&
+		(remembered->webtransport_max_sessions > received->webtransport_max_sessions ||
+			remembered->wt_initial_max_data > received->wt_initial_max_data ||
+			remembered->wt_initial_max_streams_uni > received->wt_initial_max_streams_uni ||
+			remembered->wt_initial_max_streams_bidi > received->wt_initial_max_streams_bidi));
+}
+
 static void h3zero_notify_webtransport_goaway(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx)
 {
 	for (h3zero_stream_prefix_t* prefix_ctx = ctx->stream_prefixes.first;
@@ -643,6 +657,12 @@ static uint8_t* h3zero_parse_control_stream(uint8_t* bytes, uint8_t* bytes_max,
 					decoded_last = h3zero_settings_components_decode(stream_state->current_frame,
 						stream_state->current_frame + stream_state->current_frame_length, &ctx->settings);
 					if (decoded_last == NULL) {
+						*error_found = H3ZERO_SETTINGS_ERROR;
+						bytes = NULL;
+					}
+					else if (ctx->settings_0rtt_received &&
+						h3zero_settings_validate_webtransport_0rtt(&ctx->settings_0rtt,
+							&ctx->settings)) {
 						*error_found = H3ZERO_SETTINGS_ERROR;
 						bytes = NULL;
 					}

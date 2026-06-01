@@ -136,6 +136,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_exporter", picowt_exporter_test },
     { "picowt_tp", picowt_tp_test },
     { "picowt_requirements", picowt_requirements_test },
+    { "picowt_zero_rtt_rules", picowt_zero_rtt_rules_test },
     { "picowt_server_capabilities", picowt_server_capabilities_test },
     { "picowt_client_capabilities", picowt_client_capabilities_test },
     { "quicperf_parse", quicperf_parse_test },

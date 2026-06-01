@@ -473,6 +473,13 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
     else if (ctx->goaway_received) {
         ret = H3ZERO_REQUEST_REJECTED;
     }
+    else if (cnx != NULL && picoquic_get_cnx_state(cnx) < picoquic_state_client_almost_ready) {
+        /* Draft-15 forbids initiating WebTransport CONNECT in 0-RTT, even
+         * when HTTP/3 settings were retained from the previous session. The
+         * client-almost-ready state is past the early-data send window.
+         */
+        ret = H3ZERO_MISSING_SETTINGS;
+    }
     else if (!h3zero_webtransport_is_ready(cnx, &ctx->settings)) {
         ret = H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET;
     }
