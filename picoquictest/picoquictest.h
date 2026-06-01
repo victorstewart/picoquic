@@ -381,6 +381,7 @@ int h3zero_wt_zero_buffer_test(void);
 int h3zero_wt_datagram_payload_test(void);
 int h3zero_wt_datagram_drop_policy_test(void);
 int h3zero_wt_datagram_multi_session_test(void);
+int h3zero_wt_datagram_post_close_test(void);
 int h3zero_wt_prefix_fragment_test(void);
 int h3zero_wt_first_payload_split_test(void);
 int h3zero_wt_offset_reassembly_test(void);
