@@ -2800,6 +2800,67 @@ int picowt_close_message_test(void)
     return ret;
 }
 
+int picowt_close_message_boundary_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    uint8_t capsule_buffer[32];
+    uint8_t short_payload[3] = { 0, 0, 0 };
+    picowt_capsule_t capsule = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    if (ret == 0) {
+        size_t capsule_length = picowt_format_test_capsule(capsule_buffer,
+            sizeof(capsule_buffer), picowt_capsule_close_webtransport_session,
+            sizeof(short_payload), short_payload);
+
+        if (capsule_length == 0 ||
+            picowt_receive_capsule(cnx, capsule_buffer,
+                capsule_buffer + capsule_length, &capsule) == 0) {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+    if (ret == 0) {
+        size_t capsule_length = picowt_format_close_test_capsule(
+            capsule_buffer, sizeof(capsule_buffer), 0, 0);
+
+        if (capsule_length == 0 ||
+            picowt_receive_capsule(cnx, capsule_buffer,
+                capsule_buffer + capsule_length, &capsule) != 0 ||
+            capsule.error_code != 0 ||
+            capsule.error_msg_len != 0 ||
+            capsule.error_msg == NULL) {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+    if (ret == 0) {
+        size_t capsule_length = picowt_format_close_test_capsule(
+            capsule_buffer, sizeof(capsule_buffer), 0x12345678, 1);
+
+        if (capsule_length == 0 ||
+            picowt_receive_capsule(cnx, capsule_buffer,
+                capsule_buffer + capsule_length, &capsule) != 0 ||
+            capsule.error_code != 0x12345678 ||
+            capsule.error_msg_len != 1 ||
+            capsule.error_msg == NULL ||
+            capsule.error_msg[0] != 'm') {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    h3zero_callback_delete_context(cnx, h3_ctx);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 typedef struct st_picowt_goaway_test_ctx_t {
     int nb_drains;
 } picowt_goaway_test_ctx_t;
