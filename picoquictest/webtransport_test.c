@@ -3160,6 +3160,96 @@ static size_t picowt_format_test_capsule(uint8_t* buffer, size_t buffer_size,
     return (bytes == NULL) ? 0 : (size_t)(bytes - buffer);
 }
 
+static int picowt_capsule_framing_check_close(picowt_capsule_t* capsule,
+    uint32_t expected_error, const uint8_t* expected_msg,
+    size_t expected_msg_len)
+{
+    return (capsule->h3_capsule.is_stored &&
+        capsule->h3_capsule.capsule_type ==
+        picowt_capsule_close_webtransport_session &&
+        capsule->error_code == expected_error &&
+        capsule->error_msg_len == expected_msg_len &&
+        (expected_msg_len == 0 ||
+            memcmp(capsule->error_msg, expected_msg, expected_msg_len) == 0)) ? 0 : -1;
+}
+
+int picowt_capsule_framing_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    uint8_t buffer[64];
+    uint8_t unknown_payload[] = { 0xa5 };
+    uint8_t close_payload[] = { 0, 0, 0, 7, 'o', 'k' };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    if (ret == 0) {
+        picowt_capsule_t capsule = { 0 };
+        size_t drain_length = picowt_format_test_capsule(buffer,
+            sizeof(buffer), picowt_capsule_drain_webtransport_session,
+            0, NULL);
+        size_t close_length = picowt_format_test_capsule(
+            buffer + drain_length, sizeof(buffer) - drain_length,
+            picowt_capsule_close_webtransport_session,
+            sizeof(close_payload), close_payload);
+
+        if (drain_length == 0 || close_length == 0 ||
+            picowt_receive_capsule(cnx, buffer,
+                buffer + drain_length + close_length, &capsule) != 0 ||
+            picowt_capsule_framing_check_close(&capsule, 7,
+                close_payload + 4, 2) != 0) {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+    if (ret == 0) {
+        size_t close_length = picowt_format_test_capsule(buffer,
+            sizeof(buffer), picowt_capsule_close_webtransport_session,
+            sizeof(close_payload), close_payload);
+
+        if (close_length == 0) {
+            ret = -1;
+        }
+        for (size_t split = 1; ret == 0 && split < close_length; split++) {
+            picowt_capsule_t capsule = { 0 };
+
+            if (picowt_receive_capsule(cnx, buffer, buffer + split,
+                &capsule) != 0 || capsule.h3_capsule.is_stored ||
+                picowt_receive_capsule(cnx, buffer + split,
+                    buffer + close_length, &capsule) != 0 ||
+                picowt_capsule_framing_check_close(&capsule, 7,
+                    close_payload + 4, 2) != 0) {
+                ret = -1;
+            }
+            picowt_release_capsule(&capsule);
+        }
+    }
+    if (ret == 0) {
+        picowt_capsule_t capsule = { 0 };
+        size_t unknown_length = picowt_format_test_capsule(buffer,
+            sizeof(buffer), 0x1f, sizeof(unknown_payload),
+            unknown_payload);
+
+        if (unknown_length == 0 ||
+            picowt_receive_capsule(cnx, buffer, buffer + unknown_length,
+                &capsule) != 0 ||
+            !capsule.h3_capsule.is_stored ||
+            capsule.h3_capsule.capsule_type != 0x1f ||
+            capsule.h3_capsule.capsule_length != sizeof(unknown_payload)) {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    h3zero_callback_delete_context(cnx, h3_ctx);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 int picowt_receive_drain_test(void)
 {
     picoquic_quic_t* quic = NULL;

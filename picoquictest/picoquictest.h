@@ -711,6 +711,7 @@ int picowt_baton_settings_test(void);
 int picowt_baton_alpn_test(void);
 int picowt_protocol_select_test(void);
 int picowt_drain_test(void);
+int picowt_capsule_framing_test(void);
 int picowt_receive_drain_test(void);
 int picowt_flow_control_capsule_test(void);
 int picowt_session_limit_test(void);
