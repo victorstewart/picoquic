@@ -923,7 +923,7 @@ static int h3zero_check_frame_type(h3zero_data_stream_state_t* stream_state,
 		 * stream */
 		if (stream_state->header_found) {
 			/* protocol error */
-			*error_found = H3ZERO_FRAME_UNEXPECTED;
+			*error_found = H3ZERO_FRAME_ERROR;
 			ret = -1;
 		}
 	}

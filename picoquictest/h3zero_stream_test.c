@@ -822,6 +822,117 @@ int h3zero_wt_offset_reassembly_test(void)
     return ret;
 }
 
+static uint8_t* h3zero_wt_format_headers_frame(uint8_t* bytes,
+    uint8_t* bytes_max)
+{
+    uint8_t qpack[256];
+    uint8_t* qpack_end = h3zero_create_response_header_frame_ex(qpack,
+        qpack + sizeof(qpack), h3zero_content_type_text_html,
+        "test wt invalid placement", NULL);
+
+    if (qpack_end == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            h3zero_frame_header)) == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            qpack_end - qpack)) == NULL ||
+        bytes + (qpack_end - qpack) > bytes_max) {
+        bytes = NULL;
+    }
+    else {
+        memcpy(bytes, qpack, qpack_end - qpack);
+        bytes += qpack_end - qpack;
+    }
+
+    return bytes;
+}
+
+static uint8_t* h3zero_wt_format_data_frame(uint8_t* bytes,
+    uint8_t* bytes_max)
+{
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            h3zero_frame_data)) == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max, 1)) == NULL ||
+        bytes >= bytes_max) {
+        bytes = NULL;
+    }
+    else {
+        *bytes++ = 0xda;
+    }
+
+    return bytes;
+}
+
+static uint8_t* h3zero_wt_format_bidi_prefix(uint8_t* bytes,
+    uint8_t* bytes_max, uint64_t session_id)
+{
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            h3zero_frame_webtransport_stream)) != NULL) {
+        bytes = picoquic_frames_varint_encode(bytes, bytes_max, session_id);
+    }
+
+    return bytes;
+}
+
+static int h3zero_wt_parse_invalid_placement(uint8_t* bytes, size_t length)
+{
+    h3zero_data_stream_state_t stream_state = { 0 };
+    uint8_t* p = bytes;
+    uint8_t* p_max = bytes + length;
+    size_t available_data = 0;
+    uint64_t error_found = 0;
+    int ret = 0;
+
+    while (p != NULL && p < p_max) {
+        available_data = 0;
+        p = h3zero_parse_data_stream(p, p_max, &stream_state,
+            &available_data, &error_found);
+        if (p != NULL) {
+            p += available_data;
+        }
+    }
+    if (p != NULL || error_found != H3ZERO_FRAME_ERROR) {
+        DBG_PRINTF("Invalid WT_STREAM placement error=%" PRIu64,
+            error_found);
+        ret = -1;
+    }
+
+    h3zero_delete_data_stream_state(&stream_state);
+    return ret;
+}
+
+int h3zero_wt_invalid_frame_placement_test(void)
+{
+    uint8_t buffer[512];
+    uint8_t* bytes = h3zero_wt_format_headers_frame(buffer,
+        buffer + sizeof(buffer));
+    int ret = 0;
+
+    if (bytes == NULL ||
+        (bytes = h3zero_wt_format_bidi_prefix(bytes, buffer + sizeof(buffer),
+            4)) == NULL) {
+        ret = -1;
+    }
+    else {
+        ret = h3zero_wt_parse_invalid_placement(buffer, bytes - buffer);
+    }
+
+    if (ret == 0) {
+        bytes = h3zero_wt_format_headers_frame(buffer, buffer + sizeof(buffer));
+        if (bytes == NULL ||
+            (bytes = h3zero_wt_format_data_frame(bytes,
+                buffer + sizeof(buffer))) == NULL ||
+            (bytes = h3zero_wt_format_bidi_prefix(bytes,
+                buffer + sizeof(buffer), 4)) == NULL) {
+            ret = -1;
+        }
+        else {
+            ret = h3zero_wt_parse_invalid_placement(buffer, bytes - buffer);
+        }
+    }
+
+    return ret;
+}
+
 static int h3zero_wt_prefix_fin_case(int is_bidir, uint8_t* input, size_t input_length)
 {
     picoquic_quic_t* quic = NULL;
