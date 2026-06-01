@@ -58,6 +58,7 @@ static const picoquic_test_def_t test_table[] = {
     { "qpack_huffman", qpack_huffman_test },
     { "qpack_huffman_base", qpack_huffman_base_test},
     { "h3zero_parse_qpack", h3zero_parse_qpack_test },
+    { "h3zero_qpack_duplicate", h3zero_qpack_duplicate_test },
     { "h3zero_prepare_qpack", h3zero_prepare_qpack_test },
     { "h3zero_user_agent", h3zero_user_agent_test },
     { "h3zero_wt_protocol_response", h3zero_wt_protocol_response_test },

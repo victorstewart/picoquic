@@ -967,6 +967,77 @@ int h3zero_parse_qpack_test(void)
     return ret;
 }
 
+static uint8_t qpack_connect_duplicate_path[] = {
+    0xC0 | 1
+};
+
+static uint8_t qpack_connect_duplicate_authority[] = {
+    0x50 | 0,
+    CONNECT_TEST_AUTHORITY_LEN, CONNECT_TEST_AUTHORITY
+};
+
+static uint8_t qpack_connect_duplicate_scheme[] = {
+    0xC0 | 23
+};
+
+static uint8_t qpack_connect_duplicate_protocol[] = {
+    0x27, CONNECT_TEST_PROTOCOL_PSH_LEN - 7, CONNECT_TEST_PROTOCOL_PSH,
+    CONNECT_TEST_PROTOCOL_WTP_LEN, CONNECT_TEST_PROTOCOL_WTP
+};
+
+typedef struct st_qpack_duplicate_test_case_t {
+    uint8_t* duplicate;
+    size_t duplicate_length;
+} qpack_duplicate_test_case_t;
+
+static qpack_duplicate_test_case_t qpack_duplicate_test_case[] = {
+    { qpack_connect_duplicate_path, sizeof(qpack_connect_duplicate_path) },
+    { qpack_connect_duplicate_authority, sizeof(qpack_connect_duplicate_authority) },
+    { qpack_connect_duplicate_scheme, sizeof(qpack_connect_duplicate_scheme) },
+    { qpack_connect_duplicate_protocol, sizeof(qpack_connect_duplicate_protocol) }
+};
+
+static int h3zero_parse_qpack_duplicate_test_one(size_t i)
+{
+    uint8_t buffer[256];
+    h3zero_header_parts_t parts = { 0 };
+    uint8_t* parsed = NULL;
+    size_t length = sizeof(qpack_connect_webtransport) +
+        qpack_duplicate_test_case[i].duplicate_length;
+    int ret = 0;
+
+    if (length > sizeof(buffer)) {
+        ret = -1;
+    }
+    else {
+        memcpy(buffer, qpack_connect_webtransport, sizeof(qpack_connect_webtransport));
+        memcpy(buffer + sizeof(qpack_connect_webtransport),
+            qpack_duplicate_test_case[i].duplicate,
+            qpack_duplicate_test_case[i].duplicate_length);
+
+        parsed = h3zero_parse_qpack_header_frame(buffer, buffer + length, &parts);
+        if (parsed != NULL) {
+            DBG_PRINTF("Duplicate QPACK case %d parsed unexpectedly", (int)i);
+            ret = -1;
+        }
+    }
+
+    h3zero_release_header_parts(&parts);
+    return ret;
+}
+
+int h3zero_qpack_duplicate_test(void)
+{
+    int ret = 0;
+
+    for (size_t i = 0; ret == 0 &&
+        i < sizeof(qpack_duplicate_test_case) / sizeof(qpack_duplicate_test_case_t); i++) {
+        ret = h3zero_parse_qpack_duplicate_test_one(i);
+    }
+
+    return ret;
+}
+
 /*
  * Prepare frames of the different supported types, and 
  * verify that they can be decoded as expected
