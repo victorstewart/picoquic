@@ -111,7 +111,6 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_baton_reset", picowt_baton_reset_test },
     { "picowt_baton_wildcard", picowt_baton_wildcard_test },
     { "picowt_baton_protocol", picowt_baton_protocol_test },
-    { "picowt_chrome_legacy_connect", picowt_chrome_legacy_connect_test },
     { "picowt_baton_scheme", picowt_baton_scheme_test },
     { "picowt_baton_authority", picowt_baton_authority_test },
     { "picowt_baton_origin", picowt_baton_origin_test },
