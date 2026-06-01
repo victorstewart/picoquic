@@ -2,6 +2,10 @@
 
 Implementation of the web transport protocol on top of picoquic and h3zero implementation of HTTP3.
 
+The staged WebTransport conformance plan, CTest labels, and strict versus browser
+compatibility test policy are documented in
+[`webtransport_conformance.md`](webtransport_conformance.md).
+
 ## Pico Web Transport architecture
 
 The web transport implementation runs on top of the "h3zero" implementation of HTTP3,
