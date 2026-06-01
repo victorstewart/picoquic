@@ -1658,19 +1658,22 @@ int picowt_baton_alpn_test(void)
         0, H3ZERO_WEBTRANSPORT_ALPN_ERROR, 0);
 }
 
-static int picowt_protocol_select_test_one(char const* wt_available_protocols, int expect_success)
+static int picowt_protocol_select_test_one_ex(
+    char const* wt_available_protocols, char const* supported,
+    char const* expected_protocol)
 {
     h3zero_stream_ctx_t stream_ctx;
     int ret = 0;
+    int expect_success = (expected_protocol != NULL);
 
     memset(&stream_ctx, 0, sizeof(stream_ctx));
     stream_ctx.ps.stream_state.header.wt_available_protocols = (uint8_t const*)wt_available_protocols;
     stream_ctx.ps.stream_state.header.wt_available_protocols_length = strlen(wt_available_protocols);
 
-    if (picowt_select_wt_protocol(&stream_ctx, PICOWT_BATON_ALPN_FILTER) == 0) {
+    if (picowt_select_wt_protocol(&stream_ctx, supported) == 0) {
         if (!expect_success ||
             stream_ctx.ps.stream_state.wt_protocol == NULL ||
-            strcmp(stream_ctx.ps.stream_state.wt_protocol, PICOWT_BATON_ALPN) != 0) {
+            strcmp(stream_ctx.ps.stream_state.wt_protocol, expected_protocol) != 0) {
             ret = -1;
         }
     }
@@ -1684,10 +1687,25 @@ static int picowt_protocol_select_test_one(char const* wt_available_protocols, i
     return ret;
 }
 
+static int picowt_protocol_select_test_one(char const* wt_available_protocols, int expect_success)
+{
+    return picowt_protocol_select_test_one_ex(wt_available_protocols,
+        PICOWT_BATON_ALPN_FILTER,
+        expect_success ? PICOWT_BATON_ALPN : NULL);
+}
+
 int picowt_protocol_select_test(void)
 {
-    int ret = picowt_protocol_select_test_one("\"wrong-end-baton\", \"devious-baton-00\"", 1);
+    int ret = picowt_protocol_select_test_one("\"devious-baton-00\"", 1);
 
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one_ex(
+            "\"good-end-baton\", \"devious-baton-00\"",
+            PICOWT_BATON_ALPN_FILTER, "good-end-baton");
+    }
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one("\"wrong-end-baton\", \"devious-baton-00\"", 1);
+    }
     if (ret == 0) {
         ret = picowt_protocol_select_test_one("\"wrong-end-baton\";v=\"x,y\", \"devious-baton-00\";v=1", 1);
     }
@@ -1696,6 +1714,16 @@ int picowt_protocol_select_test(void)
     }
     if (ret == 0) {
         ret = picowt_protocol_select_test_one("\"devious-baton-00\", wrong-end-baton", 0);
+    }
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one("\"\", \"devious-baton-00\"", 0);
+    }
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one("\"wrong-end-baton\", \"devious-baton-00\\q\"", 0);
+    }
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one_ex("\"devious\\\\baton\"",
+            "devious\\baton", "devious\\baton");
     }
     return ret;
 }

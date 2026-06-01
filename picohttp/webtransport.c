@@ -438,7 +438,12 @@ int picowt_select_wt_protocol(h3zero_stream_ctx_t* stream_ctx, char const* suppo
             a = NULL;
             break;
         }
-        if (candidate_length > 0 && selected_length == 0 &&
+        if (candidate_length == 0) {
+            selected_length = 0;
+            a = NULL;
+            break;
+        }
+        if (selected_length == 0 &&
             picowt_protocol_is_supported(supported, candidate, candidate_length)) {
             memcpy(selected, candidate, candidate_length);
             selected[candidate_length] = 0;
