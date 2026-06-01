@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { createHash, X509Certificate } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const ROOT = resolve(new URL("../../..", import.meta.url).pathname);
 const BATON = process.env.PICO_BATON_BIN || join(ROOT, "build", "pico_baton");
-const CERT = process.env.PICOQUIC_WT_CERT || join(ROOT, "certs", "cert.pem");
-const KEY = process.env.PICOQUIC_WT_KEY || join(ROOT, "certs", "key.pem");
 const WEB_ROOT = process.env.PICOQUIC_WT_WEB_ROOT || join(ROOT, "tests", "webtransport", "browser");
 const PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const CDP_PORT = Number(process.env.PICOQUIC_WT_CDP_PORT || 9223);
-const TARGET_URL =
-  `https://localhost:${PORT}/index.html?autorun=1&timeoutMs=${TIMEOUT_MS}` +
-  `&protocol=${encodeURIComponent(PROTOCOL)}` +
-  (REQUIRE_DATAGRAM ? "" : "&requireDatagram=0");
+const WT_URL = process.env.PICOQUIC_WT_URL ||
+  `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
+const PAGE_URL = process.env.PICOQUIC_WT_PAGE_URL ||
+  pathToFileURL(join(WEB_ROOT, "index.html")).href;
 
 const chromeNames = [
   process.env.CHROME_BIN,
@@ -61,6 +61,78 @@ function assertFile(path, label) {
   if (!existsSync(path)) {
     throw new Error(`${label} not found: ${path}`);
   }
+}
+
+function runChecked(command, args) {
+  const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+  let stderr = "";
+  return new Promise((resolveRun, rejectRun) => {
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+    child.once("exit", (code, signal) => {
+      if (code === 0) {
+        resolveRun();
+      } else {
+        rejectRun(new Error(`${command} failed: code=${code} signal=${signal} ${stderr.trim()}`));
+      }
+    });
+  });
+}
+
+async function getCertificateConfig(workDir) {
+  const envCert = process.env.PICOQUIC_WT_CERT;
+  const envKey = process.env.PICOQUIC_WT_KEY;
+  if (envCert || envKey) {
+    const cert = envCert || join(ROOT, "certs", "cert.pem");
+    const key = envKey || join(ROOT, "certs", "key.pem");
+    assertFile(cert, "certificate");
+    assertFile(key, "private key");
+    return {
+      cert,
+      key,
+      hash: process.env.PICOQUIC_WT_CERT_HASH || certHash(cert)
+    };
+  }
+
+  const certDir = join(workDir, "cert");
+  const key = join(certDir, "key.pem");
+  const cert = join(certDir, "cert.pem");
+  rmSync(certDir, { recursive: true, force: true });
+  mkdirSync(certDir, { recursive: true });
+  await runChecked("openssl", [
+    "ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", key
+  ]);
+  await runChecked("openssl", [
+    "req", "-new", "-x509",
+    "-key", key,
+    "-out", cert,
+    "-days", "13",
+    "-subj", "/CN=localhost",
+    "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1",
+    "-addext", "keyUsage=digitalSignature",
+    "-addext", "extendedKeyUsage=serverAuth"
+  ]);
+
+  return { cert, key, hash: certHash(cert) };
+}
+
+function certHash(certPath) {
+  const cert = new X509Certificate(readFileSync(certPath));
+  return createHash("sha256").update(cert.raw).digest("base64url");
+}
+
+function buildPageUrl(certificateHash) {
+  const url = new URL(PAGE_URL);
+  url.searchParams.set("autorun", "1");
+  url.searchParams.set("timeoutMs", String(TIMEOUT_MS));
+  url.searchParams.set("url", WT_URL);
+  url.searchParams.set("protocol", PROTOCOL);
+  url.searchParams.set("certHash", certificateHash);
+  if (!REQUIRE_DATAGRAM) {
+    url.searchParams.set("requireDatagram", "0");
+  }
+  return url.href;
 }
 
 function waitForServer(child) {
@@ -118,8 +190,8 @@ async function waitForCdpEndpoint() {
   throw new Error("Chrome DevTools endpoint did not become ready");
 }
 
-async function newTarget(endpoint, url) {
-  const targetUrl = `${endpoint}/json/new?${encodeURIComponent(url)}`;
+async function newTarget(endpoint) {
+  const targetUrl = `${endpoint}/json/new?about%3Ablank`;
   let response = await fetch(targetUrl, { method: "PUT" });
   if (!response.ok) {
     response = await fetch(targetUrl);
@@ -187,7 +259,11 @@ async function waitForHarness(cdp) {
     }
     await sleep(100);
   }
-  throw new Error("browser harness did not start");
+  const diagnostic = await cdp.send("Runtime.evaluate", {
+    expression: "({ href: location.href, readyState: document.readyState, title: document.title, body: document.body ? document.body.innerText.slice(0, 500) : '' })",
+    returnByValue: true
+  });
+  throw new Error(`browser harness did not start: ${JSON.stringify(diagnostic.result.value)}`);
 }
 
 async function readHarnessResult(cdp) {
@@ -237,8 +313,6 @@ function assertHarnessResult(result) {
 
 async function main() {
   assertFile(BATON, "pico_baton");
-  assertFile(CERT, "certificate");
-  assertFile(KEY, "private key");
 
   const chrome = findChrome();
   if (!chrome) {
@@ -246,13 +320,27 @@ async function main() {
   }
 
   const profile = mkdtempSync(join(tmpdir(), "picoquic-wt-chrome-"));
-  const server = spawn(BATON, [
+  const certConfig = await getCertificateConfig(profile);
+  const targetUrl = buildPageUrl(certConfig.hash);
+  const serverArgs = [
     "-p", String(PORT),
-    "-c", CERT,
-    "-k", KEY,
+    "-c", certConfig.cert,
+    "-k", certConfig.key,
     "-w", WEB_ROOT,
     "/baton"
-  ], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
+  ];
+  if (process.env.PICOQUIC_WT_SERVER_LOG) {
+    const logTarget = process.env.PICOQUIC_WT_SERVER_LOG === "1" ?
+      "-" : process.env.PICOQUIC_WT_SERVER_LOG;
+    serverArgs.splice(serverArgs.length - 1, 0, "-l", logTarget, "-L");
+  }
+  const server = spawn(BATON, serverArgs, { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
+  let serverOutput = "";
+  function appendServerOutput(data) {
+    serverOutput = (serverOutput + data.toString()).slice(-32768);
+  }
+  server.stdout.on("data", appendServerOutput);
+  server.stderr.on("data", appendServerOutput);
 
   let chromeProcess = null;
   let cdp = null;
@@ -275,6 +363,11 @@ async function main() {
     if (typeof process.getuid === "function" && process.getuid() === 0) {
       chromeArgs.splice(1, 0, "--no-sandbox");
     }
+    if (process.env.PICOQUIC_WT_NETLOG) {
+      chromeArgs.splice(chromeArgs.length - 1, 0,
+        `--log-net-log=${process.env.PICOQUIC_WT_NETLOG}`,
+        "--net-log-capture-mode=Everything");
+    }
     chromeProcess = spawn(chrome, chromeArgs, { stdio: ["ignore", "ignore", "pipe"] });
     let chromeStderr = "";
     chromeProcess.stderr.on("data", (data) => {
@@ -288,12 +381,20 @@ async function main() {
       const stderr = chromeStderr.trim();
       throw new Error(stderr ? `${error.message}: ${stderr}` : error.message);
     }
-    cdp = await connectCdp(await newTarget(endpoint, TARGET_URL));
+    cdp = await connectCdp(await newTarget(endpoint));
+    await cdp.send("Page.enable");
     await cdp.send("Runtime.enable");
+    await cdp.send("Page.navigate", { url: targetUrl });
     await waitForHarness(cdp);
     const result = await readHarnessResult(cdp);
     assertHarnessResult(result);
     console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    const output = serverOutput.trim();
+    if (output) {
+      throw new Error(`${error.message}\nserver output:\n${output}`);
+    }
+    throw error;
   } finally {
     if (cdp) {
       cdp.close();

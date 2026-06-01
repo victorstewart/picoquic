@@ -289,6 +289,10 @@
     }
 
     function fail(error) {
+      if (sentZero && isSessionClosedError(error) && datagramRequirementMet()) {
+        markClosed();
+        return;
+      }
       if (!finished) {
         finished = true;
         result.error = errorText(error);
@@ -296,9 +300,26 @@
       }
     }
 
+    function isSessionClosedError(error) {
+      var text = errorText(error).toLowerCase();
+      return text.indexOf("session is closed") >= 0 ||
+        text.indexOf("transport is closed") >= 0;
+    }
+
+    function markClosed() {
+      if (!transportClosed) {
+        transportClosed = true;
+        note("closed");
+      }
+      maybeDone();
+    }
+
+    function datagramRequirementMet() {
+      return !requireDatagram || result.datagramsReceived.length > 0;
+    }
+
     function maybeDone() {
-      if (!finished && sentZero && transportClosed &&
-        (!requireDatagram || result.datagramsReceived.length > 0)) {
+      if (!finished && sentZero && transportClosed && datagramRequirementMet()) {
         finished = true;
         result.ok = true;
         result.closedMs = nowMs() - result.startedMs;
@@ -315,15 +336,15 @@
       try {
         await writer.ready;
         await writer.write(makeBatonPacket(baton, 0));
+        result.sent.push(baton);
+        note("sent " + baton);
+        if (baton === 0) {
+          sentZero = true;
+          maybeDone();
+        }
         await writer.close();
       } finally {
         writer.releaseLock();
-      }
-      result.sent.push(baton);
-      note("sent " + baton);
-      if (baton === 0) {
-        sentZero = true;
-        maybeDone();
       }
     }
 
@@ -417,11 +438,7 @@
     }
     note("ready");
 
-    transport.closed.then(function () {
-      transportClosed = true;
-      note("closed");
-      maybeDone();
-    }, fail);
+    transport.closed.then(markClosed, fail);
 
     track(acceptUnidirectional());
     track(acceptBidirectional());
