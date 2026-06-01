@@ -750,10 +750,15 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     add_picohttp_labeled_test(picowt_baton_protocol wt_compat)
     add_picohttp_labeled_test(picowt_chrome_legacy_connect wt_compat)
 
-    add_test(NAME picohttp_wt_wpt_placeholder
-             COMMAND ${CMAKE_COMMAND} -E echo "wt_wpt is reserved for the WebTransport WPT runner added by C06")
-    set_tests_properties(picohttp_wt_wpt_placeholder
-                         PROPERTIES LABELS wt_wpt DISABLED TRUE)
+    find_program(NODE_EXECUTABLE node)
+    if(NODE_EXECUTABLE)
+        add_test(NAME picohttp_wt_wpt_discovery
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/run-wpt.mjs
+                         list)
+        set_tests_properties(picohttp_wt_wpt_discovery
+                             PROPERTIES LABELS wt_wpt)
+    endif()
 
     add_executable(thread_test
         thread_tester/thread_test.c)
