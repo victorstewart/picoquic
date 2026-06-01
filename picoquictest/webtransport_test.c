@@ -550,16 +550,31 @@ static int picowt_accept_only_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size
 int picowt_baton_protocol_test(void)
 {
     int ret = picowt_baton_test_one_ex(10, "/baton?baton=240", 0, 2000000, NULL, NULL,
-        path_item_list, 1, "https", "webtransport", NULL, NULL, 0, 0, 0);
+        path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 0, 0, 0);
 
     if (ret == 0) {
-        ret = picowt_baton_protocol_refusal_test_one(11, "not-webtransport");
+        ret = picowt_baton_protocol_refusal_test_one(11, "webtransport");
     }
     if (ret == 0) {
-        ret = picowt_baton_protocol_refusal_test_one(12, NULL);
+        ret = picowt_baton_protocol_refusal_test_one(12, "not-webtransport");
+    }
+    if (ret == 0) {
+        ret = picowt_baton_protocol_refusal_test_one(13, NULL);
     }
 
     return ret;
+}
+
+int picowt_baton_protocol_compat_test(void)
+{
+    picohttp_server_path_item_t legacy_table[1] = {
+        { "/baton", 6, wt_baton_callback, &baton_test_ctx,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+            sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1, 1 }
+    };
+
+    return picowt_baton_test_one_ex(14, "/baton?baton=240", 0, 2000000, NULL, NULL,
+        legacy_table, 1, "https", "webtransport", NULL, NULL, 0, 0, 0);
 }
 
 int picowt_chrome_legacy_connect_test(void)
@@ -581,6 +596,7 @@ int picowt_chrome_legacy_connect_test(void)
     int ret = picoquic_test_set_minimal_cnx_with_time(&quic, &cnx, &simulated_time);
 
     if (ret == 0) {
+        chrome_path[0].accept_legacy_webtransport = 1;
         cnx->local_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
         cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
         cnx->local_parameters.is_reset_stream_at_enabled = 0;

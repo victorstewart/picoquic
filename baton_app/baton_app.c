@@ -452,6 +452,11 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
     path_item_list[0].path_app_ctx = NULL; 
     path_item_list[0].connect_protocol = H3ZERO_WEBTRANSPORT_H3_PROTOCOL;
     path_item_list[0].connect_protocol_length = sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1;
+    /* Chrome 148.0.7778.181 still sends :protocol=webtransport for its
+     * WebTransport API path; keep this demo harness compatibility opt-in
+     * until the Chrome E2E artifact no longer requires it.
+     */
+    path_item_list[0].accept_legacy_webtransport = 1;
     picoquic_file_param.path_table = path_item_list;
     picoquic_file_param.path_table_nb = 1;
 

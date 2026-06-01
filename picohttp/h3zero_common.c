@@ -1315,7 +1315,9 @@ static int h3zero_path_connect_protocol_matches(
 		if (path_desc->connect_protocol_length == sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1 &&
 			memcmp(path_desc->connect_protocol, H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
 				sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1) == 0) {
-			ret = (wt_protocol_class != 0);
+			ret = (wt_protocol_class == H3ZERO_PROTOCOL_WEBTRANSPORT_H3 ||
+				(wt_protocol_class == H3ZERO_PROTOCOL_WEBTRANSPORT_LEGACY &&
+					path_desc->accept_legacy_webtransport));
 		}
 		else {
 			ret = h3zero_protocol_is_n(protocol, protocol_length,

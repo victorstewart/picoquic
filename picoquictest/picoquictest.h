@@ -674,6 +674,7 @@ int picowt_baton_krome_test(void);
 int picowt_baton_reset_test(void);
 int picowt_baton_wildcard_test(void);
 int picowt_baton_protocol_test(void);
+int picowt_baton_protocol_compat_test(void);
 int picowt_chrome_legacy_connect_test(void);
 int picowt_baton_scheme_test(void);
 int picowt_baton_authority_test(void);

@@ -72,6 +72,7 @@ extern "C" {
         /* Required :protocol for CONNECT requests; NULL means not a CONNECT path. */
         char const* connect_protocol;
         size_t connect_protocol_length;
+        unsigned int accept_legacy_webtransport : 1;
     } picohttp_server_path_item_t;
 
     /* Define stream context common to http 3 and http 09 callbacks
