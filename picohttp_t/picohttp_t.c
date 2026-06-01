@@ -124,6 +124,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_reset_error", picowt_reset_error_test },
     { "picowt_error_code", picowt_error_code_test },
     { "picowt_session_gone", picowt_session_gone_test },
+    { "picowt_close_message", picowt_close_message_test },
     { "picowt_tp", picowt_tp_test },
     { "picowt_requirements", picowt_requirements_test },
     { "quicperf_parse", quicperf_parse_test },

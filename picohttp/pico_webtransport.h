@@ -37,6 +37,7 @@ extern "C" {
 #define picowt_capsule_wt_streams_blocked_bidi H3ZERO_CAPSULE_WT_STREAMS_BLOCKED_BIDI
 #define picowt_capsule_wt_streams_blocked_uni H3ZERO_CAPSULE_WT_STREAMS_BLOCKED_UNI
 #define picowt_max_streams_limit (1ull << 60)
+#define picowt_close_message_max 1024
 
     /* Set required transport parameters for web transport  */
     void picowt_set_transport_parameters(picoquic_cnx_t* cnx); 
