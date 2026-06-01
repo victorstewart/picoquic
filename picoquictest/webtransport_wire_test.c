@@ -611,6 +611,42 @@ static int picowt_wire_expect_no_connection_error(picowt_wire_harness_t* harness
     return ret;
 }
 
+static int picowt_wire_expect_wt_settings(char const* what,
+    const h3zero_settings_t* settings, int expect_received)
+{
+    int ret = 0;
+
+    if (settings == NULL ||
+        (expect_received && !settings->settings_received) ||
+        settings->enable_connect_protocol == 0 ||
+        settings->h3_datagram == 0 ||
+        settings->webtransport_enabled == 0) {
+        DBG_PRINTF("%s: missing required WebTransport H3 settings", what);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static int picowt_wire_expect_wt_transport_parameters(char const* what,
+    picoquic_cnx_t* cnx)
+{
+    const picoquic_tp_t* local_tp = picoquic_get_transport_parameters(cnx, 1);
+    const picoquic_tp_t* remote_tp = picoquic_get_transport_parameters(cnx, 0);
+    int ret = 0;
+
+    if (local_tp == NULL || remote_tp == NULL ||
+        local_tp->max_datagram_frame_size == 0 ||
+        remote_tp->max_datagram_frame_size == 0 ||
+        local_tp->is_reset_stream_at_enabled == 0 ||
+        remote_tp->is_reset_stream_at_enabled == 0) {
+        DBG_PRINTF("%s: missing required WebTransport transport parameters", what);
+        ret = -1;
+    }
+
+    return ret;
+}
+
 int picowt_wire_malformed_builder_test(void)
 {
     picowt_wire_malformed_sample_t sample;
@@ -782,6 +818,35 @@ static int picowt_wire_harness_connect(picowt_wire_harness_t* harness)
     return ret;
 }
 
+static int picowt_wire_harness_wait_for_server_settings(picowt_wire_harness_t* harness,
+    h3zero_callback_ctx_t** server_h3_ctx)
+{
+    uint64_t time_out = harness->simulated_time + 1000000;
+    int was_active = 0;
+    int nb_rounds = 0;
+    int ret = 0;
+
+    do {
+        *server_h3_ctx = (h3zero_callback_ctx_t*)picoquic_get_callback_context(
+            harness->test_ctx->cnx_server);
+        if (*server_h3_ctx != NULL && (*server_h3_ctx)->settings.settings_received) {
+            break;
+        }
+        ret = tls_api_one_sim_round(harness->test_ctx, &harness->simulated_time,
+            time_out, &was_active);
+        nb_rounds++;
+    } while (ret == 0 && nb_rounds < 1000 &&
+        picoquic_get_cnx_state(harness->test_ctx->cnx_client) != picoquic_state_disconnected &&
+        harness->simulated_time < time_out);
+
+    if (ret == 0 &&
+        (*server_h3_ctx == NULL || !(*server_h3_ctx)->settings.settings_received)) {
+        ret = -1;
+    }
+
+    return ret;
+}
+
 int picowt_wire_harness_test(void)
 {
     picowt_wire_harness_t harness;
@@ -799,6 +864,59 @@ int picowt_wire_harness_test(void)
         ret = -1;
     }
 
+    if (ret == 0) {
+        ret = picowt_wire_expect_no_connection_error(&harness);
+    }
+
+    picowt_wire_harness_dispose(&harness);
+    return ret;
+}
+
+int picowt_wire_capability_negotiation_test(void)
+{
+    picowt_wire_harness_t harness;
+    h3zero_callback_ctx_t* server_h3_ctx = NULL;
+    int ret = picowt_wire_harness_init(&harness);
+
+    if (ret == 0) {
+        ret = picowt_wire_harness_connect(&harness);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_harness_wait_for_server_settings(&harness, &server_h3_ctx);
+        if (ret == 0 && harness.client_h3_ctx == NULL) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_wt_settings("client local settings",
+            &harness.client_h3_ctx->local_settings, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_wt_settings("client remote settings",
+            &harness.client_h3_ctx->settings, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_wt_settings("server local settings",
+            &server_h3_ctx->local_settings, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_wt_settings("server remote settings",
+            &server_h3_ctx->settings, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_wt_transport_parameters("client transport parameters",
+            harness.test_ctx->cnx_client);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_expect_wt_transport_parameters("server transport parameters",
+            harness.test_ctx->cnx_server);
+    }
+    if (ret == 0 && (!h3zero_webtransport_is_ready(harness.test_ctx->cnx_client,
+        &harness.client_h3_ctx->settings) ||
+        !h3zero_webtransport_is_ready(harness.test_ctx->cnx_server,
+            &server_h3_ctx->settings))) {
+        ret = -1;
+    }
     if (ret == 0) {
         ret = picowt_wire_expect_no_connection_error(&harness);
     }
