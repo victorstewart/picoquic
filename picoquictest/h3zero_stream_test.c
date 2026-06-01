@@ -292,15 +292,17 @@ int h3zero_process_h3_server_data(picoquic_cnx_t* cnx,
 int h3zero_callback_datagram(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
     h3zero_callback_ctx_t* h3_ctx);
 
-int h3zero_wt_id_error_test(void)
+static int h3zero_wt_id_error_case(int is_bidir, uint64_t session_id)
 {
     picoquic_quic_t* quic = NULL;
     picoquic_cnx_t* cnx = NULL;
     h3zero_callback_ctx_t* h3_ctx = NULL;
     uint64_t simulated_time = 0;
-    uint64_t stream_id = 3;
+    uint64_t stream_id = is_bidir ? 12 : 6;
     h3zero_stream_ctx_t* stream_ctx = NULL;
-    uint8_t unidir_input[] = { 0x40, 0x54, 0x02 };
+    uint8_t input[16];
+    uint8_t* bytes = input;
+    uint8_t* bytes_max = input + sizeof(input);
     int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
 
     if (ret == 0) {
@@ -309,14 +311,23 @@ int h3zero_wt_id_error_test(void)
             ret = -1;
         }
     }
+    if (ret == 0 &&
+        ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            is_bidir ? h3zero_frame_webtransport_stream :
+            h3zero_stream_type_webtransport)) == NULL ||
+            (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+                session_id)) == NULL)) {
+        ret = -1;
+    }
 
     if (ret == 0) {
         cnx->cnx_state = picoquic_state_ready;
-        ret = h3zero_process_remote_stream(cnx, stream_id, unidir_input, sizeof(unidir_input),
+        ret = h3zero_process_remote_stream(cnx, stream_id, input, bytes - input,
             picoquic_callback_stream_data, stream_ctx, h3_ctx);
         if (ret != 0 || cnx->application_error != H3ZERO_ID_ERROR) {
-            DBG_PRINTF("Invalid WT stream ID error: ret=%d, app_error=%" PRIu64,
-                ret, cnx->application_error);
+            DBG_PRINTF("Invalid WT %s session ID %" PRIu64 " error: ret=%d, app_error=%" PRIu64,
+                is_bidir ? "bidi" : "uni", session_id, ret,
+                cnx->application_error);
             ret = -1;
         }
     }
@@ -324,6 +335,23 @@ int h3zero_wt_id_error_test(void)
     picoquic_set_callback(cnx, NULL, NULL);
     h3zero_callback_delete_context(cnx, h3_ctx);
     picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int h3zero_wt_id_error_test(void)
+{
+    const uint64_t invalid_session_ids[] = { 1, 2, 3 };
+    int ret = 0;
+
+    for (size_t i = 0; ret == 0 &&
+        i < sizeof(invalid_session_ids) / sizeof(invalid_session_ids[0]);
+        i++) {
+        ret = h3zero_wt_id_error_case(0, invalid_session_ids[i]);
+        if (ret == 0) {
+            ret = h3zero_wt_id_error_case(1, invalid_session_ids[i]);
+        }
+    }
 
     return ret;
 }
