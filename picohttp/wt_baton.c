@@ -834,6 +834,11 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         case picohttp_callback_stop_sending: /* peer wants to abandon the stream */
             ret = wt_baton_stream_stop(cnx, stream_ctx, path_app_ctx);
             break;
+        case picohttp_callback_drain:
+            if (!stream_ctx->ps.stream_state.is_fin_sent) {
+                ret = picowt_send_drain_session_message(cnx, stream_ctx);
+            }
+            break;
         case picohttp_callback_free: /* Used during clean up the stream. Only cause the freeing of memory. */
             /* Free the memory attached to the stream */
             break;

@@ -470,6 +470,9 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
     if (ctx == NULL || !ctx->settings.settings_received) {
         ret = H3ZERO_MISSING_SETTINGS;
     }
+    else if (ctx->goaway_received) {
+        ret = H3ZERO_REQUEST_REJECTED;
+    }
     else if (!h3zero_webtransport_is_ready(cnx, &ctx->settings)) {
         ret = H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET;
     }

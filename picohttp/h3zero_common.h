@@ -48,6 +48,7 @@ extern "C" {
         picohttp_callback_provide_datagram, /* Ready to send datagram in this context */
         picohttp_callback_reset, /* Stream has been abandoned by peer. */
         picohttp_callback_stop_sending, /* Peer asking to reset the stream. */
+        picohttp_callback_drain, /* Peer sent GOAWAY; initiate graceful WebTransport shutdown. */
         picohttp_callback_deregister, /* Context has been deregistered */
         picohttp_callback_free
     } picohttp_call_back_event_t;
@@ -220,9 +221,11 @@ extern "C" {
         unsigned int no_print : 1;
         unsigned int connection_closed : 1;
         unsigned int settings_sent : 1;
+        unsigned int goaway_received : 1;
         int nb_open_streams;
         int nb_open_files;
         uint32_t nb_client_streams;
+        uint64_t goaway_stream_id;
         uint64_t nb_webtransport_sessions;
     } h3zero_callback_ctx_t;
 
