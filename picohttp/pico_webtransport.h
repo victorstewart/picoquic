@@ -84,6 +84,9 @@ extern "C" {
     int picowt_send_flow_control_capsule(picoquic_cnx_t* cnx,
         h3zero_stream_ctx_t* control_stream_ctx, uint64_t capsule_type,
         uint64_t flow_control_value);
+    int picowt_export_secret(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* control_stream_ctx,
+        const uint8_t* label, size_t label_len, const uint8_t* context, size_t context_len,
+        uint8_t* out, size_t outlen);
     /* accumulate data for the web transport capsule in
      * specified context.
      */

@@ -683,6 +683,7 @@ int picowt_error_code_test(void);
 int picowt_session_gone_test(void);
 int picowt_close_message_test(void);
 int picowt_goaway_test(void);
+int picowt_exporter_test(void);
 int picowt_tp_test(void);
 int picowt_requirements_test(void);
 int quicperf_parse_test(void);

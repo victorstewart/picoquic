@@ -126,6 +126,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_session_gone", picowt_session_gone_test },
     { "picowt_close_message", picowt_close_message_test },
     { "picowt_goaway", picowt_goaway_test },
+    { "picowt_exporter", picowt_exporter_test },
     { "picowt_tp", picowt_tp_test },
     { "picowt_requirements", picowt_requirements_test },
     { "quicperf_parse", quicperf_parse_test },

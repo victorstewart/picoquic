@@ -703,6 +703,40 @@ int picowt_send_flow_control_capsule(picoquic_cnx_t* cnx,
         bytes - buffer, buffer, 0);
 }
 
+int picowt_export_secret(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* control_stream_ctx,
+    const uint8_t* label, size_t label_len, const uint8_t* context, size_t context_len,
+    uint8_t* out, size_t outlen)
+{
+    uint8_t exporter_context[8 + 1 + UINT8_MAX + 1 + UINT8_MAX];
+    uint8_t* bytes = exporter_context;
+
+    if (cnx == NULL || control_stream_ctx == NULL ||
+        out == NULL || outlen == 0 ||
+        !IS_CLIENT_STREAM_ID(control_stream_ctx->stream_id) ||
+        !IS_BIDIR_STREAM_ID(control_stream_ctx->stream_id) ||
+        (label == NULL && label_len > 0) ||
+        (context == NULL && context_len > 0) ||
+        label_len > UINT8_MAX || context_len > UINT8_MAX) {
+        return -1;
+    }
+
+    picoformat_64(bytes, control_stream_ctx->stream_id);
+    bytes += 8;
+    *bytes++ = (uint8_t)label_len;
+    if (label_len > 0) {
+        memcpy(bytes, label, label_len);
+        bytes += label_len;
+    }
+    *bytes++ = (uint8_t)context_len;
+    if (context_len > 0) {
+        memcpy(bytes, context, context_len);
+        bytes += context_len;
+    }
+
+    return picoquic_export_secret_with_context(cnx, "EXPORTER-WebTransport",
+        exporter_context, bytes - exporter_context, out, outlen);
+}
+
 static int picowt_decode_flow_control_capsule(picowt_capsule_t* capsule,
     uint64_t flow_control_value_max)
 {

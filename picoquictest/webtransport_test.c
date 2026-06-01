@@ -1090,6 +1090,165 @@ int picowt_goaway_test(void)
     return ret;
 }
 
+int picowt_exporter_test(void)
+{
+    uint64_t simulated_time = 0;
+    uint64_t loss_mask = 0;
+    picoquic_test_tls_api_ctx_t* test_ctx = NULL;
+    h3zero_stream_ctx_t session_ctx = { 0 };
+    const uint8_t exporter_label[] = { 'b', 'a', 't', 'o', 'n' };
+    const uint8_t exporter_context[] = { 1, 2, 3, 4 };
+    const uint8_t serialized_context[] = {
+        0, 0, 0, 0, 0, 0, 0, 0,
+        5, 'b', 'a', 't', 'o', 'n',
+        4, 1, 2, 3, 4
+    };
+    const uint8_t embedded_label[] = { 'b', 0, 'n' };
+    const uint8_t serialized_embedded_label[] = {
+        0, 0, 0, 0, 0, 0, 0, 0,
+        3, 'b', 0, 'n',
+        4, 1, 2, 3, 4
+    };
+    const uint8_t serialized_empty_context[] = {
+        0, 0, 0, 0, 0, 0, 0, 0,
+        5, 'b', 'a', 't', 'o', 'n',
+        0
+    };
+    const size_t export_key_len = 16;
+    uint8_t client_export_key[16] = { 0 };
+    uint8_t server_export_key[16] = { 0 };
+    uint8_t direct_export_key[16] = { 0 };
+    uint8_t other_session_key[16] = { 0 };
+    int ret = tls_api_init_ctx(&test_ctx, PICOQUIC_INTERNAL_TEST_VERSION_1,
+        PICOQUIC_TEST_SNI, PICOQUIC_TEST_ALPN, &simulated_time, NULL, NULL, 0, 0, 0);
+
+    if (ret == 0) {
+        if (test_ctx->qclient != NULL) {
+            picoquic_free(test_ctx->qclient);
+        }
+        test_ctx->qclient = picoquic_create(8, NULL, NULL, NULL, NULL, test_api_callback,
+            (void*)&test_ctx->client_callback, NULL, NULL, NULL,
+            simulated_time, &simulated_time, NULL, NULL, 0);
+        test_ctx->cnx_client = NULL;
+        if (test_ctx->qclient == NULL) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        picoquic_set_use_exporter(test_ctx->qclient, 1);
+        picoquic_set_use_exporter(test_ctx->qserver, 1);
+    }
+    if (ret == 0) {
+        test_ctx->cnx_client = picoquic_create_cnx(test_ctx->qclient,
+            picoquic_null_connection_id, picoquic_null_connection_id,
+            (struct sockaddr*)&test_ctx->server_addr, 0, 0,
+            PICOQUIC_TEST_SNI, PICOQUIC_TEST_ALPN, 1);
+        if (test_ctx->cnx_client == NULL) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        ret = picoquic_start_client_cnx(test_ctx->cnx_client);
+    }
+    if (ret == 0) {
+        ret = tls_api_connection_loop(test_ctx, &loss_mask, 0, &simulated_time);
+    }
+
+    if (ret == 0 && (test_ctx->cnx_client == NULL || test_ctx->cnx_server == NULL)) {
+        ret = -1;
+    }
+
+    if (ret == 0) {
+        session_ctx.stream_id = 0;
+        ret = picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            exporter_context, sizeof(exporter_context), client_export_key, export_key_len);
+    }
+    if (ret == 0) {
+        ret = picowt_export_secret(test_ctx->cnx_server, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            exporter_context, sizeof(exporter_context), server_export_key, export_key_len);
+    }
+    if (ret == 0 && memcmp(client_export_key, server_export_key, export_key_len) != 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = picoquic_export_secret_with_context(test_ctx->cnx_client,
+            "EXPORTER-WebTransport", serialized_context, sizeof(serialized_context),
+            direct_export_key, export_key_len);
+    }
+    if (ret == 0 && memcmp(client_export_key, direct_export_key, export_key_len) != 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        session_ctx.stream_id = 4;
+        ret = picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            exporter_context, sizeof(exporter_context), other_session_key, export_key_len);
+    }
+    if (ret == 0 && memcmp(client_export_key, other_session_key, export_key_len) == 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        session_ctx.stream_id = 0;
+        ret = picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            embedded_label, sizeof(embedded_label),
+            exporter_context, sizeof(exporter_context), other_session_key, export_key_len);
+    }
+    if (ret == 0) {
+        ret = picoquic_export_secret_with_context(test_ctx->cnx_client,
+            "EXPORTER-WebTransport", serialized_embedded_label, sizeof(serialized_embedded_label),
+            direct_export_key, export_key_len);
+    }
+    if (ret == 0 && memcmp(other_session_key, direct_export_key, export_key_len) != 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            NULL, 0, other_session_key, export_key_len);
+    }
+    if (ret == 0) {
+        ret = picoquic_export_secret_with_context(test_ctx->cnx_client,
+            "EXPORTER-WebTransport", serialized_empty_context, sizeof(serialized_empty_context),
+            direct_export_key, export_key_len);
+    }
+    if (ret == 0 && memcmp(other_session_key, direct_export_key, export_key_len) != 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        uint8_t max_label[UINT8_MAX];
+        memset(max_label, 'x', sizeof(max_label));
+        if (picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            max_label, sizeof(max_label), NULL, 0, other_session_key, export_key_len) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        uint8_t long_label[UINT8_MAX + 1];
+        memset(long_label, 'x', sizeof(long_label));
+        if (picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            long_label, sizeof(long_label),
+            exporter_context, sizeof(exporter_context), other_session_key, export_key_len) == 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        uint8_t long_context[UINT8_MAX + 1] = { 0 };
+        if (picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            long_context, sizeof(long_context), other_session_key, export_key_len) == 0) {
+            ret = -1;
+        }
+    }
+
+    if (test_ctx != NULL) {
+        tls_api_delete_ctx(test_ctx);
+    }
+
+    return ret;
+}
+
 int picowt_drain_test_one(int expect_error)
 {
     picoquic_quic_t* quic = NULL;
