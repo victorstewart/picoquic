@@ -670,6 +670,19 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
             if (capsule->h3_capsule.is_stored) {
                 switch (capsule->h3_capsule.capsule_type) {
                 case picowt_capsule_drain_webtransport_session:
+                    if (capsule->h3_capsule.capsule_length != 0) {
+                        picoquic_log_app_message(cnx, "Web transport drain capsule length is %zu bytes", capsule->h3_capsule.capsule_length);
+                        ret = -1;
+                    }
+                    else {
+                        capsule->error_code = 0;
+                        capsule->error_msg = NULL;
+                        capsule->error_msg_len = 0;
+                        picoquic_log_app_message(cnx,
+                            "Received web transport session capsule, type: 0x%" PRIx64 " (drain session)",
+                            capsule->h3_capsule.capsule_type);
+                    }
+                    break;
                 case picowt_capsule_close_webtransport_session:
                     if (capsule->h3_capsule.capsule_length < 4) {
                         picoquic_log_app_message(cnx, "Web transport capsule too short, %zu bytes", capsule->h3_capsule.capsule_length);
@@ -690,8 +703,7 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                         picoquic_log_app_message(cnx,
                             "Received web transport session capsule, type: 0x%" PRIx64 " (%s), error: %" PRIx32 " (%s)",
                             capsule->h3_capsule.capsule_type,
-                            (capsule->h3_capsule.capsule_type == picowt_capsule_close_webtransport_session) ? "close session" : "drain session",
-                            capsule->error_code, text);
+                            "close session", capsule->error_code, text);
                     }
                     break;
                 default:

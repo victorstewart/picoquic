@@ -2376,31 +2376,38 @@ const uint8_t* h3zero_accumulate_capsule(const uint8_t* bytes, const uint8_t* by
 		}
 	}
 	if (capsule->is_length_known) {
-		if (capsule->capsule_buffer_size < capsule->capsule_length) {
-			uint8_t* capsule_buffer = (uint8_t*)malloc(capsule->capsule_length);
-			if (capsule_buffer != NULL && capsule->value_read > 0) {
-				memcpy(capsule_buffer, capsule->capsule_buffer, capsule->value_read);
-			}
-			if (capsule->capsule_buffer != NULL) {
-				free(capsule->capsule_buffer);
-			}
-			capsule->capsule_buffer = capsule_buffer;
-			capsule->capsule_buffer_size = capsule->capsule_length;
-		}
- 		if (capsule->capsule_buffer == NULL) {
+		if (capsule->capsule_length == 0) {
 			capsule->value_read = 0;
-			capsule->capsule_buffer_size = 0;
-			bytes = NULL;
-		} else {
-			size_t available = bytes_max - bytes;
-			if (capsule->value_read + available > capsule->capsule_length) {
-				available = capsule->capsule_length - capsule->value_read;
+			capsule->is_stored = 1;
+		}
+		else {
+			if (capsule->capsule_buffer_size < capsule->capsule_length) {
+				uint8_t* capsule_buffer = (uint8_t*)malloc(capsule->capsule_length);
+				if (capsule_buffer != NULL && capsule->value_read > 0) {
+					memcpy(capsule_buffer, capsule->capsule_buffer, capsule->value_read);
+				}
+				if (capsule->capsule_buffer != NULL) {
+					free(capsule->capsule_buffer);
+				}
+				capsule->capsule_buffer = capsule_buffer;
+				capsule->capsule_buffer_size = capsule->capsule_length;
 			}
-			memcpy(capsule->capsule_buffer + capsule->value_read, bytes, available);
-			bytes += available;
-			capsule->value_read += available;
-			if (capsule->value_read >= capsule->capsule_length) {
-				capsule->is_stored = 1;
+			if (capsule->capsule_buffer == NULL) {
+				capsule->value_read = 0;
+				capsule->capsule_buffer_size = 0;
+				bytes = NULL;
+			}
+			else {
+				size_t available = bytes_max - bytes;
+				if (capsule->value_read + available > capsule->capsule_length) {
+					available = capsule->capsule_length - capsule->value_read;
+				}
+				memcpy(capsule->capsule_buffer + capsule->value_read, bytes, available);
+				bytes += available;
+				capsule->value_read += available;
+				if (capsule->value_read >= capsule->capsule_length) {
+					capsule->is_stored = 1;
+				}
 			}
 		}
 	}

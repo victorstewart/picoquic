@@ -118,6 +118,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_baton_alpn", picowt_baton_alpn_test },
     { "picowt_protocol_select", picowt_protocol_select_test },
     { "picowt_drain", picowt_drain_test },
+    { "picowt_receive_drain", picowt_receive_drain_test },
     { "picowt_tp", picowt_tp_test },
     { "picowt_requirements", picowt_requirements_test },
     { "quicperf_parse", quicperf_parse_test },
