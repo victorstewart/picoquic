@@ -682,6 +682,7 @@ static uint8_t qpack_get_long_file_name[] = {
 
 char const web_transport_str[] = { CONNECT_TEST_PROTOCOL_WTP, 0 };
 char const https_str[] = "https";
+char const authority_str[] = { CONNECT_TEST_AUTHORITY, 0 };
 
 static uint8_t qpack_connect_webtransport[] = {
     QPACK_TEST_HEADER_BLOCK_PREFIX, 
@@ -809,7 +810,8 @@ static qpack_test_case_t qpack_test_case[] = {
     },
     {
         qpack_connect_webtransport, sizeof(qpack_connect_webtransport),
-        { h3zero_method_connect, qpack_test_string_wtp, sizeof(qpack_test_string_wtp), NULL /* authority */, 0 /* authority_length */, NULL, 0, 0, 0,
+        { h3zero_method_connect, qpack_test_string_wtp, sizeof(qpack_test_string_wtp),
+        (uint8_t*)authority_str, CONNECT_TEST_AUTHORITY_LEN, NULL, 0, 0, 0,
         (uint8_t *)web_transport_str, CONNECT_TEST_PROTOCOL_WTP_LEN,
         NULL /* wt_available_protocols */, 0 /* wt_available_protocols_length */, NULL /* wt_protocol */, 0 /* wt_protocol_length */, 0,
         (uint8_t*)https_str, 5 }
@@ -867,6 +869,19 @@ static int h3zero_parse_qpack_test_one(size_t i, uint8_t * data, size_t data_len
     else if (parts.path != NULL && parts.path_length > 0 &&
         memcmp(parts.path, qpack_test_case[i].parts.path, parts.path_length) != 0) {
         DBG_PRINTF("Qpack case %d parse wrong path", i);
+        ret = -1;
+    } else if (qpack_test_case[i].parts.authority != NULL &&
+        parts.authority_length != qpack_test_case[i].parts.authority_length) {
+        DBG_PRINTF("Qpack case %d parse wrong authority length", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.authority != NULL && parts.authority == NULL) {
+        DBG_PRINTF("Qpack case %d parse authority not null", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.authority != NULL && parts.authority_length > 0 &&
+        memcmp(parts.authority, qpack_test_case[i].parts.authority, parts.authority_length) != 0) {
+        DBG_PRINTF("Qpack case %d parse wrong authority", i);
         ret = -1;
     } else if (parts.range_length != qpack_test_case[i].parts.range_length) {
         DBG_PRINTF("Qpack case %d parse wrong range length", i);
