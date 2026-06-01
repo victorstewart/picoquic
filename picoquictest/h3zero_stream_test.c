@@ -361,6 +361,19 @@ typedef struct st_h3zero_wt_zero_buffer_test_ctx_t {
     int nb_datagrams;
 } h3zero_wt_zero_buffer_test_ctx_t;
 
+static size_t h3zero_wt_count_stream_prefixes(h3zero_callback_ctx_t* h3_ctx)
+{
+    size_t count = 0;
+    h3zero_stream_prefix_t* prefix_ctx = h3_ctx->stream_prefixes.first;
+
+    while (prefix_ctx != NULL) {
+        count++;
+        prefix_ctx = prefix_ctx->next;
+    }
+
+    return count;
+}
+
 static int h3zero_wt_zero_buffer_callback(picoquic_cnx_t* UNUSED(cnx),
     uint8_t* bytes, size_t length, picohttp_call_back_event_t fin_or_event,
     struct st_h3zero_stream_ctx_t* UNUSED(stream_ctx), void* path_app_ctx)
@@ -601,6 +614,168 @@ int h3zero_wt_zero_buffer_test(void)
 
     picoquic_set_callback(cnx, NULL, NULL);
     h3zero_callback_delete_context(cnx, h3_ctx);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+#define H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT 8
+
+static int h3zero_wt_zero_buffer_flood_stream(
+    picoquic_cnx_t* cnx, h3zero_callback_ctx_t* h3_ctx,
+    uint64_t stream_id, int is_bidir, uint8_t* input, size_t input_length,
+    h3zero_wt_zero_buffer_test_ctx_t* test_ctx)
+{
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    picoquic_stream_head_t* stream = NULL;
+    int ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id,
+        &stream_ctx);
+
+    if (ret == 0 && is_bidir) {
+        ret = h3zero_process_h3_server_data(cnx, stream_id, input,
+            input_length, picoquic_callback_stream_data, h3_ctx, stream_ctx);
+    }
+    else if (ret == 0) {
+        ret = h3zero_process_remote_stream(cnx, stream_id, input,
+            input_length, picoquic_callback_stream_data, stream_ctx, h3_ctx);
+    }
+    stream = picoquic_find_stream(cnx, stream_id);
+    if (ret != 0 || stream == NULL || !stream->stop_sending_requested ||
+        stream->local_stop_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED ||
+        stream->reset_requested != is_bidir ||
+        (is_bidir &&
+            stream->local_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED) ||
+        stream_ctx->path_callback != NULL || cnx->application_error != 0 ||
+        test_ctx->nb_data != 0 || test_ctx->nb_datagrams != 0) {
+        DBG_PRINTF("WT zero-buffer flood %s stream %" PRIu64 " failed, ret=%d, app_error=%" PRIu64,
+            is_bidir ? "bidi" : "uni", stream_id, ret,
+            (cnx == NULL) ? UINT64_MAX : cnx->application_error);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+int h3zero_wt_zero_buffer_flood_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id = 4;
+    h3zero_stream_ctx_t* session_ctx = NULL;
+    h3zero_wt_zero_buffer_test_ctx_t test_ctx = { 0, 0 };
+    uint8_t unidir_input[] = { 0x40, 0x54, 0x04, 0xf0 };
+    uint8_t bidi_input[] = { 0x40, 0x41, 0x04, 0xf0 };
+    uint8_t datagram_input[] = { 0x01, 0xd0 };
+    uint8_t capsule_payload[] = { 0xd0 };
+    h3zero_capsule_t capsule = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    capsule.capsule_buffer = capsule_payload;
+    capsule.capsule_length = sizeof(capsule_payload);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        session_ctx = h3zero_find_or_create_stream(cnx, session_id,
+            h3_ctx, 1, 1);
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id,
+                h3zero_wt_zero_buffer_callback, &test_ctx) != 0) {
+            ret = -1;
+        }
+    }
+    for (size_t i = 0; ret == 0 &&
+        i < H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT; i++) {
+        uint64_t stream_id = 2 + 4 * i;
+
+        ret = h3zero_wt_zero_buffer_flood_stream(cnx, h3_ctx, stream_id,
+            0, unidir_input, sizeof(unidir_input), &test_ctx);
+    }
+    for (size_t i = 0; ret == 0 &&
+        i < H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT; i++) {
+        uint64_t stream_id = 8 + 4 * i;
+
+        ret = h3zero_wt_zero_buffer_flood_stream(cnx, h3_ctx, stream_id,
+            1, bidi_input, sizeof(bidi_input), &test_ctx);
+    }
+    for (size_t i = 0; ret == 0 &&
+        i < H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT; i++) {
+        ret = h3zero_callback_datagram(cnx, datagram_input,
+            sizeof(datagram_input), h3_ctx);
+        if (ret == 0) {
+            h3zero_receive_datagram_capsule(cnx, session_ctx, &capsule,
+                h3_ctx);
+        }
+        if (ret != 0 || cnx->application_error != 0 ||
+            test_ctx.nb_data != 0 || test_ctx.nb_datagrams != 0) {
+            DBG_PRINTF("WT zero-buffer flood datagram %zu failed, ret=%d, app_error=%" PRIu64,
+                i, ret, (cnx == NULL) ? UINT64_MAX :
+                cnx->application_error);
+            ret = -1;
+        }
+    }
+    if (ret == 0 &&
+        (h3zero_wt_count_stream_prefixes(h3_ctx) != 1 ||
+        h3_ctx->nb_webtransport_sessions != 0)) {
+        DBG_PRINTF("WT zero-buffer flood state failed, prefixes=%zu, sessions=%" PRIu64,
+            h3zero_wt_count_stream_prefixes(h3_ctx),
+            h3_ctx->nb_webtransport_sessions);
+        ret = -1;
+    }
+    if (ret == 0) {
+        session_ctx->is_upgraded = 1;
+        session_ctx->is_webtransport_session_counted = 1;
+        h3_ctx->nb_webtransport_sessions = 1;
+        ret = h3zero_callback_datagram(cnx, datagram_input,
+            sizeof(datagram_input), h3_ctx);
+    }
+    if (ret == 0) {
+        h3zero_receive_datagram_capsule(cnx, session_ctx, &capsule,
+            h3_ctx);
+    }
+    if (ret == 0) {
+        h3zero_stream_ctx_t* stream_ctx = NULL;
+
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx,
+            2 + 4 * H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT, &stream_ctx);
+        if (ret == 0) {
+            ret = h3zero_process_remote_stream(cnx,
+                2 + 4 * H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT, unidir_input,
+                sizeof(unidir_input), picoquic_callback_stream_data,
+                stream_ctx, h3_ctx);
+        }
+        if (ret == 0) {
+            ret = h3zero_wt_create_stream_pair(cnx, h3_ctx,
+                8 + 4 * H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT, &stream_ctx);
+        }
+        if (ret == 0) {
+            ret = h3zero_process_h3_server_data(cnx,
+                8 + 4 * H3ZERO_WT_ZERO_BUFFER_FLOOD_COUNT, bidi_input,
+                sizeof(bidi_input), picoquic_callback_stream_data,
+                h3_ctx, stream_ctx);
+        }
+    }
+    if (ret != 0 || cnx->application_error != 0 ||
+        h3zero_wt_count_stream_prefixes(h3_ctx) != 1 ||
+        h3_ctx->nb_webtransport_sessions != 1 || test_ctx.nb_data != 2 ||
+        test_ctx.nb_datagrams != 2) {
+        DBG_PRINTF("WT zero-buffer flood post-upgrade delivery failed, ret=%d, app_error=%" PRIu64 ", prefixes=%zu, sessions=%" PRIu64 ", data=%d, dg=%d",
+            ret, (cnx == NULL) ? UINT64_MAX : cnx->application_error,
+            h3zero_wt_count_stream_prefixes(h3_ctx),
+            (h3_ctx == NULL) ? UINT64_MAX : h3_ctx->nb_webtransport_sessions,
+            test_ctx.nb_data, test_ctx.nb_datagrams);
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
     picoquic_test_delete_minimal_cnx(&quic, &cnx);
 
     return ret;

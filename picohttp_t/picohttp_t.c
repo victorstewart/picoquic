@@ -51,6 +51,7 @@ static const picoquic_test_def_t test_table[] = {
     { "h3zero_wt_id_error", h3zero_wt_id_error_test },
     { "h3zero_wt_unknown_session", h3zero_wt_unknown_session_test },
     { "h3zero_wt_zero_buffer", h3zero_wt_zero_buffer_test },
+    { "h3zero_wt_zero_buffer_flood", h3zero_wt_zero_buffer_flood_test },
     { "h3zero_wt_datagram_payload", h3zero_wt_datagram_payload_test },
     { "h3zero_wt_datagram_drop_policy", h3zero_wt_datagram_drop_policy_test },
     { "h3zero_wt_datagram_multi_session", h3zero_wt_datagram_multi_session_test },
