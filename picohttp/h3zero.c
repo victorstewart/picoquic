@@ -499,6 +499,16 @@ uint8_t * h3zero_parse_qpack_header_value(uint8_t * bytes, uint8_t * bytes_max,
                         decoded_length, &parts->scheme, &parts->scheme_length);
                 }
                 break;
+            case http_header_origin:
+                if (parts->origin != NULL) {
+                    /* Duplicate origin! */
+                    bytes = 0;
+                }
+                else {
+                    bytes = h3zero_parse_qpack_header_value_string(bytes, decoded,
+                        decoded_length, &parts->origin, &parts->origin_length);
+                }
+                break;
             case http_header_range:
                 if (parts->range != NULL) {
                     /* Duplicate content type! */
@@ -695,7 +705,15 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                     }
                     break;
                 case http_header_origin:
-                    /* TODO: parse origin value? */
+                    if (parts->origin != NULL) {
+                        /* Duplicate origin! */
+                        bytes = NULL;
+                    }
+                    else if (qpack_static[s_index].content != NULL &&
+                        h3zero_qpack_set_static_string(qpack_static[s_index].content, &parts->origin, &parts->origin_length) != 0) {
+                        bytes = NULL;
+                    }
+                    break;
                 case http_pseudo_header_protocol:
                     /* TODO: parse protocol value? */
                 default:
@@ -1173,6 +1191,11 @@ void h3zero_release_header_parts(h3zero_header_parts_t* header)
         free((uint8_t*)header->scheme);
         *((uint8_t**)&header->scheme) = NULL;
         header->scheme_length = 0;
+    }
+    if (header->origin != NULL) {
+        free((uint8_t*)header->origin);
+        *((uint8_t**)&header->origin) = NULL;
+        header->origin_length = 0;
     }
     if (header->range != NULL) {
         free((uint8_t*)header->range);

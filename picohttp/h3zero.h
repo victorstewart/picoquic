@@ -213,6 +213,8 @@ typedef struct st_h3zero_header_parts_t {
     unsigned int path_is_huffman : 1;
     uint8_t const* scheme;
     size_t scheme_length;
+    uint8_t const* origin;
+    size_t origin_length;
 } h3zero_header_parts_t;
 
 /* Setting codes.

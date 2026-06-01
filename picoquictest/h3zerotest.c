@@ -683,6 +683,7 @@ static uint8_t qpack_get_long_file_name[] = {
 char const web_transport_str[] = { CONNECT_TEST_PROTOCOL_WTP, 0 };
 char const https_str[] = "https";
 char const authority_str[] = { CONNECT_TEST_AUTHORITY, 0 };
+char const origin_str[] = { CONNECT_TEST_ORIGIN, 0 };
 
 static uint8_t qpack_connect_webtransport[] = {
     QPACK_TEST_HEADER_BLOCK_PREFIX, 
@@ -814,7 +815,7 @@ static qpack_test_case_t qpack_test_case[] = {
         (uint8_t*)authority_str, CONNECT_TEST_AUTHORITY_LEN, NULL, 0, 0, 0,
         (uint8_t *)web_transport_str, CONNECT_TEST_PROTOCOL_WTP_LEN,
         NULL /* wt_available_protocols */, 0 /* wt_available_protocols_length */, NULL /* wt_protocol */, 0 /* wt_protocol_length */, 0,
-        (uint8_t*)https_str, 5 }
+        (uint8_t*)https_str, 5, (uint8_t*)origin_str, CONNECT_TEST_ORIGIN_LEN }
     },
     {
         qpack_test_get_slash_range, sizeof(qpack_test_get_slash_range),
@@ -929,6 +930,20 @@ static int h3zero_parse_qpack_test_one(size_t i, uint8_t * data, size_t data_len
     else if (qpack_test_case[i].parts.scheme != NULL && parts.scheme_length > 0 &&
         memcmp(parts.scheme, qpack_test_case[i].parts.scheme, parts.scheme_length) != 0) {
         DBG_PRINTF("Qpack case %d parse wrong scheme", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.origin != NULL &&
+        parts.origin_length != qpack_test_case[i].parts.origin_length) {
+        DBG_PRINTF("Qpack case %d parse wrong origin length", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.origin != NULL && parts.origin == NULL) {
+        DBG_PRINTF("Qpack case %d parse origin not null", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.origin != NULL && parts.origin_length > 0 &&
+        memcmp(parts.origin, qpack_test_case[i].parts.origin, parts.origin_length) != 0) {
+        DBG_PRINTF("Qpack case %d parse wrong origin", i);
         ret = -1;
     }
 

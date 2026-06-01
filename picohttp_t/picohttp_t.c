@@ -111,6 +111,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_baton_protocol", picowt_baton_protocol_test },
     { "picowt_baton_scheme", picowt_baton_scheme_test },
     { "picowt_baton_authority", picowt_baton_authority_test },
+    { "picowt_baton_origin", picowt_baton_origin_test },
     { "picowt_drain", picowt_drain_test },
     { "picowt_tp", picowt_tp_test },
     { "picowt_requirements", picowt_requirements_test },
