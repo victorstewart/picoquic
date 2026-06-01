@@ -511,6 +511,89 @@ int h3zero_wt_zero_buffer_test(void)
     return ret;
 }
 
+static int h3zero_wt_prefix_fragment_case(int is_bidir, size_t split)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id = 4;
+    const uint64_t stream_id = is_bidir ? 12 : 6;
+    h3zero_stream_ctx_t* session_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    h3zero_wt_zero_buffer_test_ctx_t test_ctx = { 0, 0 };
+    uint8_t bidi_input[] = { 0x40, 0x41, 0x04, 0xf0 };
+    uint8_t unidir_input[] = { 0x40, 0x54, 0x04, 0xf0 };
+    uint8_t* input = is_bidir ? bidi_input : unidir_input;
+    size_t input_length = is_bidir ? sizeof(bidi_input) : sizeof(unidir_input);
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        session_ctx = h3zero_find_or_create_stream(cnx, session_id, h3_ctx, 1, 1);
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id,
+                h3zero_wt_zero_buffer_callback, &test_ctx) != 0) {
+            ret = -1;
+        }
+        else {
+            session_ctx->is_upgraded = 1;
+        }
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+    }
+    if (ret == 0) {
+        ret = h3zero_process_remote_stream(cnx, stream_id, input, split,
+            picoquic_callback_stream_data, stream_ctx, h3_ctx);
+    }
+    if (ret != 0 || cnx->application_error != 0 || test_ctx.nb_data != 0) {
+        DBG_PRINTF("WT %s prefix split %zu first chunk failed, ret=%d, app_error=%" PRIu64 ", data=%d",
+            is_bidir ? "bidi" : "uni", split, ret, cnx->application_error,
+            test_ctx.nb_data);
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = h3zero_process_remote_stream(cnx, stream_id, input + split,
+            input_length - split, picoquic_callback_stream_data, stream_ctx,
+            h3_ctx);
+    }
+    if (ret != 0 ||
+        stream_ctx->ps.stream_state.stream_type !=
+            (is_bidir ? h3zero_frame_webtransport_stream : h3zero_stream_type_webtransport) ||
+        stream_ctx->ps.stream_state.control_stream_id != session_id ||
+        cnx->application_error != 0 || test_ctx.nb_data != 1) {
+        DBG_PRINTF("WT %s prefix split %zu completion failed, ret=%d, app_error=%" PRIu64 ", data=%d",
+            is_bidir ? "bidi" : "uni", split, ret, cnx->application_error,
+            test_ctx.nb_data);
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int h3zero_wt_prefix_fragment_test(void)
+{
+    int ret = 0;
+
+    for (int is_bidir = 0; ret == 0 && is_bidir <= 1; is_bidir++) {
+        for (size_t split = 1; ret == 0 && split < 4; split++) {
+            ret = h3zero_wt_prefix_fragment_case(is_bidir, split);
+        }
+    }
+
+    return ret;
+}
+
 /*
 * A fraction of the control stream parsing is covered by normal usage :
 * -receive h3 settings on control stream,

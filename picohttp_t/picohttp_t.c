@@ -50,6 +50,7 @@ static const picoquic_test_def_t test_table[] = {
     { "h3zero_incoming_unidir", h3zero_incoming_unidir_test },
     { "h3zero_wt_id_error", h3zero_wt_id_error_test },
     { "h3zero_wt_zero_buffer", h3zero_wt_zero_buffer_test },
+    { "h3zero_wt_prefix_fragment", h3zero_wt_prefix_fragment_test },
     { "h3zero_unidir_error", h3zero_unidir_error_test },
     { "h3zero_setting_error", h3zero_setting_error_test },
     { "h3zero_settings_fragment", h3zero_settings_fragment_test },
