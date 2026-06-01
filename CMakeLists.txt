@@ -748,6 +748,7 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     add_picohttp_labeled_test(picowt_exporter wt_strict)
     add_picohttp_labeled_test(picowt_tp wt_strict wt_wire)
     add_picohttp_labeled_test(picowt_requirements wt_strict wt_wire)
+    add_picohttp_labeled_test(picowt_server_capabilities wt_strict wt_wire)
     add_picohttp_labeled_test(picowt_baton_protocol wt_compat)
     add_picohttp_labeled_test(picowt_chrome_legacy_connect wt_compat)
 

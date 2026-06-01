@@ -821,6 +821,121 @@ int picowt_requirements_test(void)
     return ret;
 }
 
+typedef enum {
+    picowt_server_capability_missing_settings,
+    picowt_server_capability_wt_enabled,
+    picowt_server_capability_connect_protocol,
+    picowt_server_capability_h3_datagram,
+    picowt_server_capability_quic_datagram,
+    picowt_server_capability_reset_stream_at
+} picowt_server_capability_case_t;
+
+static int picowt_server_capability_case(
+    picowt_server_capability_case_t capability_case, uint64_t expected_error)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* control_stream_ctx = NULL;
+    uint64_t simulated_time = 0;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->cnx_state = picoquic_state_ready;
+        cnx->local_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->local_parameters.is_reset_stream_at_enabled = 1;
+        cnx->remote_parameters.is_reset_stream_at_enabled = 1;
+        h3_ctx->settings.settings_received = 1;
+        h3_ctx->settings.enable_connect_protocol = 1;
+        h3_ctx->settings.h3_datagram = 1;
+        h3_ctx->settings.webtransport_enabled = 1;
+
+        switch (capability_case) {
+        case picowt_server_capability_missing_settings:
+            h3_ctx->settings.settings_received = 0;
+            break;
+        case picowt_server_capability_wt_enabled:
+            h3_ctx->settings.webtransport_enabled = 0;
+            break;
+        case picowt_server_capability_connect_protocol:
+            h3_ctx->settings.enable_connect_protocol = 0;
+            break;
+        case picowt_server_capability_h3_datagram:
+            h3_ctx->settings.h3_datagram = 0;
+            break;
+        case picowt_server_capability_quic_datagram:
+            cnx->remote_parameters.max_datagram_frame_size = 0;
+            break;
+        case picowt_server_capability_reset_stream_at:
+            cnx->remote_parameters.is_reset_stream_at_enabled = 0;
+            break;
+        default:
+            ret = -1;
+            break;
+        }
+    }
+
+    if (ret == 0 && (control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        int connect_ret = picowt_connect(cnx, h3_ctx, control_stream_ctx,
+            PICOQUIC_TEST_SNI, "/baton", picowt_accept_only_callback, NULL, NULL);
+
+        if (connect_ret != (int)expected_error) {
+            DBG_PRINTF("Capability case %d: expected error 0x%" PRIx64 ", got 0x%x",
+                capability_case, expected_error, connect_ret);
+            ret = -1;
+        }
+        else if (control_stream_ctx->is_open ||
+            h3zero_find_stream_prefix(h3_ctx, control_stream_ctx->stream_id) != NULL) {
+            DBG_PRINTF("Capability case %d sent CONNECT despite missing server capability",
+                capability_case);
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int picowt_server_capabilities_test(void)
+{
+    int ret = picowt_server_capability_case(
+        picowt_server_capability_missing_settings, H3ZERO_MISSING_SETTINGS);
+
+    if (ret == 0) {
+        ret = picowt_server_capability_case(
+            picowt_server_capability_wt_enabled, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+    }
+    if (ret == 0) {
+        ret = picowt_server_capability_case(
+            picowt_server_capability_connect_protocol, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+    }
+    if (ret == 0) {
+        ret = picowt_server_capability_case(
+            picowt_server_capability_h3_datagram, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+    }
+    if (ret == 0) {
+        ret = picowt_server_capability_case(
+            picowt_server_capability_quic_datagram, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+    }
+    if (ret == 0) {
+        ret = picowt_server_capability_case(
+            picowt_server_capability_reset_stream_at, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+    }
+
+    return ret;
+}
+
 static int picowt_reset_error_case(uint64_t app_error, uint64_t h3_error, int expect_success)
 {
     picoquic_quic_t* quic = NULL;

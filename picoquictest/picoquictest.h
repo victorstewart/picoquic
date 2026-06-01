@@ -692,6 +692,7 @@ int picowt_goaway_test(void);
 int picowt_exporter_test(void);
 int picowt_tp_test(void);
 int picowt_requirements_test(void);
+int picowt_server_capabilities_test(void);
 int quicperf_parse_test(void);
 int quicperf_batch_test(void);
 int quicperf_datagram_test(void);
