@@ -109,6 +109,8 @@ extern "C" {
 
     int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint8_t* bytes_max, picowt_capsule_t* capsule);
     void picowt_release_capsule(picowt_capsule_t* capsule);
+    int picowt_apply_flow_control_capsule(h3zero_stream_ctx_t* control_stream_ctx,
+        const picowt_capsule_t* capsule);
     int picowt_abort_session(picoquic_cnx_t* cnx,
         h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* control_stream_ctx,
         uint64_t h3_error_code);

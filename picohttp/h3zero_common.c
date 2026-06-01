@@ -200,6 +200,7 @@ static void h3zero_track_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero
 		stream_ctx->is_webtransport_session_counted = 1;
 		stream_ctx->wt_data_received = 0;
 		stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
+		stream_ctx->wt_max_data_remote = ctx->settings.wt_initial_max_data;
 		stream_ctx->wt_streams_bidi_received = 0;
 		stream_ctx->wt_streams_uni_received = 0;
 		stream_ctx->wt_streams_bidi_sent = 0;

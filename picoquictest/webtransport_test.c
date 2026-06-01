@@ -4003,7 +4003,10 @@ static int picowt_local_stream_limit_case(int is_bidir)
     h3zero_stream_ctx_t* control_stream_ctx = NULL;
     h3zero_stream_ctx_t* first_stream_ctx = NULL;
     h3zero_stream_ctx_t* second_stream_ctx = NULL;
+    h3zero_stream_ctx_t* third_stream_ctx = NULL;
     uint64_t simulated_time = 0;
+    uint8_t capsule_buffer[24];
+    picowt_capsule_t capsule = { 0 };
     int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
         &simulated_time);
 
@@ -4056,8 +4059,40 @@ static int picowt_local_stream_limit_case(int is_bidir)
             ret = -1;
         }
     }
+    if (ret == 0) {
+        uint64_t capsule_type = is_bidir ?
+            picowt_capsule_wt_max_streams_bidi :
+            picowt_capsule_wt_max_streams_uni;
+        size_t capsule_length = picowt_format_flow_control_test_capsule(
+            capsule_buffer, sizeof(capsule_buffer), capsule_type, 2);
+
+        if (capsule_length == 0 ||
+            picowt_receive_capsule(cnx, capsule_buffer,
+                capsule_buffer + capsule_length, &capsule) != 0 ||
+            picowt_apply_flow_control_capsule(control_stream_ctx,
+                &capsule) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        third_stream_ctx = picowt_create_local_stream(cnx, is_bidir, h3_ctx,
+            control_stream_ctx->stream_id);
+        if (third_stream_ctx == NULL) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        uint64_t count = is_bidir ?
+            control_stream_ctx->wt_streams_bidi_sent :
+            control_stream_ctx->wt_streams_uni_sent;
+
+        if (count != 2) {
+            ret = -1;
+        }
+    }
 
     picoquic_set_callback(cnx, NULL, NULL);
+    picowt_release_capsule(&capsule);
     if (h3_ctx != NULL) {
         h3zero_callback_delete_context(cnx, h3_ctx);
     }

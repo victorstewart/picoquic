@@ -576,6 +576,7 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         stream_ctx->path_callback_ctx = wt_ctx;
         stream_ctx->wt_data_received = 0;
         stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
+        stream_ctx->wt_max_data_remote = ctx->settings.wt_initial_max_data;
         stream_ctx->wt_streams_bidi_received = 0;
         stream_ctx->wt_streams_uni_received = 0;
         stream_ctx->wt_streams_bidi_sent = 0;
@@ -1129,6 +1130,31 @@ void picowt_release_capsule(picowt_capsule_t* capsule)
 {
     h3zero_release_capsule(&capsule->h3_capsule);
     memset(capsule, 0, sizeof(picowt_capsule_t));
+}
+
+int picowt_apply_flow_control_capsule(h3zero_stream_ctx_t* control_stream_ctx,
+    const picowt_capsule_t* capsule)
+{
+    int ret = 0;
+
+    if (control_stream_ctx == NULL || capsule == NULL) {
+        ret = -1;
+    }
+    else {
+        if (capsule->wt_max_data_received) {
+            control_stream_ctx->wt_max_data_remote = capsule->wt_max_data;
+        }
+        if (capsule->wt_max_streams_bidi_received) {
+            control_stream_ctx->wt_max_streams_bidi_remote =
+                capsule->wt_max_streams_bidi;
+        }
+        if (capsule->wt_max_streams_uni_received) {
+            control_stream_ctx->wt_max_streams_uni_remote =
+                capsule->wt_max_streams_uni;
+        }
+    }
+
+    return ret;
 }
 
 int picowt_abort_session(picoquic_cnx_t* cnx,

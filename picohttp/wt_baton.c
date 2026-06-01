@@ -353,6 +353,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 return picowt_abort_session(cnx, baton_ctx->h3_ctx, stream_ctx,
                     h3_error_code);
             }
+            ret = picowt_apply_flow_control_capsule(stream_ctx,
+                &baton_ctx->capsule);
             if (is_fin) {
                 stream_ctx->ps.stream_state.is_fin_received = 1;
                 baton_ctx->baton_state = wt_baton_state_closed;
