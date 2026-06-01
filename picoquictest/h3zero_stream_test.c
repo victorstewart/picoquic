@@ -1194,6 +1194,202 @@ int h3zero_wt_stream_interleave_test(void)
     return ret;
 }
 
+#define H3ZERO_WT_MULTI_SESSION_COUNT 2
+#define H3ZERO_WT_MULTI_SESSION_STREAMS 2
+
+typedef struct st_h3zero_wt_multi_session_stream_t {
+    uint64_t stream_id;
+    uint8_t expected_byte;
+    int nb_data;
+    int nb_fin;
+    int error_seen;
+} h3zero_wt_multi_session_stream_t;
+
+typedef struct st_h3zero_wt_multi_session_test_ctx_t {
+    uint64_t session_id;
+    h3zero_wt_multi_session_stream_t streams[H3ZERO_WT_MULTI_SESSION_STREAMS];
+    int unknown_stream;
+} h3zero_wt_multi_session_test_ctx_t;
+
+static size_t h3zero_wt_multi_session_find_stream(
+    h3zero_wt_multi_session_test_ctx_t* ctx, uint64_t stream_id)
+{
+    for (size_t i = 0; i < H3ZERO_WT_MULTI_SESSION_STREAMS; i++) {
+        if (ctx->streams[i].stream_id == stream_id) {
+            return i;
+        }
+    }
+
+    return H3ZERO_WT_MULTI_SESSION_STREAMS;
+}
+
+static int h3zero_wt_multi_session_callback(picoquic_cnx_t* UNUSED(cnx),
+    uint8_t* bytes, size_t length, picohttp_call_back_event_t fin_or_event,
+    struct st_h3zero_stream_ctx_t* stream_ctx, void* path_app_ctx)
+{
+    h3zero_wt_multi_session_test_ctx_t* ctx =
+        (h3zero_wt_multi_session_test_ctx_t*)path_app_ctx;
+    size_t stream_index = h3zero_wt_multi_session_find_stream(ctx,
+        (stream_ctx == NULL) ? UINT64_MAX : stream_ctx->stream_id);
+
+    if (stream_index >= H3ZERO_WT_MULTI_SESSION_STREAMS) {
+        ctx->unknown_stream++;
+    }
+    else {
+        h3zero_wt_multi_session_stream_t* stream =
+            &ctx->streams[stream_index];
+
+        if (stream_ctx == NULL ||
+            stream_ctx->ps.stream_state.control_stream_id != ctx->session_id) {
+            stream->error_seen = 1;
+        }
+        else if (fin_or_event == picohttp_callback_post_data) {
+            if (length == 1 && bytes != NULL &&
+                bytes[0] == stream->expected_byte) {
+                stream->nb_data++;
+            }
+            else {
+                stream->error_seen = 1;
+            }
+        }
+        else if (fin_or_event == picohttp_callback_post_fin) {
+            stream->nb_fin++;
+        }
+    }
+
+    return 0;
+}
+
+static int h3zero_wt_multi_session_send_stream(picoquic_cnx_t* cnx,
+    h3zero_callback_ctx_t* h3_ctx, uint64_t session_id, uint64_t stream_id,
+    int is_bidir, uint8_t payload)
+{
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    uint8_t buffer[16];
+    uint8_t fin_byte = 0;
+    uint8_t* bytes = buffer;
+    uint8_t* bytes_max = buffer + sizeof(buffer);
+    int ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id,
+        &stream_ctx);
+
+    if (ret == 0 &&
+        ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            is_bidir ? h3zero_frame_webtransport_stream :
+            h3zero_stream_type_webtransport)) == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            session_id)) == NULL ||
+        bytes >= bytes_max)) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        *bytes++ = payload;
+        ret = h3zero_process_remote_stream(cnx, stream_id, buffer,
+            bytes - buffer, picoquic_callback_stream_data, stream_ctx,
+            h3_ctx);
+    }
+    if (ret == 0) {
+        ret = h3zero_process_remote_stream(cnx, stream_id, &fin_byte, 0,
+            picoquic_callback_stream_fin, stream_ctx, h3_ctx);
+    }
+
+    return ret;
+}
+
+int h3zero_wt_multi_session_stream_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_ids[H3ZERO_WT_MULTI_SESSION_COUNT] = { 4, 8 };
+    const uint64_t stream_ids[H3ZERO_WT_MULTI_SESSION_COUNT]
+        [H3ZERO_WT_MULTI_SESSION_STREAMS] = {
+        { 6, 12 },
+        { 10, 16 }
+    };
+    const int stream_is_bidir[H3ZERO_WT_MULTI_SESSION_STREAMS] = { 0, 1 };
+    const uint8_t stream_payload[H3ZERO_WT_MULTI_SESSION_COUNT]
+        [H3ZERO_WT_MULTI_SESSION_STREAMS] = {
+        { 0xa4, 0xb4 },
+        { 0xa8, 0xb8 }
+    };
+    h3zero_wt_multi_session_test_ctx_t test_ctx[H3ZERO_WT_MULTI_SESSION_COUNT] = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+    }
+    for (size_t s = 0; ret == 0 && s < H3ZERO_WT_MULTI_SESSION_COUNT; s++) {
+        h3zero_stream_ctx_t* session_ctx = h3zero_find_or_create_stream(
+            cnx, session_ids[s], h3_ctx, 1, 1);
+
+        test_ctx[s].session_id = session_ids[s];
+        for (size_t i = 0; i < H3ZERO_WT_MULTI_SESSION_STREAMS; i++) {
+            test_ctx[s].streams[i].stream_id = stream_ids[s][i];
+            test_ctx[s].streams[i].expected_byte = stream_payload[s][i];
+        }
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_ids[s],
+                h3zero_wt_multi_session_callback, &test_ctx[s]) != 0) {
+            ret = -1;
+        }
+        else {
+            session_ctx->is_upgraded = 1;
+        }
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_multi_session_send_stream(cnx, h3_ctx,
+            session_ids[0], stream_ids[0][0], stream_is_bidir[0],
+            stream_payload[0][0]);
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_multi_session_send_stream(cnx, h3_ctx,
+            session_ids[1], stream_ids[1][0], stream_is_bidir[0],
+            stream_payload[1][0]);
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_multi_session_send_stream(cnx, h3_ctx,
+            session_ids[0], stream_ids[0][1], stream_is_bidir[1],
+            stream_payload[0][1]);
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_multi_session_send_stream(cnx, h3_ctx,
+            session_ids[1], stream_ids[1][1], stream_is_bidir[1],
+            stream_payload[1][1]);
+    }
+    for (size_t s = 0; ret == 0 && s < H3ZERO_WT_MULTI_SESSION_COUNT; s++) {
+        if (test_ctx[s].unknown_stream != 0) {
+            ret = -1;
+        }
+        for (size_t i = 0; ret == 0 && i < H3ZERO_WT_MULTI_SESSION_STREAMS; i++) {
+            if (test_ctx[s].streams[i].error_seen ||
+                test_ctx[s].streams[i].nb_data != 1 ||
+                test_ctx[s].streams[i].nb_fin != 1) {
+                DBG_PRINTF("WT multi-session stream %zu/%zu failed, data=%d, fin=%d, error=%d",
+                    s, i, test_ctx[s].streams[i].nb_data,
+                    test_ctx[s].streams[i].nb_fin,
+                    test_ctx[s].streams[i].error_seen);
+                ret = -1;
+            }
+        }
+    }
+    if (ret != 0) {
+        DBG_PRINTF("WT multi-session stream test failed, ret=%d, app_error=%" PRIu64,
+            ret, (cnx == NULL) ? UINT64_MAX : cnx->application_error);
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 /*
 * A fraction of the control stream parsing is covered by normal usage :
 * -receive h3 settings on control stream,

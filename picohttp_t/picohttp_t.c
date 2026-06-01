@@ -56,6 +56,7 @@ static const picoquic_test_def_t test_table[] = {
     { "h3zero_wt_stream_empty_fin", h3zero_wt_stream_empty_fin_test },
     { "h3zero_wt_payload_order", h3zero_wt_payload_order_test },
     { "h3zero_wt_stream_interleave", h3zero_wt_stream_interleave_test },
+    { "h3zero_wt_multi_session_stream", h3zero_wt_multi_session_stream_test },
     { "h3zero_unidir_error", h3zero_unidir_error_test },
     { "h3zero_setting_error", h3zero_setting_error_test },
     { "h3zero_settings_fragment", h3zero_settings_fragment_test },
