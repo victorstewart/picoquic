@@ -135,6 +135,9 @@
     <ClCompile Include="webtransport_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="webtransport_wire_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="h3zero_uri_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>

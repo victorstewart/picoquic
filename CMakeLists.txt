@@ -280,7 +280,8 @@ set(PICOHTTP_TEST_LIBRARY_FILES
     picoquictest/h3zero_uri_test.c
     picoquictest/picomask_test.c
     picoquictest/quicperf_test.c
-    picoquictest/webtransport_test.c)
+    picoquictest/webtransport_test.c
+    picoquictest/webtransport_wire_test.c)
 
 OPTION(WITH_OPENSSL "build with OpenSSL" ON)
 OPTION(WITH_AEGIS "enable AEGIS support through picotls/libaegis" OFF)
@@ -714,6 +715,7 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     add_picohttp_labeled_test(h3zero_stream_test wt_wire)
     add_picohttp_labeled_test(h3zero_qpack_fuzz wt_fuzz)
     add_picohttp_labeled_test(h3zero_stream_fuzz wt_fuzz wt_wire)
+    add_picohttp_labeled_test(picowt_wire_harness wt_wire)
     add_picohttp_labeled_test(picowt_baton_basic wt_strict)
     add_picohttp_labeled_test(picowt_baton_error wt_strict)
     add_picohttp_labeled_test(picowt_baton_long wt_strict)
