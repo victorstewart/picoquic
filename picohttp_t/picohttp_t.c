@@ -70,6 +70,7 @@ static const picoquic_test_def_t test_table[] = {
     { "h3zero_setting_error", h3zero_setting_error_test },
     { "h3zero_settings_fragment", h3zero_settings_fragment_test },
     { "h3zero_capsule", h3zero_capsule_test },
+    { "h3zero_capsule_length_bound", h3zero_capsule_length_bound_test },
     { "h3zero_client_data", h3zero_client_data_test },
     { "qpack_huffman", qpack_huffman_test },
     { "qpack_huffman_base", qpack_huffman_base_test},

@@ -171,6 +171,7 @@ extern "C" {
 #define h3zero_capsule_type_datagram 0x00
 
 #define H3ZERO_CAPSULE_HEADER_SIZE_MAX 16
+#define H3ZERO_CAPSULE_VALUE_SIZE_MAX 65535
     typedef struct st_h3zero_capsule_t {
         uint8_t header_buffer[H3ZERO_CAPSULE_HEADER_SIZE_MAX];
         size_t header_length;

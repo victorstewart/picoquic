@@ -3172,3 +3172,29 @@ int h3zero_capsule_test(void)
 
     return ret;
 }
+
+int h3zero_capsule_length_bound_test(void)
+{
+    uint8_t buffer[24];
+    uint8_t* bytes = buffer;
+    uint8_t* bytes_max = buffer + sizeof(buffer);
+    h3zero_capsule_t capsule = { 0 };
+    const uint8_t* parsed = NULL;
+    int ret = 0;
+
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max, 0x1f)) == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            H3ZERO_CAPSULE_VALUE_SIZE_MAX + 1)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        parsed = h3zero_accumulate_capsule(buffer, bytes, &capsule);
+        if (parsed != NULL || capsule.capsule_buffer != NULL ||
+            capsule.capsule_buffer_size != 0 || capsule.is_stored) {
+            ret = -1;
+        }
+    }
+    h3zero_release_capsule(&capsule);
+
+    return ret;
+}

@@ -2792,6 +2792,12 @@ const uint8_t* h3zero_accumulate_capsule(const uint8_t* bytes, const uint8_t* by
 			capsule->value_read = 0;
 			capsule->is_stored = 1;
 		}
+		else if (capsule->capsule_length > H3ZERO_CAPSULE_VALUE_SIZE_MAX) {
+			/* Capsule lengths are peer-controlled; reject oversized stored
+			 * values before allocation to keep memory use bounded.
+			 */
+			bytes = NULL;
+		}
 		else {
 			if (capsule->capsule_buffer_size < capsule->capsule_length) {
 				uint8_t* capsule_buffer = (uint8_t*)malloc(capsule->capsule_length);
