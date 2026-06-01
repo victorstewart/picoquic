@@ -202,8 +202,12 @@ static void h3zero_track_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero
 		stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
 		stream_ctx->wt_streams_bidi_received = 0;
 		stream_ctx->wt_streams_uni_received = 0;
+		stream_ctx->wt_streams_bidi_sent = 0;
+		stream_ctx->wt_streams_uni_sent = 0;
 		stream_ctx->wt_max_streams_bidi_local = ctx->local_settings.wt_initial_max_streams_bidi;
 		stream_ctx->wt_max_streams_uni_local = ctx->local_settings.wt_initial_max_streams_uni;
+		stream_ctx->wt_max_streams_bidi_remote = ctx->settings.wt_initial_max_streams_bidi;
+		stream_ctx->wt_max_streams_uni_remote = ctx->settings.wt_initial_max_streams_uni;
 		ctx->nb_webtransport_sessions++;
 	}
 }

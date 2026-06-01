@@ -111,8 +111,12 @@ extern "C" {
         uint64_t wt_max_data_local;
         uint64_t wt_streams_bidi_received;
         uint64_t wt_streams_uni_received;
+        uint64_t wt_streams_bidi_sent;
+        uint64_t wt_streams_uni_sent;
         uint64_t wt_max_streams_bidi_local;
         uint64_t wt_max_streams_uni_local;
+        uint64_t wt_max_streams_bidi_remote;
+        uint64_t wt_max_streams_uni_remote;
         union {
             h3zero_data_stream_state_t stream_state; /* h3 only */
             struct {

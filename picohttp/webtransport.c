@@ -109,6 +109,64 @@ void picowt_set_default_transport_parameters(picoquic_quic_t* quic)
 
 /* Web transport commands */
 
+static int picowt_settings_enable_flow_control(const h3zero_settings_t* settings)
+{
+    return (settings != NULL &&
+        (settings->wt_initial_max_data != 0 ||
+            settings->wt_initial_max_streams_uni != 0 ||
+            settings->wt_initial_max_streams_bidi != 0));
+}
+
+static int picowt_session_flow_control_is_enabled(h3zero_callback_ctx_t* h3_ctx)
+{
+    return (h3_ctx != NULL &&
+        picowt_settings_enable_flow_control(&h3_ctx->local_settings) &&
+        picowt_settings_enable_flow_control(&h3_ctx->settings));
+}
+
+static int picowt_local_stream_credit_available(h3zero_callback_ctx_t* h3_ctx,
+    uint64_t control_stream_id, int is_bidir)
+{
+    int ret = 1;
+
+    if (picowt_session_flow_control_is_enabled(h3_ctx)) {
+        h3zero_stream_ctx_t* control_stream_ctx =
+            h3zero_find_stream(h3_ctx, control_stream_id);
+
+        if (control_stream_ctx == NULL) {
+            ret = 0;
+        }
+        else if (is_bidir) {
+            ret = (control_stream_ctx->wt_streams_bidi_sent <
+                control_stream_ctx->wt_max_streams_bidi_remote);
+        }
+        else {
+            ret = (control_stream_ctx->wt_streams_uni_sent <
+                control_stream_ctx->wt_max_streams_uni_remote);
+        }
+    }
+
+    return ret;
+}
+
+static void picowt_local_stream_credit_used(h3zero_callback_ctx_t* h3_ctx,
+    uint64_t control_stream_id, int is_bidir)
+{
+    if (picowt_session_flow_control_is_enabled(h3_ctx)) {
+        h3zero_stream_ctx_t* control_stream_ctx =
+            h3zero_find_stream(h3_ctx, control_stream_id);
+
+        if (control_stream_ctx != NULL) {
+            if (is_bidir) {
+                control_stream_ctx->wt_streams_bidi_sent++;
+            }
+            else {
+                control_stream_ctx->wt_streams_uni_sent++;
+            }
+        }
+    }
+}
+
 /**
 * Create stream: when a stream is created locally. 
 * Send the stream header. Associate the stream with a per_stream
@@ -134,7 +192,15 @@ static h3zero_stream_ctx_t* picowt_create_stream_ctx(picoquic_cnx_t* cnx, int is
 h3zero_stream_ctx_t* picowt_create_local_stream(picoquic_cnx_t* cnx, int is_bidir, h3zero_callback_ctx_t* h3_ctx,
     uint64_t control_stream_id)
 {
-    h3zero_stream_ctx_t* stream_ctx = picowt_create_stream_ctx(cnx, is_bidir, h3_ctx, control_stream_id);
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+
+    if (!picowt_local_stream_credit_available(h3_ctx, control_stream_id,
+        is_bidir)) {
+        return NULL;
+    }
+
+    stream_ctx = picowt_create_stream_ctx(cnx, is_bidir, h3_ctx,
+        control_stream_id);
     if (stream_ctx != NULL) {
         /* Write the first required bytes for sending the context ID */
         uint8_t stream_header[16];
@@ -149,6 +215,10 @@ h3zero_stream_ctx_t* picowt_create_local_stream(picoquic_cnx_t* cnx, int is_bidi
             DBG_PRINTF("Could not add data for stream %"PRIu64 ", ret = %d", stream_ctx->stream_id, ret);
             h3zero_delete_stream(cnx, h3_ctx, stream_ctx);
             stream_ctx = NULL;
+        }
+        else {
+            picowt_local_stream_credit_used(h3_ctx, control_stream_id,
+                is_bidir);
         }
     }
     return(stream_ctx);
@@ -508,10 +578,16 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
         stream_ctx->wt_streams_bidi_received = 0;
         stream_ctx->wt_streams_uni_received = 0;
+        stream_ctx->wt_streams_bidi_sent = 0;
+        stream_ctx->wt_streams_uni_sent = 0;
         stream_ctx->wt_max_streams_bidi_local =
             ctx->local_settings.wt_initial_max_streams_bidi;
         stream_ctx->wt_max_streams_uni_local =
             ctx->local_settings.wt_initial_max_streams_uni;
+        stream_ctx->wt_max_streams_bidi_remote =
+            ctx->settings.wt_initial_max_streams_bidi;
+        stream_ctx->wt_max_streams_uni_remote =
+            ctx->settings.wt_initial_max_streams_uni;
     }
 
     /* Declare the outgoing connection through the callback, so it can update its own state */
