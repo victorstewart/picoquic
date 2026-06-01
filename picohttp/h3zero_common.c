@@ -195,6 +195,8 @@ static void h3zero_track_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero
 {
 	if (ctx != NULL && stream_ctx != NULL && !stream_ctx->is_webtransport_session_counted) {
 		stream_ctx->is_webtransport_session_counted = 1;
+		stream_ctx->wt_data_received = 0;
+		stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
 		ctx->nb_webtransport_sessions++;
 	}
 }
@@ -1221,6 +1223,68 @@ void h3zero_callback_delete_context(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* 
 	free(ctx);
 }
 
+static int h3zero_abort_webtransport_session(picoquic_cnx_t* cnx,
+	h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* control_stream_ctx,
+	uint64_t h3_error_code)
+{
+	int ret = -1;
+
+	if (cnx != NULL && h3_ctx != NULL && control_stream_ctx != NULL) {
+		ret = picoquic_reset_stream(cnx, control_stream_ctx->stream_id,
+			h3_error_code);
+		if (ret == 0) {
+			ret = picoquic_stop_sending(cnx, control_stream_ctx->stream_id,
+				h3_error_code);
+		}
+		control_stream_ctx->ps.stream_state.is_fin_sent = 1;
+		control_stream_ctx->ps.stream_state.is_fin_received = 1;
+		h3zero_delete_stream_prefix(cnx, h3_ctx, control_stream_ctx->stream_id);
+	}
+
+	return ret;
+}
+
+static int h3zero_account_webtransport_stream_data(picoquic_cnx_t* cnx,
+	h3zero_stream_ctx_t* stream_ctx, size_t length, int* session_aborted)
+{
+	int ret = 0;
+	h3zero_callback_ctx_t* h3_ctx = NULL;
+	h3zero_stream_ctx_t* control_stream_ctx = NULL;
+
+	if (session_aborted != NULL) {
+		*session_aborted = 0;
+	}
+	if (length == 0 ||
+		stream_ctx == NULL ||
+		stream_ctx->ps.stream_state.control_stream_id == UINT64_MAX ||
+		stream_ctx->ps.stream_state.control_stream_id == stream_ctx->stream_id) {
+		return 0;
+	}
+
+	h3_ctx = stream_ctx->ps.stream_state.h3_ctx;
+	if (!h3zero_webtransport_flow_control_is_enabled(h3_ctx)) {
+		return 0;
+	}
+
+	control_stream_ctx = h3zero_find_stream(h3_ctx,
+		stream_ctx->ps.stream_state.control_stream_id);
+	if (control_stream_ctx == NULL ||
+		UINT64_MAX - control_stream_ctx->wt_data_received < length ||
+		control_stream_ctx->wt_data_received + length >
+			control_stream_ctx->wt_max_data_local) {
+		if (session_aborted != NULL) {
+			*session_aborted = 1;
+		}
+		ret = h3zero_abort_webtransport_session(cnx, h3_ctx,
+			control_stream_ctx, H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR);
+	}
+	else {
+		control_stream_ctx->wt_data_received += length;
+	}
+
+	return ret;
+}
+
 /* The picoquic callback bundles DATA and FIN. 
 * We maintain this bundling, so the application has complete control on
 * the stream context.
@@ -1230,8 +1294,14 @@ int h3zero_post_data_or_fin(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
 	h3zero_stream_ctx_t* stream_ctx)
 {
 	int ret = 0;
+	int session_aborted = 0;
 
 	if (stream_ctx != NULL && stream_ctx->path_callback != NULL) {
+		ret = h3zero_account_webtransport_stream_data(cnx, stream_ctx,
+			length, &session_aborted);
+	}
+	if (ret == 0 && !session_aborted && stream_ctx != NULL &&
+		stream_ctx->path_callback != NULL) {
 		ret = stream_ctx->path_callback(cnx, bytes, length, (fin_or_event == picoquic_callback_stream_fin) ?
 			picohttp_callback_post_fin : picohttp_callback_post_data, stream_ctx, stream_ctx->path_callback_ctx);
 	}
@@ -1889,14 +1959,23 @@ int h3zero_process_h3_server_data(picoquic_cnx_t* cnx,
 				* the FIN bit in the following code block, because the FIN bit is already handled in this call.
 				*/
 				int is_post = stream_ctx->ps.stream_state.header.method == h3zero_method_post;
+				int session_aborted = 0;
 
-				ret = stream_ctx->path_callback(cnx, bytes, available_data,
-					(fin_or_event == picoquic_callback_stream_fin && !is_post) ?
-					picohttp_callback_post_fin : picohttp_callback_post_data, stream_ctx, stream_ctx->path_callback_ctx);
-				if (is_post) {
+				ret = h3zero_account_webtransport_stream_data(cnx,
+					stream_ctx, available_data, &session_aborted);
+				if (session_aborted) {
+					process_complete = 1;
+					break;
+				}
+				else if (ret == 0) {
+					ret = stream_ctx->path_callback(cnx, bytes, available_data,
+						(fin_or_event == picoquic_callback_stream_fin && !is_post) ?
+						picohttp_callback_post_fin : picohttp_callback_post_data, stream_ctx, stream_ctx->path_callback_ctx);
+				}
+				if (ret == 0 && is_post) {
 					stream_ctx->post_received += available_data;
 				}
-				else {
+				else if (ret == 0) {
 					process_complete = 1;
 				}
 			}

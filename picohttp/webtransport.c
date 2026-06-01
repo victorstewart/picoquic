@@ -504,6 +504,8 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         stream_ctx->is_open = 1;
         stream_ctx->path_callback = wt_callback;
         stream_ctx->path_callback_ctx = wt_ctx;
+        stream_ctx->wt_data_received = 0;
+        stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
     }
 
     /* Declare the outgoing connection through the callback, so it can update its own state */
@@ -775,16 +777,26 @@ int picowt_send_flow_control_capsule(picoquic_cnx_t* cnx,
 {
     uint8_t buffer[8];
     uint8_t* bytes;
+    int ret = 0;
 
-    if (control_stream_ctx->ps.stream_state.is_fin_sent ||
+    if (cnx == NULL || control_stream_ctx == NULL ||
+        control_stream_ctx->ps.stream_state.is_fin_sent ||
         !picowt_flow_control_capsule_is_valid(capsule_type, flow_control_value) ||
+        (capsule_type == picowt_capsule_wt_max_data &&
+            flow_control_value < control_stream_ctx->wt_max_data_local) ||
         (bytes = picoquic_frames_varint_encode(buffer, buffer + sizeof(buffer),
             flow_control_value)) == NULL) {
-        return -1;
+        ret = -1;
+    }
+    else {
+        ret = h3zero_send_capsule(cnx, control_stream_ctx, capsule_type,
+            bytes - buffer, buffer, 0);
+        if (ret == 0 && capsule_type == picowt_capsule_wt_max_data) {
+            control_stream_ctx->wt_max_data_local = flow_control_value;
+        }
     }
 
-    return h3zero_send_capsule(cnx, control_stream_ctx, capsule_type,
-        bytes - buffer, buffer, 0);
+    return ret;
 }
 
 int picowt_export_secret(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* control_stream_ctx,
