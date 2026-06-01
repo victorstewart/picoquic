@@ -1447,6 +1447,10 @@ int h3zero_process_request_frame(
 			picoquic_log_app_message(cnx, "Missing WebTransport CONNECT authority on stream: %"PRIu64, stream_ctx->stream_id);
 			o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
 		}
+		else if (is_webtransport && stream_ctx->ps.stream_state.header.path == NULL) {
+			picoquic_log_app_message(cnx, "Missing WebTransport CONNECT path on stream: %"PRIu64, stream_ctx->stream_id);
+			o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
+		}
 		else if (is_webtransport && (stream_ctx->ps.stream_state.header.origin == NULL ||
 			stream_ctx->ps.stream_state.header.origin_length == 0)) {
 			picoquic_log_app_message(cnx, "Missing WebTransport CONNECT origin on stream: %"PRIu64, stream_ctx->stream_id);

@@ -152,7 +152,10 @@ static int picowt_connect_test_protocol(picoquic_cnx_t* cnx, h3zero_callback_ctx
         else if (connect_scheme != NULL) {
             bytes = h3zero_qpack_code_encode(bytes, bytes_max, 0xC0, 0x3F, H3ZERO_QPACK_SCHEME_HTTPS);
         }
-        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_CODE_PATH, (const uint8_t*)path, strlen(path));
+        if (path != NULL) {
+            bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max,
+                H3ZERO_QPACK_CODE_PATH, (const uint8_t*)path, strlen(path));
+        }
         if (connect_protocol != NULL) {
             bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max, (uint8_t*)":protocol", 9,
                 (uint8_t*)connect_protocol, strlen(connect_protocol));
@@ -671,6 +674,13 @@ int picowt_baton_authority_test(void)
 {
     return picowt_baton_test_one_ex(15, "/baton?baton=240", 0, 2000000, NULL, NULL,
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, "", NULL, 0, 0, 1);
+}
+
+int picowt_baton_path_test(void)
+{
+    return picowt_baton_test_one_ex(19, NULL, 0, 2000000, NULL, NULL,
+        path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+        PICOQUIC_TEST_SNI, NULL, 0, 0, 1);
 }
 
 int picowt_baton_origin_test(void)
