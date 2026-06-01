@@ -102,6 +102,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picomask_udp_path", picomask_udp_path_test },
     { "picowt_wire_harness", picowt_wire_harness_test },
     { "picowt_wire_fragment", picowt_wire_fragment_test },
+    { "picowt_wire_malformed_builder", picowt_wire_malformed_builder_test },
     { "picowt_baton_basic", picowt_baton_basic_test },
     { "picowt_baton_error", picowt_baton_error_test },
     { "picowt_baton_long", picowt_baton_long_test },

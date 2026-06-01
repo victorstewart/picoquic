@@ -76,12 +76,166 @@ typedef struct st_picowt_wire_fragment_frame_ctx_t {
     size_t payload_seen;
 } picowt_wire_fragment_frame_ctx_t;
 
+typedef struct st_picowt_wire_malformed_sample_t {
+    picowt_wire_fragment_target_t target;
+    uint8_t bytes[128];
+    size_t length;
+    size_t payload_offset;
+    uint64_t type;
+    size_t declared_length;
+    size_t payload_length;
+} picowt_wire_malformed_sample_t;
+
 static int picowt_wire_expect_uint64(char const* what, uint64_t expected, uint64_t actual)
 {
     int ret = 0;
 
     if (expected != actual) {
         DBG_PRINTF("%s: expected 0x%" PRIx64 ", got 0x%" PRIx64, what, expected, actual);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static void picowt_wire_malformed_reset(picowt_wire_malformed_sample_t* sample,
+    picowt_wire_fragment_target_t target)
+{
+    memset(sample, 0, sizeof(picowt_wire_malformed_sample_t));
+    sample->target = target;
+}
+
+static int picowt_wire_malformed_append_varint(picowt_wire_malformed_sample_t* sample,
+    uint64_t value)
+{
+    uint8_t* bytes = sample->bytes + sample->length;
+    uint8_t* bytes_max = sample->bytes + sizeof(sample->bytes);
+
+    bytes = picoquic_frames_varint_encode(bytes, bytes_max, value);
+    if (bytes == NULL) {
+        return -1;
+    }
+
+    sample->length = bytes - sample->bytes;
+    return 0;
+}
+
+static int picowt_wire_malformed_append_bytes(picowt_wire_malformed_sample_t* sample,
+    const uint8_t* bytes, size_t length)
+{
+    int ret = 0;
+
+    if (sample->length + length > sizeof(sample->bytes)) {
+        ret = -1;
+    }
+    else {
+        memcpy(sample->bytes + sample->length, bytes, length);
+        sample->length += length;
+    }
+
+    return ret;
+}
+
+static int picowt_wire_malformed_build_tlv(picowt_wire_malformed_sample_t* sample,
+    picowt_wire_fragment_target_t target, uint64_t type, size_t declared_length,
+    const uint8_t* payload, size_t payload_length)
+{
+    int ret;
+
+    picowt_wire_malformed_reset(sample, target);
+    sample->type = type;
+    sample->declared_length = declared_length;
+    sample->payload_length = payload_length;
+
+    ret = picowt_wire_malformed_append_varint(sample, type);
+    if (ret == 0) {
+        ret = picowt_wire_malformed_append_varint(sample, declared_length);
+    }
+    if (ret == 0) {
+        sample->payload_offset = sample->length;
+        ret = picowt_wire_malformed_append_bytes(sample, payload, payload_length);
+    }
+
+    return ret;
+}
+
+static int picowt_wire_malformed_build_h3_frame(picowt_wire_malformed_sample_t* sample)
+{
+    const uint8_t payload[] = { 0x68, 0x33 };
+
+    return picowt_wire_malformed_build_tlv(sample, picowt_wire_fragment_h3_frame,
+        h3zero_frame_data, sizeof(payload) + 2, payload, sizeof(payload));
+}
+
+static int picowt_wire_malformed_build_settings(picowt_wire_malformed_sample_t* sample)
+{
+    uint8_t payload[8];
+    uint8_t* bytes = payload;
+    uint8_t* bytes_max = payload + sizeof(payload);
+
+    bytes = picoquic_frames_varint_encode(bytes, bytes_max, h3zero_setting_h3_datagram);
+    if (bytes == NULL) {
+        return -1;
+    }
+
+    return picowt_wire_malformed_build_tlv(sample, picowt_wire_fragment_settings,
+        h3zero_frame_settings, bytes - payload, payload, bytes - payload);
+}
+
+static int picowt_wire_malformed_build_capsule(picowt_wire_malformed_sample_t* sample)
+{
+    const uint8_t payload[] = { 0xca, 0xfe };
+
+    return picowt_wire_malformed_build_tlv(sample, picowt_wire_fragment_capsule,
+        H3ZERO_CAPSULE_CLOSE_WEBTRANSPORT_SESSION, sizeof(payload) + 2,
+        payload, sizeof(payload));
+}
+
+static int picowt_wire_malformed_build_stream_prefix(picowt_wire_malformed_sample_t* sample)
+{
+    const uint8_t prefix[] = { 0x40 };
+
+    picowt_wire_malformed_reset(sample, picowt_wire_fragment_stream_prefix);
+    sample->type = h3zero_frame_webtransport_stream;
+    sample->declared_length = 2;
+    sample->payload_length = sizeof(prefix);
+    return picowt_wire_malformed_append_bytes(sample, prefix, sizeof(prefix));
+}
+
+static int picowt_wire_malformed_build_datagram(picowt_wire_malformed_sample_t* sample)
+{
+    const uint8_t quarter_stream_id[] = { 0x40 };
+
+    picowt_wire_malformed_reset(sample, picowt_wire_fragment_datagram);
+    sample->payload_length = sizeof(quarter_stream_id);
+    return picowt_wire_malformed_append_bytes(sample, quarter_stream_id,
+        sizeof(quarter_stream_id));
+}
+
+static int picowt_wire_malformed_build_qpack_header(picowt_wire_malformed_sample_t* sample)
+{
+    const uint8_t qpack_prefix[] = { 0x00 };
+
+    picowt_wire_malformed_reset(sample, picowt_wire_fragment_qpack_header);
+    sample->payload_length = sizeof(qpack_prefix);
+    return picowt_wire_malformed_append_bytes(sample, qpack_prefix, sizeof(qpack_prefix));
+}
+
+static int picowt_wire_malformed_expect_tlv(
+    const picowt_wire_malformed_sample_t* sample)
+{
+    const uint8_t* bytes = sample->bytes;
+    const uint8_t* bytes_max = sample->bytes + sample->length;
+    uint64_t decoded_type = UINT64_MAX;
+    uint64_t decoded_length = UINT64_MAX;
+    int ret = 0;
+
+    if ((bytes = picoquic_frames_varint_decode(bytes, bytes_max, &decoded_type)) == NULL ||
+        (bytes = picoquic_frames_varint_decode(bytes, bytes_max, &decoded_length)) == NULL ||
+        decoded_type != sample->type ||
+        decoded_length != sample->declared_length ||
+        (size_t)(bytes - sample->bytes) != sample->payload_offset ||
+        (size_t)(bytes_max - bytes) != sample->payload_length) {
         ret = -1;
     }
 
@@ -207,6 +361,102 @@ static int picowt_wire_fragment_frame_cb(
     return ret;
 }
 
+static int picowt_wire_malformed_expect_truncated_varint(
+    const picowt_wire_malformed_sample_t* sample, uint64_t expected)
+{
+    picowt_wire_fragment_varint_ctx_t ctx = { expected, UINT64_MAX, { 0 }, 0 };
+    picowt_wire_fragment_chunk_t chunk = {
+        sample->target,
+        sample->bytes,
+        sample->length,
+        sample->length,
+        0,
+        1
+    };
+
+    return (picowt_wire_fragment_varint_cb(&chunk, &ctx) == 0) ? -1 : 0;
+}
+
+static int picowt_wire_malformed_h3_frame_test(
+    const picowt_wire_malformed_sample_t* sample)
+{
+    picowt_wire_fragment_frame_ctx_t ctx = {
+        sample->type,
+        sample->bytes + sample->payload_offset,
+        sample->payload_length,
+        UINT64_MAX,
+        UINT64_MAX,
+        { 0 },
+        0,
+        0
+    };
+    picowt_wire_fragment_chunk_t chunk = {
+        sample->target,
+        sample->bytes,
+        sample->length,
+        sample->length,
+        0,
+        1
+    };
+    int ret = picowt_wire_malformed_expect_tlv(sample);
+
+    if (ret == 0 && picowt_wire_fragment_frame_cb(&chunk, &ctx) == 0) {
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static int picowt_wire_malformed_settings_test(
+    const picowt_wire_malformed_sample_t* sample)
+{
+    h3zero_settings_t settings;
+    int ret = picowt_wire_malformed_expect_tlv(sample);
+
+    if (ret == 0 && h3zero_settings_decode(sample->bytes,
+        sample->bytes + sample->length, &settings) != NULL) {
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static int picowt_wire_malformed_capsule_test(
+    const picowt_wire_malformed_sample_t* sample)
+{
+    h3zero_capsule_t capsule = { 0 };
+    const uint8_t* parsed;
+    int ret = picowt_wire_malformed_expect_tlv(sample);
+
+    if (ret == 0) {
+        parsed = h3zero_accumulate_capsule(sample->bytes,
+            sample->bytes + sample->length, &capsule);
+        if (parsed != sample->bytes + sample->length ||
+            !capsule.is_length_known ||
+            capsule.is_stored ||
+            capsule.capsule_type != sample->type ||
+            capsule.capsule_length != sample->declared_length ||
+            capsule.value_read != sample->payload_length) {
+            ret = -1;
+        }
+    }
+
+    h3zero_release_capsule(&capsule);
+    return ret;
+}
+
+static int picowt_wire_malformed_qpack_test(
+    const picowt_wire_malformed_sample_t* sample)
+{
+    h3zero_header_parts_t parts;
+    uint8_t* parsed = h3zero_parse_qpack_header_frame(
+        (uint8_t*)sample->bytes, (uint8_t*)sample->bytes + sample->length, &parts);
+    int ret = (parsed == NULL) ? 0 : -1;
+
+    h3zero_release_header_parts(&parts);
+    return ret;
+}
+
 static int picowt_wire_expect_no_connection_error(picowt_wire_harness_t* harness)
 {
     int ret = picowt_wire_expect_uint64("client local error", 0,
@@ -223,6 +473,49 @@ static int picowt_wire_expect_no_connection_error(picowt_wire_harness_t* harness
     if (ret == 0) {
         ret = picowt_wire_expect_uint64("server remote error", 0,
             harness->test_ctx->cnx_server->remote_error);
+    }
+
+    return ret;
+}
+
+int picowt_wire_malformed_builder_test(void)
+{
+    picowt_wire_malformed_sample_t sample;
+    int ret = picowt_wire_malformed_build_h3_frame(&sample);
+
+    if (ret == 0) {
+        ret = picowt_wire_malformed_h3_frame_test(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_build_settings(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_settings_test(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_build_capsule(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_capsule_test(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_build_stream_prefix(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_expect_truncated_varint(&sample,
+            h3zero_frame_webtransport_stream);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_build_datagram(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_expect_truncated_varint(&sample, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_build_qpack_header(&sample);
+    }
+    if (ret == 0) {
+        ret = picowt_wire_malformed_qpack_test(&sample);
     }
 
     return ret;
