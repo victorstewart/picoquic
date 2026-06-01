@@ -927,6 +927,8 @@ typedef struct st_picowt_connect_response_test_ctx_t {
     int accepted;
     int refused;
     int post_fin;
+    int reset;
+    int stop_sending;
 } picowt_connect_response_test_ctx_t;
 
 static int picowt_connect_response_test_callback(picoquic_cnx_t* cnx,
@@ -949,6 +951,12 @@ static int picowt_connect_response_test_callback(picoquic_cnx_t* cnx,
         }
         else if (wt_event == picohttp_callback_post_fin) {
             ctx->post_fin++;
+        }
+        else if (wt_event == picohttp_callback_reset) {
+            ctx->reset++;
+        }
+        else if (wt_event == picohttp_callback_stop_sending) {
+            ctx->stop_sending++;
         }
     }
     return 0;
@@ -1362,6 +1370,97 @@ int picowt_connect_stream_id_test(void)
     }
     if (ret == 0) {
         ret = picowt_connect_stream_id_case(1, 0);
+    }
+
+    return ret;
+}
+
+static int picowt_connect_reset_lifecycle_case(
+    picoquic_call_back_event_t event, int after_accept)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    uint64_t simulated_time = 0;
+    uint64_t fin_stream_id = UINT64_MAX;
+    uint8_t frame[768];
+    size_t frame_length = 0;
+    picowt_connect_response_test_ctx_t response_ctx = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        picowt_connect_response_set_ready(cnx, h3_ctx);
+        stream_ctx = h3zero_find_or_create_stream(cnx, 0, h3_ctx, 1, 1);
+        if (stream_ctx == NULL ||
+            picoquic_set_app_stream_ctx(cnx, stream_ctx->stream_id,
+                stream_ctx) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        stream_ctx->is_open = 1;
+        stream_ctx->path_callback = picowt_connect_response_test_callback;
+        stream_ctx->path_callback_ctx = &response_ctx;
+        stream_ctx->ps.stream_state.is_upgrade_requested = 1;
+        stream_ctx->ps.stream_state.is_webtransport_requested = 1;
+    }
+    if (ret == 0 && after_accept) {
+        ret = picowt_build_response_header_frame("200", NULL,
+            frame, frame + sizeof(frame), &frame_length);
+        if (ret == 0) {
+            ret = h3zero_process_h3_client_data(cnx, stream_ctx->stream_id,
+                frame, frame_length, 0, h3_ctx, stream_ctx, &fin_stream_id);
+        }
+        if (ret == 0 &&
+            (!stream_ctx->is_upgraded || response_ctx.accepted != 1 ||
+                response_ctx.refused != 0)) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        ret = h3zero_callback(cnx, stream_ctx->stream_id, NULL, 0, event,
+            h3_ctx, stream_ctx);
+    }
+    if (ret == 0) {
+        int expect_reset = (event == picoquic_callback_stream_reset);
+        if (response_ctx.reset != expect_reset ||
+            response_ctx.stop_sending != !expect_reset ||
+            response_ctx.refused != 0 ||
+            response_ctx.post_fin != 0 ||
+            stream_ctx->is_upgraded != after_accept ||
+            h3_ctx->nb_webtransport_sessions != 0) {
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int picowt_connect_reset_lifecycle_test(void)
+{
+    int ret = picowt_connect_reset_lifecycle_case(
+        picoquic_callback_stream_reset, 0);
+
+    if (ret == 0) {
+        ret = picowt_connect_reset_lifecycle_case(
+            picoquic_callback_stop_sending, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_connect_reset_lifecycle_case(
+            picoquic_callback_stream_reset, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_connect_reset_lifecycle_case(
+            picoquic_callback_stop_sending, 1);
     }
 
     return ret;
