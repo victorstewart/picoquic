@@ -2240,6 +2240,87 @@ int picowt_error_code_test(void)
         H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(0x1e) != 0x52e4a40fa8faull) ? -1 : 0;
 }
 
+static int picowt_check_local_stream_prefix(picoquic_cnx_t* cnx,
+    h3zero_stream_ctx_t* stream_ctx, uint64_t expected_type,
+    uint64_t expected_control_stream_id)
+{
+    picoquic_stream_head_t* stream = (stream_ctx == NULL) ? NULL :
+        picoquic_find_stream(cnx, stream_ctx->stream_id);
+    picoquic_stream_queue_node_t* queued = (stream == NULL) ? NULL :
+        stream->send_queue;
+    const uint8_t* bytes = (queued == NULL) ? NULL : queued->bytes;
+    const uint8_t* bytes_max = (queued == NULL) ? NULL :
+        queued->bytes + queued->length;
+    uint64_t stream_type = UINT64_MAX;
+    uint64_t control_stream_id = UINT64_MAX;
+
+    if (stream == NULL || queued == NULL ||
+        queued->offset != 0 ||
+        stream->app_stream_ctx != stream_ctx ||
+        stream_ctx->ps.stream_state.stream_type != expected_type ||
+        stream_ctx->ps.stream_state.control_stream_id != expected_control_stream_id ||
+        (bytes = picoquic_frames_varint_decode(bytes, bytes_max,
+            &stream_type)) == NULL ||
+        (bytes = picoquic_frames_varint_decode(bytes, bytes_max,
+            &control_stream_id)) == NULL ||
+        bytes != bytes_max ||
+        stream_type != expected_type ||
+        control_stream_id != expected_control_stream_id) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int picowt_create_local_stream_pair_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* control_stream_ctx = NULL;
+    h3zero_stream_ctx_t* uni_stream_ctx = NULL;
+    h3zero_stream_ctx_t* bidi_stream_ctx = NULL;
+    uint64_t simulated_time = 0;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0 &&
+        (control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (uni_stream_ctx = picowt_create_local_stream(cnx, 0, h3_ctx,
+            control_stream_ctx->stream_id)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (bidi_stream_ctx = picowt_create_local_stream(cnx, 1, h3_ctx,
+            control_stream_ctx->stream_id)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (!IS_LOCAL_STREAM_ID(uni_stream_ctx->stream_id, cnx->client_mode) ||
+            IS_BIDIR_STREAM_ID(uni_stream_ctx->stream_id) ||
+            !IS_LOCAL_STREAM_ID(bidi_stream_ctx->stream_id, cnx->client_mode) ||
+            !IS_BIDIR_STREAM_ID(bidi_stream_ctx->stream_id) ||
+            uni_stream_ctx->stream_id == bidi_stream_ctx->stream_id ||
+            picowt_check_local_stream_prefix(cnx, uni_stream_ctx,
+                h3zero_stream_type_webtransport,
+                control_stream_ctx->stream_id) != 0 ||
+            picowt_check_local_stream_prefix(cnx, bidi_stream_ctx,
+                h3zero_frame_webtransport_stream,
+                control_stream_ctx->stream_id) != 0)) {
+        ret = -1;
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 static int picowt_session_gone_add_stream(picoquic_cnx_t* cnx,
     h3zero_callback_ctx_t* h3_ctx, uint64_t stream_id, uint64_t control_stream_id)
 {
