@@ -283,6 +283,10 @@ uint8_t* h3zero_create_request_header_frame_ex(uint8_t* bytes, uint8_t* bytes_ma
 uint8_t* h3zero_create_connect_header_frame(uint8_t* bytes, uint8_t* bytes_max,
     char const* authority, uint8_t const* path, size_t path_length, char const* protocol,
     char const* origin, char const* ua_string, char const * wt_available_protocols);
+uint8_t* h3zero_create_connect_header_frame_ex(uint8_t* bytes, uint8_t* bytes_max,
+    char const* authority, size_t authority_length, uint8_t const* path, size_t path_length,
+    char const* protocol, size_t protocol_length, char const* origin, size_t origin_length,
+    char const* ua_string, size_t ua_string_length, char const* wt_available_protocols);
 uint8_t* h3zero_encode_wt_available_protocols_header(uint8_t* bytes, uint8_t* bytes_max,
     char const* wt_available_protocols);
 uint8_t* h3zero_create_post_header_frame_ex(uint8_t* bytes, uint8_t* bytes_max,

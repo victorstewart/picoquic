@@ -642,18 +642,29 @@ uint8_t * h3zero_parse_qpack_header_value(uint8_t * bytes, uint8_t * bytes_max,
     return bytes;
 }
 
+typedef struct st_h3zero_interesting_header_t {
+    const char* name;
+    size_t name_length;
+    http_header_enum_t header;
+} h3zero_interesting_header_t;
+
+#define H3ZERO_INTERESTING_HEADER(name, header) { name, sizeof(name) - 1, header }
+
 int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int is_huffman)
 {
-    char const  * interesting_header_name[] = {
-     ":method", ":path", ":authority", ":status", "content-type", ":protocol", "origin", "range", ":scheme",
-     H3ZERO_WT_AVAILABLE_PROTOCOLS, H3ZERO_WT_PROTOCOL,
-     NULL};
-    const http_header_enum_t interesting_header[] = {
-        http_pseudo_header_method, http_pseudo_header_path,
-        http_pseudo_header_authority,
-        http_pseudo_header_status, http_header_content_type,
-        http_pseudo_header_protocol, http_header_origin,
-        http_header_range, http_pseudo_header_scheme, http_header_wt_available_protocols, http_header_wt_protocol
+    static const h3zero_interesting_header_t interesting_header[] = {
+        H3ZERO_INTERESTING_HEADER(":method", http_pseudo_header_method),
+        H3ZERO_INTERESTING_HEADER(":path", http_pseudo_header_path),
+        H3ZERO_INTERESTING_HEADER(":authority", http_pseudo_header_authority),
+        H3ZERO_INTERESTING_HEADER(":status", http_pseudo_header_status),
+        H3ZERO_INTERESTING_HEADER("content-type", http_header_content_type),
+        H3ZERO_INTERESTING_HEADER(":protocol", http_pseudo_header_protocol),
+        H3ZERO_INTERESTING_HEADER("origin", http_header_origin),
+        H3ZERO_INTERESTING_HEADER("range", http_header_range),
+        H3ZERO_INTERESTING_HEADER(":scheme", http_pseudo_header_scheme),
+        H3ZERO_INTERESTING_HEADER(H3ZERO_WT_AVAILABLE_PROTOCOLS, http_header_wt_available_protocols),
+        H3ZERO_INTERESTING_HEADER(H3ZERO_WT_PROTOCOL, http_header_wt_protocol),
+        { NULL, 0, http_header_unknown }
     };
     http_header_enum_t val = http_header_unknown;
     uint8_t deHuff[256];
@@ -666,10 +677,10 @@ int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int i
         }
     }
 
-    for (int i = 0; interesting_header_name[i] != NULL; i++) {
-        if (strlen(interesting_header_name[i]) == name_length &&
-            picoquic_strncasecmp(interesting_header_name[i], (const char*)name, name_length) == 0) {
-            val = interesting_header[i];
+    for (size_t i = 0; interesting_header[i].name != NULL; i++) {
+        if (interesting_header[i].name_length == name_length &&
+            picoquic_strncasecmp(interesting_header[i].name, (const char*)name, name_length) == 0) {
+            val = interesting_header[i].header;
             break;
         }
     }
@@ -677,11 +688,25 @@ int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int i
     return val;
 }
 
-static void h3zero_qpack_set_static_string(const char* content, const uint8_t** value,
+static void h3zero_qpack_set_static_string(uint64_t s_index, const uint8_t** value,
     size_t* value_length)
 {
+    const char* content = qpack_static[s_index].content;
     *value = (const uint8_t*)content;
-    *value_length = strlen(content);
+    switch (s_index) {
+    case H3ZERO_QPACK_CODE_PATH:
+        *value_length = 1;
+        break;
+    case H3ZERO_QPACK_SCHEME_HTTP:
+        *value_length = 4;
+        break;
+    case H3ZERO_QPACK_SCHEME_HTTPS:
+        *value_length = 5;
+        break;
+    default:
+        *value_length = strlen(content);
+        break;
+    }
 }
 
 uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max, 
@@ -749,8 +774,7 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                         bytes = NULL;
                     }
                     else {
-                        h3zero_qpack_set_static_string(qpack_static[s_index].content,
-                            &parts->path, &parts->path_length);
+                        h3zero_qpack_set_static_string(s_index, &parts->path, &parts->path_length);
                         parts->path_is_static = 1;
                     }
                     break;
@@ -760,8 +784,7 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                         bytes = NULL;
                     }
                     else {
-                        h3zero_qpack_set_static_string(qpack_static[s_index].content,
-                            &parts->scheme, &parts->scheme_length);
+                        h3zero_qpack_set_static_string(s_index, &parts->scheme, &parts->scheme_length);
                         parts->scheme_is_static = 1;
                     }
                     break;
@@ -771,8 +794,7 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                         bytes = NULL;
                     }
                     else if (qpack_static[s_index].content != NULL) {
-                        h3zero_qpack_set_static_string(qpack_static[s_index].content,
-                            &parts->origin, &parts->origin_length);
+                        h3zero_qpack_set_static_string(s_index, &parts->origin, &parts->origin_length);
                         parts->origin_is_static = 1;
                     }
                     break;
@@ -1053,15 +1075,16 @@ uint8_t* h3zero_encode_wt_available_protocols_header(uint8_t* bytes, uint8_t* by
     }
     else {
         bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
-            (uint8_t*)H3ZERO_WT_AVAILABLE_PROTOCOLS, strlen(H3ZERO_WT_AVAILABLE_PROTOCOLS),
+            (uint8_t*)H3ZERO_WT_AVAILABLE_PROTOCOLS, sizeof(H3ZERO_WT_AVAILABLE_PROTOCOLS) - 1,
             (uint8_t*)sf_value, sf_value_len);
     }
     return bytes;
 }
 
-uint8_t* h3zero_create_connect_header_frame(uint8_t* bytes, uint8_t* bytes_max,
-    char const * authority, uint8_t const* path, size_t path_length, char const* protocol,
-    char const * origin, char const* ua_string, char const * wt_available_protocols)
+uint8_t* h3zero_create_connect_header_frame_ex(uint8_t* bytes, uint8_t* bytes_max,
+    char const* authority, size_t authority_length, uint8_t const* path, size_t path_length,
+    char const* protocol, size_t protocol_length, char const* origin, size_t origin_length,
+    char const* ua_string, size_t ua_string_length, char const* wt_available_protocols)
 {
     if (bytes == NULL || bytes + 2 > bytes_max) {
         return NULL;
@@ -1077,25 +1100,38 @@ uint8_t* h3zero_create_connect_header_frame(uint8_t* bytes, uint8_t* bytes_max,
     bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_CODE_PATH, path, path_length);
     /* Protocol. Use literal plus name format */
     if (protocol != NULL) {
-        bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max, (uint8_t*)":protocol", 9, (uint8_t*)protocol, strlen(protocol));
+        bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max, (uint8_t*)":protocol", 9, (uint8_t*)protocol, protocol_length);
     }
     /* Authority. Use literal plus reference format */
     if (authority != NULL) {
-        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_AUTHORITY, (uint8_t const*)authority, strlen(authority));
+        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_AUTHORITY, (uint8_t const*)authority, authority_length);
     }
     /* Origin. Use literal plus ref format */
     if (origin != NULL) {
-        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_ORIGIN, (uint8_t*)origin, strlen(origin));
+        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_ORIGIN, (uint8_t*)origin, origin_length);
     }
     /* User Agent */
     if (ua_string != NULL) {
-        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_USER_AGENT, (uint8_t const*)ua_string, strlen(ua_string));
+        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_USER_AGENT, (uint8_t const*)ua_string, ua_string_length);
     }
     /* WT Available Protocols */
     if (wt_available_protocols != NULL) {
         bytes = h3zero_encode_wt_available_protocols_header(bytes, bytes_max, wt_available_protocols);
     }
     return bytes;
+}
+
+uint8_t* h3zero_create_connect_header_frame(uint8_t* bytes, uint8_t* bytes_max,
+    char const* authority, uint8_t const* path, size_t path_length, char const* protocol,
+    char const* origin, char const* ua_string, char const* wt_available_protocols)
+{
+    return h3zero_create_connect_header_frame_ex(bytes, bytes_max,
+        authority, (authority == NULL) ? 0 : strlen(authority),
+        path, path_length,
+        protocol, (protocol == NULL) ? 0 : strlen(protocol),
+        origin, (origin == NULL) ? 0 : strlen(origin),
+        ua_string, (ua_string == NULL) ? 0 : strlen(ua_string),
+        wt_available_protocols);
 }
 
 uint8_t * h3zero_create_post_header_frame_ex(uint8_t * bytes, uint8_t * bytes_max,
@@ -1244,7 +1280,7 @@ uint8_t * h3zero_create_response_header_frame_ex(uint8_t * bytes, uint8_t * byte
         }
         else {
             bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
-                (uint8_t*)H3ZERO_WT_PROTOCOL, strlen(H3ZERO_WT_PROTOCOL),
+                (uint8_t*)H3ZERO_WT_PROTOCOL, sizeof(H3ZERO_WT_PROTOCOL) - 1,
                 (uint8_t*)quoted, quoted_len);
         }
     }

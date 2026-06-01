@@ -252,18 +252,26 @@ int picowt_prepare_client_cnx(picoquic_quic_t* quic, struct sockaddr* server_add
     return ret;
 }
 
-/* set web transport protocol to selected value.
-*/
-int picowt_set_wt_protocol(h3zero_stream_ctx_t* stream_ctx, const char* selected_protocol)
+static int picowt_set_wt_protocol_n(h3zero_stream_ctx_t* stream_ctx,
+    const char* selected_protocol, size_t selected_protocol_length)
 {
     int ret = 0;
     if (stream_ctx->ps.stream_state.wt_protocol != NULL) {
         ret = -1;
     }
-    else if ((stream_ctx->ps.stream_state.wt_protocol = picoquic_string_duplicate(selected_protocol)) == NULL) {
+    else if ((stream_ctx->ps.stream_state.wt_protocol =
+        picoquic_string_create(selected_protocol, selected_protocol_length)) == NULL) {
         ret = -1; /* memory allocation failed */
     }
     return ret;
+}
+
+/* set web transport protocol to selected value.
+*/
+int picowt_set_wt_protocol(h3zero_stream_ctx_t* stream_ctx, const char* selected_protocol)
+{
+    return (selected_protocol == NULL) ? -1 :
+        picowt_set_wt_protocol_n(stream_ctx, selected_protocol, strlen(selected_protocol));
 }
 
 /*
@@ -297,12 +305,14 @@ static int picowt_protocol_is_supported(char const* supported, char const* candi
     return ret;
 }
 
-static int picowt_parse_protocol_item(char const** pp, char* decoded, size_t decoded_max,
-    size_t* decoded_length, int* is_last)
+static int picowt_parse_protocol_item(char const** pp, char const** decoded,
+    char* escaped, size_t escaped_max, size_t* decoded_length, int* is_last)
 {
     char const* p = *pp;
+    char const* start;
     size_t length = 0;
     int closed = 0;
+    int has_escape = 0;
 
     while (*p == ' ' || *p == '\t') {
         p++;
@@ -310,6 +320,7 @@ static int picowt_parse_protocol_item(char const** pp, char* decoded, size_t dec
     if (*p++ != '"') {
         return -1;
     }
+    start = p;
     while (*p != 0) {
         uint8_t c = (uint8_t)*p++;
 
@@ -318,6 +329,14 @@ static int picowt_parse_protocol_item(char const** pp, char* decoded, size_t dec
             break;
         }
         if (c == '\\') {
+            if (!has_escape) {
+                length = (size_t)(p - 1 - start);
+                if (length >= escaped_max) {
+                    return -1;
+                }
+                memcpy(escaped, start, length);
+                has_escape = 1;
+            }
             c = (uint8_t)*p++;
             if (c != '"' && c != '\\') {
                 return -1;
@@ -326,13 +345,23 @@ static int picowt_parse_protocol_item(char const** pp, char* decoded, size_t dec
         else if (c < 0x20 || c > 0x7e) {
             return -1;
         }
-        if (length + 1 >= decoded_max) {
+        if (length + 1 >= escaped_max) {
             return -1;
         }
-        decoded[length++] = (char)c;
+        if (has_escape) {
+            escaped[length] = (char)c;
+        }
+        length++;
     }
     if (!closed) {
         return -1;
+    }
+    if (has_escape) {
+        escaped[length] = 0;
+        *decoded = escaped;
+    }
+    else {
+        *decoded = start;
     }
     while (*p == ' ' || *p == '\t') {
         p++;
@@ -382,7 +411,6 @@ static int picowt_parse_protocol_item(char const** pp, char* decoded, size_t dec
     else {
         return -1;
     }
-    decoded[length] = 0;
     *decoded_length = length;
     *pp = p;
     return 0;
@@ -390,7 +418,8 @@ static int picowt_parse_protocol_item(char const** pp, char* decoded, size_t dec
 
 int picowt_select_wt_protocol(h3zero_stream_ctx_t* stream_ctx, char const* supported)
 {
-    char candidate[256];
+    char decoded[256];
+    char const* candidate;
     size_t candidate_length;
     char selected[256];
     size_t selected_length = 0;
@@ -400,19 +429,20 @@ int picowt_select_wt_protocol(h3zero_stream_ctx_t* stream_ctx, char const* suppo
 
     selected[0] = 0;
     while (a != NULL && *a != 0 && !is_last) {
-        if (picowt_parse_protocol_item(&a, candidate, sizeof(candidate), &candidate_length, &is_last) != 0) {
+        if (picowt_parse_protocol_item(&a, &candidate, decoded, sizeof(decoded), &candidate_length, &is_last) != 0) {
             selected_length = 0;
             a = NULL;
             break;
         }
         if (candidate_length > 0 && selected_length == 0 &&
             picowt_protocol_is_supported(supported, candidate, candidate_length)) {
-            memcpy(selected, candidate, candidate_length + 1);
+            memcpy(selected, candidate, candidate_length);
+            selected[candidate_length] = 0;
             selected_length = candidate_length;
         }
     }
     if (a != NULL && is_last && selected_length > 0) {
-        ret = picowt_set_wt_protocol(stream_ctx, selected);
+        ret = picowt_set_wt_protocol_n(stream_ctx, selected, selected_length);
     }
     return ret;
 }
@@ -467,6 +497,9 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         uint8_t buffer[1024];
         char origin[512];
         char const* origin_arg = NULL;
+        size_t authority_length = 0;
+        size_t origin_length = 0;
+        size_t path_length = strlen(path);
         uint8_t* bytes = buffer;
         uint8_t* bytes_max = bytes + 1024;
 
@@ -475,11 +508,12 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
 
         if (authority != NULL) {
             static char const https_prefix[] = "https://";
-            size_t authority_length = strlen(authority);
+            authority_length = strlen(authority);
             if (sizeof(https_prefix) + authority_length <= sizeof(origin)) {
                 memcpy(origin, https_prefix, sizeof(https_prefix) - 1);
                 memcpy(origin + sizeof(https_prefix) - 1, authority, authority_length + 1);
                 origin_arg = origin;
+                origin_length = sizeof(https_prefix) - 1 + authority_length;
             }
             else {
                 ret = -1;
@@ -487,8 +521,11 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         }
 
         if (ret == 0) {
-            bytes = h3zero_create_connect_header_frame(bytes, bytes_max, authority, (const uint8_t*)path, strlen(path), H3ZERO_WEBTRANSPORT_H3_PROTOCOL, origin_arg,
-                H3ZERO_USER_AGENT_STRING, wt_available_protocols);
+            bytes = h3zero_create_connect_header_frame_ex(bytes, bytes_max,
+                authority, authority_length, (const uint8_t*)path, path_length,
+                H3ZERO_WEBTRANSPORT_H3_PROTOCOL, sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1,
+                origin_arg, origin_length, H3ZERO_USER_AGENT_STRING,
+                sizeof(H3ZERO_USER_AGENT_STRING) - 1, wt_available_protocols);
         }
 
         if (ret == 0 && bytes == NULL) {
