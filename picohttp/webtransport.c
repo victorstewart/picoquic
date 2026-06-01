@@ -807,6 +807,19 @@ void picowt_release_capsule(picowt_capsule_t* capsule)
     h3zero_release_capsule(&capsule->h3_capsule);
 }
 
+static void picowt_abort_stream_on_session_close(picoquic_cnx_t* cnx, uint64_t stream_id)
+{
+    int is_bidir = IS_BIDIR_STREAM_ID(stream_id);
+    int is_local = IS_LOCAL_STREAM_ID(stream_id, cnx->client_mode);
+
+    if (is_bidir || !is_local) {
+        (void)picoquic_stop_sending(cnx, stream_id, H3ZERO_WEBTRANSPORT_SESSION_GONE);
+    }
+    if (is_bidir || is_local) {
+        (void)picoquic_reset_stream(cnx, stream_id, H3ZERO_WEBTRANSPORT_SESSION_GONE);
+    }
+}
+
 void picowt_deregister(picoquic_cnx_t* cnx,
     h3zero_callback_ctx_t* h3_ctx,
     h3zero_stream_ctx_t* control_stream_ctx)
@@ -825,6 +838,7 @@ void picowt_deregister(picoquic_cnx_t* cnx,
 
             if (control_stream_id == stream_ctx->ps.stream_state.control_stream_id &&
                 control_stream_id != stream_ctx->stream_id) {
+                picowt_abort_stream_on_session_close(cnx, stream_ctx->stream_id);
                 stream_ctx->ps.stream_state.control_stream_id = UINT64_MAX;
                 stream_ctx->path_callback = NULL;
                 stream_ctx->path_callback_ctx = NULL;
