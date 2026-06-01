@@ -1787,6 +1787,129 @@ static int picowt_session_limit_prepare_stream(picoquic_cnx_t* cnx,
     return ret;
 }
 
+typedef enum {
+    picowt_client_capability_before_settings,
+    picowt_client_capability_wt_enabled,
+    picowt_client_capability_connect_protocol,
+    picowt_client_capability_h3_datagram,
+    picowt_client_capability_quic_datagram,
+    picowt_client_capability_reset_stream_at
+} picowt_client_capability_case_t;
+
+static int picowt_client_capability_case(
+    picowt_client_capability_case_t capability_case)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    uint64_t simulated_time = 0;
+    picowt_session_limit_test_ctx_t test_ctx = { 0 };
+    picohttp_server_path_item_t path_table[1] = {
+        { "/baton", 6, picowt_session_limit_callback, &test_ctx,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL, sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1 }
+    };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        cnx->local_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->local_parameters.is_reset_stream_at_enabled = 1;
+        cnx->remote_parameters.is_reset_stream_at_enabled = 1;
+        h3_ctx->path_table = path_table;
+        h3_ctx->path_table_nb = 1;
+        h3_ctx->settings.settings_received = 1;
+        h3_ctx->settings.enable_connect_protocol = 1;
+        h3_ctx->settings.h3_datagram = 1;
+        h3_ctx->settings.webtransport_enabled = 1;
+        test_ctx.h3_ctx = h3_ctx;
+
+        switch (capability_case) {
+        case picowt_client_capability_before_settings:
+            h3_ctx->settings.settings_received = 0;
+            break;
+        case picowt_client_capability_wt_enabled:
+            h3_ctx->settings.webtransport_enabled = 0;
+            break;
+        case picowt_client_capability_connect_protocol:
+            h3_ctx->settings.enable_connect_protocol = 0;
+            break;
+        case picowt_client_capability_h3_datagram:
+            h3_ctx->settings.h3_datagram = 0;
+            break;
+        case picowt_client_capability_quic_datagram:
+            cnx->remote_parameters.max_datagram_frame_size = 0;
+            break;
+        case picowt_client_capability_reset_stream_at:
+            cnx->remote_parameters.is_reset_stream_at_enabled = 0;
+            break;
+        default:
+            ret = -1;
+            break;
+        }
+    }
+
+    if (ret == 0) {
+        ret = picowt_session_limit_prepare_stream(cnx, h3_ctx, 0, &stream_ctx);
+    }
+    if (ret == 0) {
+        ret = h3zero_process_request_frame(cnx, stream_ctx, h3_ctx);
+    }
+    if (ret == 0 && capability_case == picowt_client_capability_before_settings) {
+        if (!stream_ctx->ps.stream_state.is_webtransport_pending ||
+            stream_ctx->is_upgraded ||
+            h3_ctx->nb_webtransport_sessions != 0 ||
+            test_ctx.nb_connects != 0 ||
+            cnx->application_error != 0) {
+            ret = -1;
+        }
+    }
+    else if (ret == 0) {
+        if (stream_ctx->ps.stream_state.is_webtransport_pending ||
+            stream_ctx->is_upgraded ||
+            h3_ctx->nb_webtransport_sessions != 0 ||
+            test_ctx.nb_connects != 0 ||
+            cnx->application_error != H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET) {
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int picowt_client_capabilities_test(void)
+{
+    int ret = picowt_client_capability_case(picowt_client_capability_before_settings);
+
+    if (ret == 0) {
+        ret = picowt_client_capability_case(picowt_client_capability_wt_enabled);
+    }
+    if (ret == 0) {
+        ret = picowt_client_capability_case(picowt_client_capability_connect_protocol);
+    }
+    if (ret == 0) {
+        ret = picowt_client_capability_case(picowt_client_capability_h3_datagram);
+    }
+    if (ret == 0) {
+        ret = picowt_client_capability_case(picowt_client_capability_quic_datagram);
+    }
+    if (ret == 0) {
+        ret = picowt_client_capability_case(picowt_client_capability_reset_stream_at);
+    }
+
+    return ret;
+}
+
 static int picowt_session_limit_case(uint64_t local_flow_control,
     uint64_t remote_flow_control, int expect_reject)
 {
