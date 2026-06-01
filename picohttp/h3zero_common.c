@@ -2744,6 +2744,7 @@ const uint8_t* h3zero_accumulate_capsule(const uint8_t* bytes, const uint8_t* by
 		/* reset the fields to expected value */
 		capsule->header_length = 0;
 		capsule->header_read = 0;
+		capsule->value_read = 0;
 		capsule->capsule_type = 0;
 		capsule->capsule_length = 0;
 		capsule->is_stored = 0;

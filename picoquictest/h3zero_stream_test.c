@@ -3198,3 +3198,74 @@ int h3zero_capsule_length_bound_test(void)
 
     return ret;
 }
+
+int h3zero_capsule_fragmented_header_test(void)
+{
+    uint8_t buffer[128];
+    uint8_t second_capsule[] = { h3zero_capsule_type_datagram, 1, 0xaa };
+    uint8_t* bytes = buffer;
+    uint8_t* bytes_max = buffer + sizeof(buffer);
+    const uint64_t capsule_type = H3ZERO_CAPSULE_WT_DATA_BLOCKED;
+    const size_t payload_length = 64;
+    h3zero_capsule_t capsule = { 0 };
+    size_t header_length = 0;
+    size_t capsule_length = 0;
+    int ret = 0;
+
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max, capsule_type)) == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max, payload_length)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        header_length = bytes - buffer;
+        for (size_t i = 0; i < payload_length; i++) {
+            *bytes++ = (uint8_t)i;
+        }
+        capsule_length = bytes - buffer;
+    }
+    for (size_t i = 0; ret == 0 && i < capsule_length; i++) {
+        const uint8_t* next = h3zero_accumulate_capsule(buffer + i, buffer + i + 1, &capsule);
+        if (next != buffer + i + 1) {
+            ret = -1;
+        }
+        else if (i + 1 < header_length &&
+            (capsule.is_length_known || capsule.is_stored)) {
+            ret = -1;
+        }
+        else if (i + 1 == header_length &&
+            (!capsule.is_length_known || capsule.is_stored ||
+                capsule.capsule_type != capsule_type ||
+                capsule.capsule_length != payload_length ||
+                capsule.value_read != 0)) {
+            ret = -1;
+        }
+        else if (i + 1 > header_length && i + 1 < capsule_length &&
+            (capsule.is_stored || capsule.value_read != i + 1 - header_length)) {
+            ret = -1;
+        }
+    }
+    if (ret == 0 &&
+        (!capsule.is_length_known || !capsule.is_stored ||
+            capsule.capsule_type != capsule_type ||
+            capsule.capsule_length != payload_length ||
+            capsule.value_read != payload_length ||
+            capsule.capsule_buffer == NULL ||
+            memcmp(capsule.capsule_buffer, buffer + header_length, payload_length) != 0)) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        const uint8_t* next = h3zero_accumulate_capsule(second_capsule,
+            second_capsule + sizeof(second_capsule), &capsule);
+        if (next != second_capsule + sizeof(second_capsule) ||
+            !capsule.is_length_known || !capsule.is_stored ||
+            capsule.capsule_type != h3zero_capsule_type_datagram ||
+            capsule.capsule_length != 1 || capsule.value_read != 1 ||
+            capsule.capsule_buffer == NULL ||
+            capsule.capsule_buffer[0] != 0xaa) {
+            ret = -1;
+        }
+    }
+    h3zero_release_capsule(&capsule);
+
+    return ret;
+}
