@@ -53,6 +53,7 @@ static const picoquic_test_def_t test_table[] = {
     { "h3zero_wt_zero_buffer", h3zero_wt_zero_buffer_test },
     { "h3zero_wt_zero_buffer_flood", h3zero_wt_zero_buffer_flood_test },
     { "h3zero_wt_datagram_payload", h3zero_wt_datagram_payload_test },
+    { "h3zero_wt_datagram_malformed", h3zero_wt_datagram_malformed_test },
     { "h3zero_wt_datagram_drop_policy", h3zero_wt_datagram_drop_policy_test },
     { "h3zero_wt_datagram_multi_session", h3zero_wt_datagram_multi_session_test },
     { "h3zero_wt_datagram_post_close", h3zero_wt_datagram_post_close_test },

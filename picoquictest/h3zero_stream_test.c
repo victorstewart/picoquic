@@ -879,6 +879,47 @@ int h3zero_wt_datagram_payload_test(void)
     return ret;
 }
 
+static int h3zero_wt_datagram_malformed_case(uint8_t* datagram,
+    size_t datagram_length)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        ret = h3zero_callback_datagram(cnx, datagram, datagram_length,
+            h3_ctx);
+    }
+    if (ret != 0 || cnx->application_error != H3ZERO_FRAME_ERROR) {
+        DBG_PRINTF("WT malformed datagram failed, ret=%d, app_error=%" PRIu64,
+            ret, (cnx == NULL) ? UINT64_MAX : cnx->application_error);
+        ret = -1;
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    h3zero_callback_delete_context(cnx, h3_ctx);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int h3zero_wt_datagram_malformed_test(void)
+{
+    uint8_t datagram[] = { 0x40 };
+    int ret = h3zero_wt_datagram_malformed_case(datagram, 0);
+
+    if (ret == 0) {
+        ret = h3zero_wt_datagram_malformed_case(datagram, sizeof(datagram));
+    }
+
+    return ret;
+}
+
 int h3zero_wt_datagram_drop_policy_test(void)
 {
     picoquic_quic_t* quic = NULL;
@@ -888,7 +929,6 @@ int h3zero_wt_datagram_drop_policy_test(void)
     const uint64_t session_id = 4;
     h3zero_stream_ctx_t* session_ctx = NULL;
     h3zero_wt_datagram_payload_test_ctx_t test_ctx = { 0 };
-    uint8_t malformed_datagram[] = { 0x40 };
     uint8_t unknown_session_datagram[] = { 0x02, 0xd2 };
     uint8_t pre_response_datagram[] = { 0x01, 0xd4 };
     uint8_t capsule_payload[] = { 0xd5 };
@@ -901,10 +941,6 @@ int h3zero_wt_datagram_drop_policy_test(void)
     if (ret == 0) {
         cnx->client_mode = 0;
         cnx->cnx_state = picoquic_state_ready;
-    }
-    if (ret == 0) {
-        ret = h3zero_callback_datagram(cnx, malformed_datagram,
-            sizeof(malformed_datagram), h3_ctx);
     }
     if (ret == 0) {
         ret = h3zero_callback_datagram(cnx, unknown_session_datagram,

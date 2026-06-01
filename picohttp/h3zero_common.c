@@ -2291,7 +2291,10 @@ int h3zero_callback_datagram(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
 
 	/* Find the control stream identifier */
 	bytes = (uint8_t*)picoquic_frames_varint_decode(bytes, bytes_max, &quarter_stream_id);
-	if (bytes != NULL) {
+	if (bytes == NULL) {
+		ret = picoquic_close(cnx, H3ZERO_FRAME_ERROR);
+	}
+	else {
 		/* find the control stream context, using the full stream ID */
 		h3zero_stream_ctx_t* stream_ctx = NULL;
 		h3zero_stream_prefix_t* prefix_ctx = h3zero_find_ready_webtransport_prefix(h3_ctx, quarter_stream_id*4, &stream_ctx);

@@ -380,6 +380,7 @@ int h3zero_wt_unknown_session_test(void);
 int h3zero_wt_zero_buffer_test(void);
 int h3zero_wt_zero_buffer_flood_test(void);
 int h3zero_wt_datagram_payload_test(void);
+int h3zero_wt_datagram_malformed_test(void);
 int h3zero_wt_datagram_drop_policy_test(void);
 int h3zero_wt_datagram_multi_session_test(void);
 int h3zero_wt_datagram_post_close_test(void);
