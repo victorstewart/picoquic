@@ -725,6 +725,7 @@ int picowt_receive_stream_error_test(void);
 int picowt_error_code_test(void);
 int picowt_session_gone_test(void);
 int picowt_close_message_test(void);
+int picowt_close_message_utf8_test(void);
 int picowt_close_message_boundary_test(void);
 int picowt_goaway_test(void);
 int picowt_exporter_test(void);

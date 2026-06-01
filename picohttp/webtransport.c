@@ -614,6 +614,77 @@ static size_t picowt_close_message_length(const char* err_msg)
     return err_msg_len;
 }
 
+static int picowt_close_message_is_valid_utf8(const uint8_t* bytes, size_t length)
+{
+    size_t i = 0;
+
+    if (bytes == NULL && length > 0) {
+        return 0;
+    }
+    while (i < length) {
+        if (bytes[i] < 0x80) {
+            i++;
+        }
+        else if (bytes[i] >= 0xc2 && bytes[i] <= 0xdf) {
+            if (i + 1 >= length || (bytes[i + 1] & 0xc0) != 0x80) {
+                return 0;
+            }
+            i += 2;
+        }
+        else if (bytes[i] == 0xe0) {
+            if (i + 2 >= length || bytes[i + 1] < 0xa0 ||
+                bytes[i + 1] > 0xbf || (bytes[i + 2] & 0xc0) != 0x80) {
+                return 0;
+            }
+            i += 3;
+        }
+        else if ((bytes[i] >= 0xe1 && bytes[i] <= 0xec) ||
+            (bytes[i] >= 0xee && bytes[i] <= 0xef)) {
+            if (i + 2 >= length || (bytes[i + 1] & 0xc0) != 0x80 ||
+                (bytes[i + 2] & 0xc0) != 0x80) {
+                return 0;
+            }
+            i += 3;
+        }
+        else if (bytes[i] == 0xed) {
+            if (i + 2 >= length || bytes[i + 1] < 0x80 ||
+                bytes[i + 1] > 0x9f || (bytes[i + 2] & 0xc0) != 0x80) {
+                return 0;
+            }
+            i += 3;
+        }
+        else if (bytes[i] == 0xf0) {
+            if (i + 3 >= length || bytes[i + 1] < 0x90 ||
+                bytes[i + 1] > 0xbf || (bytes[i + 2] & 0xc0) != 0x80 ||
+                (bytes[i + 3] & 0xc0) != 0x80) {
+                return 0;
+            }
+            i += 4;
+        }
+        else if (bytes[i] >= 0xf1 && bytes[i] <= 0xf3) {
+            if (i + 3 >= length || (bytes[i + 1] & 0xc0) != 0x80 ||
+                (bytes[i + 2] & 0xc0) != 0x80 ||
+                (bytes[i + 3] & 0xc0) != 0x80) {
+                return 0;
+            }
+            i += 4;
+        }
+        else if (bytes[i] == 0xf4) {
+            if (i + 3 >= length || bytes[i + 1] < 0x80 ||
+                bytes[i + 1] > 0x8f || (bytes[i + 2] & 0xc0) != 0x80 ||
+                (bytes[i + 3] & 0xc0) != 0x80) {
+                return 0;
+            }
+            i += 4;
+        }
+        else {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 int picowt_send_close_session_message(picoquic_cnx_t* cnx, 
     h3zero_stream_ctx_t* control_stream_ctx, 
     uint32_t picowt_err, const char* err_msg)
@@ -631,6 +702,7 @@ int picowt_send_close_session_message(picoquic_cnx_t* cnx,
     else {
         err_msg_len = picowt_close_message_length(err_msg);
         if (err_msg_len > picowt_close_message_max ||
+            !picowt_close_message_is_valid_utf8((const uint8_t*)err_msg, err_msg_len) ||
             (bytes = picoquic_frames_uint32_encode(buffer, bytes_max, picowt_err)) == NULL ||
             bytes + err_msg_len > bytes_max) {
             ret = -1;
@@ -822,15 +894,23 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                             capsule->h3_capsule.capsule_buffer, capsule->h3_capsule.capsule_buffer + capsule->h3_capsule.capsule_length,
                             &capsule->error_code);
                         capsule->error_msg_len = capsule->h3_capsule.capsule_length - 4;
-                        text_len = (capsule->error_msg_len > 255) ? 255 : capsule->error_msg_len;
-                        if (text_len > 0) {
-                            memcpy(text, capsule->error_msg, text_len);
+                        if (!picowt_close_message_is_valid_utf8(capsule->error_msg,
+                            capsule->error_msg_len)) {
+                            picoquic_log_app_message(cnx,
+                                "Invalid web transport close capsule UTF-8 message");
+                            ret = -1;
                         }
-                        text[text_len] = 0;
-                        picoquic_log_app_message(cnx,
-                            "Received web transport session capsule, type: 0x%" PRIx64 " (%s), error: %" PRIx32 " (%s)",
-                            capsule->h3_capsule.capsule_type,
-                            "close session", capsule->error_code, text);
+                        else {
+                            text_len = (capsule->error_msg_len > 255) ? 255 : capsule->error_msg_len;
+                            if (text_len > 0) {
+                                memcpy(text, capsule->error_msg, text_len);
+                            }
+                            text[text_len] = 0;
+                            picoquic_log_app_message(cnx,
+                                "Received web transport session capsule, type: 0x%" PRIx64 " (%s), error: %" PRIx32 " (%s)",
+                                capsule->h3_capsule.capsule_type,
+                                "close session", capsule->error_code, text);
+                        }
                     }
                     break;
                 case picowt_capsule_wt_max_data:

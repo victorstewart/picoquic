@@ -168,6 +168,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_error_code", picowt_error_code_test },
     { "picowt_session_gone", picowt_session_gone_test },
     { "picowt_close_message", picowt_close_message_test },
+    { "picowt_close_message_utf8", picowt_close_message_utf8_test },
     { "picowt_close_message_boundary", picowt_close_message_boundary_test },
     { "picowt_goaway", picowt_goaway_test },
     { "picowt_exporter", picowt_exporter_test },
