@@ -1197,6 +1197,66 @@ static int h3zero_qpack_parser_policy_invalid_name_test(void)
     return ret;
 }
 
+static int h3zero_qpack_parser_policy_pseudo_order_test(void)
+{
+    static const uint8_t regular_name[] = "x-test";
+    static const uint8_t regular_value[] = "1";
+    static const uint8_t path_name[] = ":path";
+    static const uint8_t path_value[] = { CONNECT_TEST_PROTOCOL_PATH };
+    static const uint8_t unknown_pseudo_name[] = ":unknown";
+    static const uint8_t unknown_pseudo_value[] = "x";
+    uint8_t qpack[128];
+    uint8_t* bytes = qpack;
+    uint8_t* bytes_max = qpack + sizeof(qpack);
+    h3zero_header_parts_t parts = { 0 };
+    uint8_t* parsed = NULL;
+    int ret = 0;
+
+    *bytes++ = 0;
+    *bytes++ = 0;
+    bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+        (uint8_t*)regular_name, sizeof(regular_name) - 1,
+        (uint8_t*)regular_value, sizeof(regular_value) - 1);
+    if (bytes != NULL) {
+        bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)path_name, sizeof(path_name) - 1,
+            (uint8_t*)path_value, sizeof(path_value));
+    }
+    if (bytes == NULL) {
+        ret = -1;
+    }
+    else {
+        parsed = h3zero_parse_qpack_header_frame(qpack, bytes, &parts);
+        if (parsed != NULL) {
+            ret = -1;
+        }
+    }
+
+    h3zero_release_header_parts(&parts);
+    if (ret == 0) {
+        bytes = qpack;
+        *bytes++ = 0;
+        *bytes++ = 0;
+        bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)unknown_pseudo_name,
+            sizeof(unknown_pseudo_name) - 1,
+            (uint8_t*)unknown_pseudo_value,
+            sizeof(unknown_pseudo_value) - 1);
+        if (bytes == NULL) {
+            ret = -1;
+        }
+        else {
+            parsed = h3zero_parse_qpack_header_frame(qpack, bytes, &parts);
+            if (parsed != NULL) {
+                ret = -1;
+            }
+        }
+        h3zero_release_header_parts(&parts);
+    }
+
+    return ret;
+}
+
 int h3zero_qpack_parser_policy_test(void)
 {
     int ret = h3zero_qpack_parser_policy_literal_connect_test();
@@ -1206,6 +1266,9 @@ int h3zero_qpack_parser_policy_test(void)
     }
     if (ret == 0) {
         ret = h3zero_qpack_parser_policy_invalid_name_test();
+    }
+    if (ret == 0) {
+        ret = h3zero_qpack_parser_policy_pseudo_order_test();
     }
 
     return ret;
