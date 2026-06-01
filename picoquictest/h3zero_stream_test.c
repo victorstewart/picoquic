@@ -606,6 +606,104 @@ int h3zero_wt_zero_buffer_test(void)
     return ret;
 }
 
+typedef struct st_h3zero_wt_datagram_payload_test_ctx_t {
+    int nb_zero_length;
+    int nb_one_byte;
+    int nb_errors;
+    uint64_t byte_sum;
+} h3zero_wt_datagram_payload_test_ctx_t;
+
+static int h3zero_wt_datagram_payload_callback(picoquic_cnx_t* UNUSED(cnx),
+    uint8_t* bytes, size_t length, picohttp_call_back_event_t fin_or_event,
+    struct st_h3zero_stream_ctx_t* UNUSED(stream_ctx), void* path_app_ctx)
+{
+    h3zero_wt_datagram_payload_test_ctx_t* ctx =
+        (h3zero_wt_datagram_payload_test_ctx_t*)path_app_ctx;
+
+    if (fin_or_event != picohttp_callback_post_datagram) {
+        ctx->nb_errors++;
+    }
+    else if (length == 0) {
+        ctx->nb_zero_length++;
+    }
+    else if (length == 1 && bytes != NULL) {
+        ctx->nb_one_byte++;
+        ctx->byte_sum += bytes[0];
+    }
+    else {
+        ctx->nb_errors++;
+    }
+
+    return 0;
+}
+
+int h3zero_wt_datagram_payload_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id = 4;
+    h3zero_stream_ctx_t* session_ctx = NULL;
+    h3zero_wt_datagram_payload_test_ctx_t test_ctx = { 0 };
+    uint8_t datagram_zero[] = { 0x01 };
+    uint8_t datagram_one[] = { 0x01, 0xd0 };
+    uint8_t capsule_one_payload[] = { 0xd1 };
+    h3zero_capsule_t capsule_zero = { 0 };
+    h3zero_capsule_t capsule_one = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    capsule_one.capsule_buffer = capsule_one_payload;
+    capsule_one.capsule_length = sizeof(capsule_one_payload);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        session_ctx = h3zero_find_or_create_stream(cnx, session_id, h3_ctx, 1, 1);
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id,
+                h3zero_wt_datagram_payload_callback, &test_ctx) != 0) {
+            ret = -1;
+        }
+        else {
+            session_ctx->is_upgraded = 1;
+        }
+    }
+    if (ret == 0) {
+        ret = h3zero_callback_datagram(cnx, datagram_zero,
+            sizeof(datagram_zero), h3_ctx);
+    }
+    if (ret == 0) {
+        ret = h3zero_callback_datagram(cnx, datagram_one,
+            sizeof(datagram_one), h3_ctx);
+    }
+    if (ret == 0) {
+        h3zero_receive_datagram_capsule(cnx, session_ctx, &capsule_zero,
+            h3_ctx);
+        h3zero_receive_datagram_capsule(cnx, session_ctx, &capsule_one,
+            h3_ctx);
+    }
+    if (ret != 0 || test_ctx.nb_zero_length != 2 ||
+        test_ctx.nb_one_byte != 2 || test_ctx.nb_errors != 0 ||
+        test_ctx.byte_sum != 0xd0 + 0xd1 || cnx->application_error != 0) {
+        DBG_PRINTF("WT datagram payload delivery failed, ret=%d, app_error=%" PRIu64 ", zero=%d, one=%d, errors=%d, sum=%" PRIu64,
+            ret, (cnx == NULL) ? UINT64_MAX : cnx->application_error,
+            test_ctx.nb_zero_length, test_ctx.nb_one_byte,
+            test_ctx.nb_errors, test_ctx.byte_sum);
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 static int h3zero_wt_prefix_fragment_case(int is_bidir, size_t split)
 {
     picoquic_quic_t* quic = NULL;

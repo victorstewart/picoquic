@@ -378,6 +378,7 @@ int h3zero_incoming_unidir_test(void);
 int h3zero_wt_id_error_test(void);
 int h3zero_wt_unknown_session_test(void);
 int h3zero_wt_zero_buffer_test(void);
+int h3zero_wt_datagram_payload_test(void);
 int h3zero_wt_prefix_fragment_test(void);
 int h3zero_wt_first_payload_split_test(void);
 int h3zero_wt_offset_reassembly_test(void);
