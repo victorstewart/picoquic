@@ -48,6 +48,17 @@ static int h3zero_wt_session_id_is_valid(uint64_t session_id)
 	return IS_CLIENT_STREAM_ID(session_id) && IS_BIDIR_STREAM_ID(session_id);
 }
 
+static int h3zero_reject_buffered_webtransport_stream(picoquic_cnx_t* cnx, uint64_t stream_id)
+{
+	/* Draft-15 section 4.6 buffering limit is zero in h3zero. */
+	int ret = picoquic_stop_sending(cnx, stream_id, H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED);
+
+	if (ret == 0 && IS_BIDIR_STREAM_ID(stream_id)) {
+		ret = picoquic_reset_stream(cnx, stream_id, H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED);
+	}
+	return ret;
+}
+
 
  /* Stream context splay management */
 
@@ -187,6 +198,24 @@ h3zero_stream_prefix_t* h3zero_find_stream_prefix(h3zero_callback_ctx_t* ctx, ui
 		prefix_ctx = prefix_ctx->next;
 	}
 
+	return prefix_ctx;
+}
+
+static h3zero_stream_prefix_t* h3zero_find_ready_webtransport_prefix(
+	h3zero_callback_ctx_t* ctx, uint64_t prefix, h3zero_stream_ctx_t** session_ctx)
+{
+	h3zero_stream_ctx_t* stream_ctx = NULL;
+	h3zero_stream_prefix_t* prefix_ctx = h3zero_find_stream_prefix(ctx, prefix);
+
+	if (prefix_ctx != NULL) {
+		stream_ctx = h3zero_find_stream(ctx, prefix);
+		if (stream_ctx == NULL || !stream_ctx->is_upgraded) {
+			prefix_ctx = NULL;
+		}
+	}
+	if (session_ctx != NULL) {
+		*session_ctx = stream_ctx;
+	}
 	return prefix_ctx;
 }
 
@@ -538,8 +567,9 @@ uint8_t* h3zero_wt_parse_control_stream_id(
 		}
 		/* Just found the control stream ID */
 		h3zero_stream_prefix_t* stream_prefix;
-		stream_prefix = h3zero_find_stream_prefix(ctx, stream_state->control_stream_id);
+		stream_prefix = h3zero_find_ready_webtransport_prefix(ctx, stream_state->control_stream_id, NULL);
 		if (stream_prefix == NULL) {
+			*error_found = H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED;
 			bytes = NULL;
 		}
 		else {
@@ -646,6 +676,9 @@ uint8_t* h3zero_parse_incoming_remote_stream(
 	}
 	if (bytes == NULL && error_found == H3ZERO_ID_ERROR && opt_cnx != NULL) {
 		(void)picoquic_close(opt_cnx, H3ZERO_ID_ERROR);
+	}
+	else if (bytes == NULL && error_found == H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED && opt_cnx != NULL) {
+		(void)h3zero_reject_buffered_webtransport_stream(opt_cnx, stream_ctx->stream_id);
 	}
 	return bytes;
 }
@@ -980,9 +1013,15 @@ int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
 		if (bytes == NULL) {
 			picoquic_log_app_message(cnx, "Cannot parse incoming stream: %" PRIu64", error: %" PRIu64,
 				stream_id, error_found);
-			ret = (error_found == H3ZERO_ID_ERROR) ?
-				picoquic_close(cnx, H3ZERO_ID_ERROR) :
-				picoquic_stop_sending(cnx, stream_id, error_found);
+			if (error_found == H3ZERO_ID_ERROR) {
+				ret = picoquic_close(cnx, H3ZERO_ID_ERROR);
+			}
+			else if (error_found == H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED) {
+				ret = h3zero_reject_buffered_webtransport_stream(cnx, stream_id);
+			}
+			else {
+				ret = picoquic_stop_sending(cnx, stream_id, error_found);
+			}
 		}
 		else if (bytes < bytes_max || fin_or_event == picoquic_callback_stream_fin) {
 			ret = h3zero_post_data_or_fin(cnx, bytes, bytes_max - bytes, fin_or_event, stream_ctx);
@@ -1420,9 +1459,14 @@ int h3zero_process_h3_server_data(picoquic_cnx_t* cnx,
 			if (stream_ctx->ps.stream_state.is_web_transport) {
 				if (stream_ctx->path_callback == NULL) {
 					h3zero_stream_prefix_t* stream_prefix;
-					stream_prefix = h3zero_find_stream_prefix(ctx, stream_ctx->ps.stream_state.control_stream_id);
+					if (!h3zero_wt_session_id_is_valid(stream_ctx->ps.stream_state.control_stream_id)) {
+						ret = picoquic_close(cnx, H3ZERO_ID_ERROR);
+						break;
+					}
+					stream_prefix = h3zero_find_ready_webtransport_prefix(ctx, stream_ctx->ps.stream_state.control_stream_id, NULL);
 					if (stream_prefix == NULL) {
-						ret = picoquic_reset_stream(cnx, stream_id, H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED);
+						ret = h3zero_reject_buffered_webtransport_stream(cnx, stream_id);
+						break;
 					}
 					else {
 						stream_ctx->path_callback = stream_prefix->function_call;
@@ -1854,20 +1898,16 @@ int h3zero_callback_datagram(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
 	bytes = (uint8_t*)picoquic_frames_varint_decode(bytes, bytes_max, &quarter_stream_id);
 	if (bytes != NULL) {
 		/* find the control stream context, using the full stream ID */
-		h3zero_stream_prefix_t* prefix_ctx = h3zero_find_stream_prefix(h3_ctx, quarter_stream_id*4);
+		h3zero_stream_ctx_t* stream_ctx = NULL;
+		h3zero_stream_prefix_t* prefix_ctx = h3zero_find_ready_webtransport_prefix(h3_ctx, quarter_stream_id*4, &stream_ctx);
 
 		if (prefix_ctx == NULL) {
-			/* Session not available yet. Buffering policy is handled by the caller. */
+			/* Zero-buffer policy: pre-response datagrams are dropped. */
 		}
 		else if (prefix_ctx->function_call == NULL) {
 			ret = picoquic_close(cnx, H3ZERO_INTERNAL_ERROR);
 		} else {
-			h3zero_stream_ctx_t* stream_ctx = h3zero_find_stream(h3_ctx, prefix_ctx->prefix);
-			if (stream_ctx == NULL) {
-				/* Application is not yet ready -- just ignore the datagram */
-			} else {
-				prefix_ctx->function_call(cnx, bytes, bytes_max - bytes, picohttp_callback_post_datagram, stream_ctx, prefix_ctx->function_ctx);
-			}
+			prefix_ctx->function_call(cnx, bytes, bytes_max - bytes, picohttp_callback_post_datagram, stream_ctx, prefix_ctx->function_ctx);
 		}
 	}
 	return ret;
@@ -1876,13 +1916,13 @@ int h3zero_callback_datagram(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
 /* Arrival of a datagram capsule */
 void h3zero_receive_datagram_capsule(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* stream_ctx, h3zero_capsule_t* capsule, h3zero_callback_ctx_t* h3_ctx)
 {
-	if (stream_ctx == NULL) {
-		/* Application is not yet ready -- just ignore the datagram */
+	if (stream_ctx == NULL || !stream_ctx->is_upgraded) {
+		/* Zero-buffer policy: pre-response datagrams are dropped. */
 	}
 	else {
 		h3zero_stream_prefix_t* prefix_ctx = h3zero_find_stream_prefix(h3_ctx, stream_ctx->stream_id);
 		if (prefix_ctx == NULL) {
-			/* Session not available yet. Buffering policy is handled by the caller. */
+			/* Zero-buffer policy: pre-response datagrams are dropped. */
 		}
 		else if (prefix_ctx->function_call == NULL) {
 			(void)picoquic_close(cnx, H3ZERO_INTERNAL_ERROR);

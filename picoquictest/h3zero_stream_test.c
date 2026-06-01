@@ -232,6 +232,7 @@ int h3zero_incoming_unidir_test(void)
         }
         else {
             unidir_input[2] = (uint8_t)control_stream_ctx->stream_id;
+            control_stream_ctx->is_upgraded = 1;
             /* Need to program a stream prefix that matches the connection */
             ret = h3zero_declare_stream_prefix(h3_ctx, control_stream_ctx->stream_id, incoming_unidir_test_fn, NULL);
         }
@@ -283,6 +284,14 @@ int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
     h3zero_stream_ctx_t* stream_ctx,
     h3zero_callback_ctx_t* ctx);
 
+int h3zero_process_h3_server_data(picoquic_cnx_t* cnx,
+    uint64_t stream_id, uint8_t* bytes, size_t length,
+    picoquic_call_back_event_t fin_or_event, h3zero_callback_ctx_t* ctx,
+    h3zero_stream_ctx_t* stream_ctx);
+
+int h3zero_callback_datagram(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
+    h3zero_callback_ctx_t* h3_ctx);
+
 int h3zero_wt_id_error_test(void)
 {
     picoquic_quic_t* quic = NULL;
@@ -308,6 +317,158 @@ int h3zero_wt_id_error_test(void)
         if (ret != 0 || cnx->application_error != H3ZERO_ID_ERROR) {
             DBG_PRINTF("Invalid WT stream ID error: ret=%d, app_error=%" PRIu64,
                 ret, cnx->application_error);
+            ret = -1;
+        }
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    h3zero_callback_delete_context(cnx, h3_ctx);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+typedef struct st_h3zero_wt_zero_buffer_test_ctx_t {
+    int nb_data;
+    int nb_datagrams;
+} h3zero_wt_zero_buffer_test_ctx_t;
+
+static int h3zero_wt_zero_buffer_callback(picoquic_cnx_t* UNUSED(cnx),
+    uint8_t* bytes, size_t length, picohttp_call_back_event_t fin_or_event,
+    struct st_h3zero_stream_ctx_t* UNUSED(stream_ctx), void* path_app_ctx)
+{
+    h3zero_wt_zero_buffer_test_ctx_t* ctx = (h3zero_wt_zero_buffer_test_ctx_t*)path_app_ctx;
+
+    if (fin_or_event == picohttp_callback_post_data &&
+        length == 1 && bytes != NULL && bytes[0] == 0xf0) {
+        ctx->nb_data++;
+    }
+    else if (fin_or_event == picohttp_callback_post_datagram &&
+        length == 1 && bytes != NULL && bytes[0] == 0xd0) {
+        ctx->nb_datagrams++;
+    }
+    return 0;
+}
+
+static int h3zero_wt_create_stream_pair(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* h3_ctx,
+    uint64_t stream_id, h3zero_stream_ctx_t** stream_ctx)
+{
+    int ret = 0;
+
+    if (picoquic_create_stream(cnx, stream_id) == NULL) {
+        ret = -1;
+    }
+    else if ((*stream_ctx = h3zero_find_or_create_stream(cnx, stream_id, h3_ctx, 1, 1)) == NULL) {
+        ret = -1;
+    }
+    else {
+        picoquic_set_app_stream_ctx(cnx, stream_id, *stream_ctx);
+    }
+    return ret;
+}
+
+int h3zero_wt_zero_buffer_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id = 4;
+    h3zero_stream_ctx_t* session_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    h3zero_wt_zero_buffer_test_ctx_t test_ctx = { 0, 0 };
+    uint8_t unidir_input[] = { 0x40, 0x54, 0x04, 0xf0 };
+    uint8_t bidi_input[] = { 0x40, 0x41, 0x04, 0xf0 };
+    uint8_t datagram_input[] = { 0x01, 0xd0 };
+    uint8_t capsule_payload[] = { 0xd0 };
+    h3zero_capsule_t capsule = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    capsule.capsule_buffer = capsule_payload;
+    capsule.capsule_length = sizeof(capsule_payload);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        session_ctx = h3zero_find_or_create_stream(cnx, session_id, h3_ctx, 1, 1);
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id, h3zero_wt_zero_buffer_callback, &test_ctx) != 0) {
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        ret = h3zero_callback_datagram(cnx, datagram_input, sizeof(datagram_input), h3_ctx);
+        h3zero_receive_datagram_capsule(cnx, session_ctx, &capsule, h3_ctx);
+        if (ret != 0 || test_ctx.nb_datagrams != 0 || test_ctx.nb_data != 0) {
+            DBG_PRINTF("Pre-response datagram was not dropped, ret=%d, data=%d, dg=%d",
+                ret, test_ctx.nb_data, test_ctx.nb_datagrams);
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        const uint64_t stream_id = 2;
+        picoquic_stream_head_t* stream;
+
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+        if (ret == 0) {
+            ret = h3zero_process_remote_stream(cnx, stream_id, unidir_input, sizeof(unidir_input),
+                picoquic_callback_stream_data, stream_ctx, h3_ctx);
+        }
+        stream = picoquic_find_stream(cnx, stream_id);
+        if (ret != 0 || stream == NULL || !stream->stop_sending_requested ||
+            stream->local_stop_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED ||
+            cnx->application_error != 0 || test_ctx.nb_data != 0) {
+            DBG_PRINTF("Pre-response unidir reject failed, ret=%d, app_error=%" PRIu64,
+                ret, cnx->application_error);
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        const uint64_t stream_id = 8;
+        picoquic_stream_head_t* stream;
+
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+        if (ret == 0) {
+            ret = h3zero_process_h3_server_data(cnx, stream_id, bidi_input, sizeof(bidi_input),
+                picoquic_callback_stream_data, h3_ctx, stream_ctx);
+        }
+        stream = picoquic_find_stream(cnx, stream_id);
+        if (ret != 0 || stream == NULL || !stream->stop_sending_requested ||
+            stream->local_stop_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED ||
+            !stream->reset_requested ||
+            stream->local_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED ||
+            cnx->application_error != 0 || test_ctx.nb_data != 0) {
+            DBG_PRINTF("Pre-response bidi reject failed, ret=%d, app_error=%" PRIu64,
+                ret, cnx->application_error);
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        session_ctx->is_upgraded = 1;
+        ret = h3zero_callback_datagram(cnx, datagram_input, sizeof(datagram_input), h3_ctx);
+        h3zero_receive_datagram_capsule(cnx, session_ctx, &capsule, h3_ctx);
+        if (ret != 0 || test_ctx.nb_datagrams != 2 || test_ctx.nb_data != 0) {
+            DBG_PRINTF("Established datagram delivery failed, ret=%d, data=%d, dg=%d",
+                ret, test_ctx.nb_data, test_ctx.nb_datagrams);
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        const uint64_t stream_id = 6;
+
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+        if (ret == 0) {
+            ret = h3zero_process_remote_stream(cnx, stream_id, unidir_input, sizeof(unidir_input),
+                picoquic_callback_stream_data, stream_ctx, h3_ctx);
+        }
+        if (ret != 0 || test_ctx.nb_datagrams != 2 || test_ctx.nb_data != 1) {
+            DBG_PRINTF("Established unidir delivery failed, ret=%d, data=%d, dg=%d",
+                ret, test_ctx.nb_data, test_ctx.nb_datagrams);
             ret = -1;
         }
     }
