@@ -2370,6 +2370,9 @@ int h3zero_callback(picoquic_cnx_t* cnx,
 					ret = stream_ctx->path_callback(cnx, NULL, 0, (fin_or_event == picoquic_callback_stream_reset)?
 						picohttp_callback_reset:picohttp_callback_stop_sending, stream_ctx, stream_ctx->path_callback_ctx);
 				}
+				else if (h3zero_remote_wt_prefix_incomplete(stream_id, &stream_ctx->ps.stream_state)) {
+					ret = h3zero_reject_buffered_webtransport_stream(cnx, stream_id);
+				}
 				else {
 					/* If a file is open on a client, close and do the accounting. */
 					ret = h3zero_client_close_stream(cnx, ctx, stream_ctx);
