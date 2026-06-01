@@ -288,16 +288,34 @@
       }
     }
 
-    function fail(error) {
+    function isNetworkError(error) {
+      return (error && error.name === "NetworkError") ||
+        errorText(error).toLowerCase().indexOf("network error") >= 0;
+    }
+
+    function fail(error, mayBePostCloseReadError) {
+      if (finished) {
+        return;
+      }
       if (sentZero && isSessionClosedError(error) && datagramRequirementMet()) {
         markClosed();
         return;
       }
-      if (!finished) {
-        finished = true;
-        result.error = errorText(error);
-        rejectDone(error);
+      if (mayBePostCloseReadError && sentZero && datagramRequirementMet() &&
+        isNetworkError(error)) {
+        /* Safari 26.5 can reject pending WebTransport readers with NetworkError
+         * during a clean peer-initiated close. Only treat that as benign after
+         * the expected exchange is complete, and only if transport.closed also
+         * fulfills.
+         */
+        transport.closed.then(markClosed, function (closeError) {
+          fail(closeError, false);
+        });
+        return;
       }
+      finished = true;
+      result.error = errorText(error);
+      rejectDone(error);
     }
 
     function isSessionClosedError(error) {
@@ -327,8 +345,10 @@
       }
     }
 
-    function track(promise) {
-      promise.catch(fail);
+    function track(promise, mayBePostCloseReadError) {
+      promise.catch(function (error) {
+        fail(error, mayBePostCloseReadError === true);
+      });
     }
 
     async function writePacket(writable, baton) {
@@ -353,7 +373,7 @@
       var stream = await transport.createBidirectionalStream();
       await writePacket(stream.writable, next);
       if (next !== 0) {
-        track(handleBatonStream(stream.readable, "local-bidi"));
+        track(handleBatonStream(stream.readable, "local-bidi"), true);
       }
     }
 
@@ -392,7 +412,7 @@
           reader.releaseLock();
           return;
         }
-        track(handleBatonStream(incoming.value, "remote-uni"));
+        track(handleBatonStream(incoming.value, "remote-uni"), true);
       }
     }
 
@@ -404,7 +424,7 @@
           reader.releaseLock();
           return;
         }
-        track(handleBatonStream(incoming.value.readable, "remote-bidi", incoming.value));
+        track(handleBatonStream(incoming.value.readable, "remote-bidi", incoming.value), true);
       }
     }
 
@@ -438,11 +458,13 @@
     }
     note("ready");
 
-    transport.closed.then(markClosed, fail);
+    transport.closed.then(markClosed, function (error) {
+      fail(error, false);
+    });
 
-    track(acceptUnidirectional());
-    track(acceptBidirectional());
-    track(readDatagrams());
+    track(acceptUnidirectional(), true);
+    track(acceptBidirectional(), true);
+    track(readDatagrams(), true);
 
     var datagramWritable = getDatagramWritable(transport.datagrams);
     if (datagramWritable) {
