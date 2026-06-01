@@ -735,6 +735,96 @@ int h3zero_wt_prefix_reset_test(void)
     return ret;
 }
 
+typedef struct st_h3zero_wt_stream_fin_test_ctx_t {
+    int nb_data;
+    int nb_fin;
+} h3zero_wt_stream_fin_test_ctx_t;
+
+static int h3zero_wt_stream_fin_callback(picoquic_cnx_t* UNUSED(cnx),
+    uint8_t* UNUSED(bytes), size_t length, picohttp_call_back_event_t fin_or_event,
+    struct st_h3zero_stream_ctx_t* UNUSED(stream_ctx), void* path_app_ctx)
+{
+    h3zero_wt_stream_fin_test_ctx_t* ctx =
+        (h3zero_wt_stream_fin_test_ctx_t*)path_app_ctx;
+
+    if (fin_or_event == picohttp_callback_post_data) {
+        ctx->nb_data++;
+    }
+    else if (fin_or_event == picohttp_callback_post_fin && length == 0) {
+        ctx->nb_fin++;
+    }
+    return 0;
+}
+
+static int h3zero_wt_stream_empty_fin_case(int is_bidir)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id = 4;
+    const uint64_t stream_id = is_bidir ? 12 : 6;
+    h3zero_stream_ctx_t* session_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    h3zero_wt_stream_fin_test_ctx_t test_ctx = { 0, 0 };
+    uint8_t bidi_input[] = { 0x40, 0x41, 0x04 };
+    uint8_t unidir_input[] = { 0x40, 0x54, 0x04 };
+    uint8_t* input = is_bidir ? bidi_input : unidir_input;
+    size_t input_length = is_bidir ? sizeof(bidi_input) : sizeof(unidir_input);
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        session_ctx = h3zero_find_or_create_stream(cnx, session_id, h3_ctx, 1, 1);
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id,
+                h3zero_wt_stream_fin_callback, &test_ctx) != 0) {
+            ret = -1;
+        }
+        else {
+            session_ctx->is_upgraded = 1;
+        }
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+    }
+    if (ret == 0) {
+        ret = h3zero_process_remote_stream(cnx, stream_id, input, input_length,
+            picoquic_callback_stream_fin, stream_ctx, h3_ctx);
+    }
+    if (ret != 0 || test_ctx.nb_data != 0 || test_ctx.nb_fin != 1 ||
+        stream_ctx->ps.stream_state.control_stream_id != session_id ||
+        cnx->application_error != 0) {
+        DBG_PRINTF("WT %s empty FIN failed, ret=%d, app_error=%" PRIu64 ", data=%d, fin=%d",
+            is_bidir ? "bidi" : "uni", ret,
+            (cnx == NULL) ? UINT64_MAX : cnx->application_error,
+            test_ctx.nb_data, test_ctx.nb_fin);
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int h3zero_wt_stream_empty_fin_test(void)
+{
+    int ret = h3zero_wt_stream_empty_fin_case(0);
+
+    if (ret == 0) {
+        ret = h3zero_wt_stream_empty_fin_case(1);
+    }
+
+    return ret;
+}
+
 /*
 * A fraction of the control stream parsing is covered by normal usage :
 * -receive h3 settings on control stream,
