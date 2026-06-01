@@ -1279,6 +1279,94 @@ int picowt_connect_headers_fragment_test(void)
     return ret;
 }
 
+static int picowt_connect_stream_id_case(uint64_t stream_id, int settings_ready)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    h3zero_stream_ctx_t stream_ctx = { 0 };
+    const uint8_t path[] = "/baton";
+    const uint8_t protocol[] = H3ZERO_WEBTRANSPORT_H3_PROTOCOL;
+    const uint8_t scheme[] = "https";
+    const uint8_t authority[] = PICOQUIC_TEST_SNI;
+    char origin[256];
+    picohttp_server_path_item_t stream_id_table[1] = {
+        { "/baton", 6, picowt_accept_only_callback, NULL,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+            sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1, 0,
+            h3zero_origin_validator_allow_all, NULL }
+    };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        if (settings_ready) {
+            picowt_connect_response_set_ready(cnx, h3_ctx);
+        }
+        h3_ctx->path_table = stream_id_table;
+        h3_ctx->path_table_nb = 1;
+        ret = picoquic_sprintf(origin, sizeof(origin), NULL,
+            "https://%s", PICOQUIC_TEST_SNI);
+    }
+    if (ret == 0) {
+        stream_ctx.cnx = cnx;
+        stream_ctx.is_h3 = 1;
+        stream_ctx.stream_id = stream_id;
+        stream_ctx.ps.stream_state.h3_ctx = h3_ctx;
+        stream_ctx.ps.stream_state.header_found = 1;
+        stream_ctx.ps.stream_state.header.method = h3zero_method_connect;
+        stream_ctx.ps.stream_state.header.path = path;
+        stream_ctx.ps.stream_state.header.path_length = sizeof(path) - 1;
+        stream_ctx.ps.stream_state.header.protocol = protocol;
+        stream_ctx.ps.stream_state.header.protocol_length = sizeof(protocol) - 1;
+        stream_ctx.ps.stream_state.header.scheme = scheme;
+        stream_ctx.ps.stream_state.header.scheme_length = sizeof(scheme) - 1;
+        stream_ctx.ps.stream_state.header.authority = authority;
+        stream_ctx.ps.stream_state.header.authority_length = sizeof(authority) - 1;
+        stream_ctx.ps.stream_state.header.origin = (uint8_t*)origin;
+        stream_ctx.ps.stream_state.header.origin_length = strlen(origin);
+
+        ret = h3zero_process_request_frame(cnx, &stream_ctx, h3_ctx);
+        if (ret != 0 ||
+            cnx->application_error != H3ZERO_ID_ERROR ||
+            stream_ctx.ps.stream_state.is_webtransport_pending ||
+            stream_ctx.is_upgraded ||
+            stream_ctx.is_webtransport_session_counted ||
+            h3_ctx->nb_webtransport_sessions != 0) {
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int picowt_connect_stream_id_test(void)
+{
+    int ret = picowt_connect_stream_id_case(1, 1);
+
+    if (ret == 0) {
+        ret = picowt_connect_stream_id_case(2, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_connect_stream_id_case(3, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_connect_stream_id_case(1, 0);
+    }
+
+    return ret;
+}
+
 int picowt_baton_origin_test(void)
 {
     return picowt_baton_test_one_ex(16, "/baton?baton=240", 0, 2000000, NULL, NULL,

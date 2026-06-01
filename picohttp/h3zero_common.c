@@ -1435,7 +1435,10 @@ int h3zero_process_request_frame(
 		int is_webtransport = (wt_protocol_class != 0);
 
 		stream_ctx->ps.stream_state.is_webtransport_requested = is_webtransport;
-		if (is_webtransport && !app_ctx->settings.settings_received) {
+		if (is_webtransport && !h3zero_wt_session_id_is_valid(stream_ctx->stream_id)) {
+			return picoquic_close(cnx, H3ZERO_ID_ERROR);
+		}
+		else if (is_webtransport && !app_ctx->settings.settings_received) {
 			stream_ctx->ps.stream_state.is_webtransport_pending = 1;
 			return 0;
 		}

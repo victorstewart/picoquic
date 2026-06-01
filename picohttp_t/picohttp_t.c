@@ -128,6 +128,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_baton_header_qpack_limit", picowt_baton_header_qpack_limit_test },
     { "picowt_connect_response", picowt_connect_response_test },
     { "picowt_connect_headers_fragment", picowt_connect_headers_fragment_test },
+    { "picowt_connect_stream_id", picowt_connect_stream_id_test },
     { "picowt_baton_origin", picowt_baton_origin_test },
     { "picowt_baton_origin_policy", picowt_baton_origin_policy_test },
     { "picowt_baton_settings", picowt_baton_settings_test },

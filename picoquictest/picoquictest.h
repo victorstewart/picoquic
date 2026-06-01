@@ -685,6 +685,7 @@ int picowt_baton_empty_path_test(void);
 int picowt_baton_header_qpack_limit_test(void);
 int picowt_connect_response_test(void);
 int picowt_connect_headers_fragment_test(void);
+int picowt_connect_stream_id_test(void);
 int picowt_baton_origin_test(void);
 int picowt_baton_origin_policy_test(void);
 int picowt_baton_settings_test(void);
