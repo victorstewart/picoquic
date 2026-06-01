@@ -533,6 +533,27 @@ int qpack_huffman_base_test(void)
             DBG_PRINTF("Huffman cannot decode eof test %d\n", (int)i);
         }
     }
+    /* Third, test that non-all-ones padding is rejected. */
+    for (size_t i = 0; ret == 0 && i < (nb_h3zero_qpack_huffman_base - 1); i++) {
+        if ((h3zero_qpack_huffman_base[i].nb_bits & 7) != 0) {
+            uint64_t val = h3zero_qpack_huffman_base[i].right_shift_hex << (64 - h3zero_qpack_huffman_base[i].nb_bits);
+            uint64_t mask = UINT64_MAX >> h3zero_qpack_huffman_base[i].nb_bits;
+            uint64_t val_in = val | mask;
+
+            input_length = 0;
+            for (int l = 0; 8 * l < h3zero_qpack_huffman_base[i].nb_bits; l++) {
+                input[input_length++] = (uint8_t)(val_in >> 56);
+                val_in <<= 8;
+            }
+            input[input_length - 1] &= 0xfe;
+            if (hzero_qpack_huffman_decode(input, input + input_length,
+                data, sizeof(data), &nb_data) == 0) {
+                DBG_PRINTF("Huffman accepted invalid padding in base test %d\n",
+                    (int)i);
+                ret = -1;
+            }
+        }
+    }
     return ret;
 }
 
