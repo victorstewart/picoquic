@@ -48,6 +48,40 @@ static int h3zero_wt_session_id_is_valid(uint64_t session_id)
 	return IS_CLIENT_STREAM_ID(session_id) && IS_BIDIR_STREAM_ID(session_id);
 }
 
+static int h3zero_settings_enable_webtransport_flow_control(const h3zero_settings_t* settings)
+{
+	return (settings != NULL &&
+		(settings->wt_initial_max_data != 0 ||
+			settings->wt_initial_max_streams_uni != 0 ||
+			settings->wt_initial_max_streams_bidi != 0));
+}
+
+static int h3zero_webtransport_flow_control_is_enabled(const h3zero_callback_ctx_t* ctx)
+{
+	return (ctx != NULL &&
+		h3zero_settings_enable_webtransport_flow_control(&ctx->local_settings) &&
+		h3zero_settings_enable_webtransport_flow_control(&ctx->settings));
+}
+
+static void h3zero_track_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx)
+{
+	if (ctx != NULL && stream_ctx != NULL && !stream_ctx->is_webtransport_session_counted) {
+		stream_ctx->is_webtransport_session_counted = 1;
+		ctx->nb_webtransport_sessions++;
+	}
+}
+
+void h3zero_untrack_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx)
+{
+	if (ctx != NULL && stream_ctx != NULL && stream_ctx->is_webtransport_session_counted) {
+		stream_ctx->is_webtransport_session_counted = 0;
+		stream_ctx->is_upgraded = 0;
+		if (ctx->nb_webtransport_sessions > 0) {
+			ctx->nb_webtransport_sessions--;
+		}
+	}
+}
+
 static int h3zero_reject_buffered_webtransport_stream(picoquic_cnx_t* cnx, uint64_t stream_id)
 {
 	/* Draft-15 section 4.6 buffering limit is zero in h3zero. */
@@ -80,6 +114,9 @@ void * picohttp_stream_node_value(picosplay_node_t * node)
 
 static void picohttp_clear_stream_ctx(h3zero_stream_ctx_t* stream_ctx)
 {
+	if (stream_ctx->is_h3) {
+		h3zero_untrack_webtransport_session(stream_ctx->ps.stream_state.h3_ctx, stream_ctx);
+	}
 	if (stream_ctx->file_path != NULL) {
 		free(stream_ctx->file_path);
 		stream_ctx->file_path = NULL;
@@ -115,6 +152,7 @@ static void picohttp_stream_node_delete(void* UNUSED(tree), picosplay_node_t* no
 
 void h3zero_delete_stream(picoquic_cnx_t * cnx, h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx)
 {
+	h3zero_untrack_webtransport_session(ctx, stream_ctx);
 	if (cnx != NULL) {
 		picoquic_unlink_app_stream_ctx(cnx, stream_ctx->stream_id);
 	}
@@ -299,7 +337,21 @@ void h3zero_delete_all_stream_prefixes(picoquic_cnx_t * cnx, h3zero_callback_ctx
 	}
 }
 
-int h3zero_protocol_init(picoquic_cnx_t* cnx)
+static void h3zero_settings_init_local(picoquic_cnx_t* cnx, h3zero_settings_t* settings)
+{
+	memset(settings, 0, sizeof(h3zero_settings_t));
+	settings->enable_connect_protocol = 1;
+
+	/* Web transport is only enabled if h3 datagrams are supported.
+	 */
+	if (cnx != NULL && cnx->local_parameters.max_datagram_frame_size > 0) {
+		settings->h3_datagram = 1;
+		settings->webtransport_enabled = 1;
+		settings->webtransport_max_sessions = 1;
+	}
+}
+
+static int h3zero_protocol_init_with_settings(picoquic_cnx_t* cnx, const h3zero_settings_t* settings)
 {
 	uint8_t decoder_stream_head = (uint8_t)h3zero_stream_type_qpack_decoder;
 	uint8_t encoder_stream_head = (uint8_t)h3zero_stream_type_qpack_encoder;
@@ -307,21 +359,10 @@ int h3zero_protocol_init(picoquic_cnx_t* cnx)
 	/* Some of the setting values depend on the presence of connection parameters */
 	uint8_t settings_buffer[256];
 	uint8_t* settings_last = 0;
-	h3zero_settings_t settings = { 0 };
 	int ret = 0;
 
-	settings.enable_connect_protocol = 1;
-
-	/* Web transport is only enabled if h3 datagrams are supported.
-	 */
-	if (cnx->local_parameters.max_datagram_frame_size > 0) {
-		settings.h3_datagram = 1;
-		settings.webtransport_enabled = 1;
-		settings.webtransport_max_sessions = 1;
-	}
-
 	settings_buffer[0] = (uint8_t)h3zero_stream_type_control;
-	if ((settings_last = h3zero_settings_encode(settings_buffer + 1, settings_buffer + sizeof(settings_buffer), &settings)) == NULL) {
+	if ((settings_last = h3zero_settings_encode(settings_buffer + 1, settings_buffer + sizeof(settings_buffer), settings)) == NULL) {
 		ret = H3ZERO_INTERNAL_ERROR;
 	}
 	else {
@@ -354,13 +395,22 @@ int h3zero_protocol_init(picoquic_cnx_t* cnx)
 	return ret;
 }
 
+int h3zero_protocol_init(picoquic_cnx_t* cnx)
+{
+	h3zero_settings_t settings;
+
+	h3zero_settings_init_local(cnx, &settings);
+	return h3zero_protocol_init_with_settings(cnx, &settings);
+}
+
 int h3zero_protocol_init_safe(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx)
 {
 	int ret = 0;
 
 	if (!ctx->settings_sent) {
 		ctx->settings_sent = 1;
-		ret = h3zero_protocol_init(cnx);
+		h3zero_settings_init_local(cnx, &ctx->local_settings);
+		ret = h3zero_protocol_init_with_settings(cnx, &ctx->local_settings);
 	}
 	return ret;
 }
@@ -1245,6 +1295,7 @@ int h3zero_process_request_frame(
 			stream_ctx->ps.stream_state.header.protocol_length,
 			H3ZERO_WEBTRANSPORT_H3_PROTOCOL);
 
+		stream_ctx->ps.stream_state.is_webtransport_requested = is_webtransport;
 		if (is_webtransport && !app_ctx->settings.settings_received) {
 			stream_ctx->ps.stream_state.is_webtransport_pending = 1;
 			return 0;
@@ -1280,6 +1331,13 @@ int h3zero_process_request_frame(
 					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
 				}
 				else {
+					if (is_webtransport && app_ctx->nb_webtransport_sessions > 0 &&
+						!h3zero_webtransport_flow_control_is_enabled(app_ctx)) {
+						picoquic_log_app_message(cnx,
+							"Rejecting excessive WebTransport CONNECT on stream: %"PRIu64,
+							stream_ctx->stream_id);
+						return picoquic_reset_stream(cnx, stream_ctx->stream_id, H3ZERO_REQUEST_REJECTED);
+					}
 					stream_ctx->path_callback = path_desc->path_callback;
 					if (stream_ctx->path_callback(cnx, (uint8_t*)stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, picohttp_callback_connect,
 						stream_ctx, path_desc->path_app_ctx) != 0) {
@@ -1292,7 +1350,12 @@ int h3zero_process_request_frame(
 						picoquic_log_app_message(cnx, "Connect accepted on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, path_desc->path);
 						/* TODO: path callback, fill additional HTTP headers */
 						o_bytes = h3zero_create_response_header_frame_ex(o_bytes, o_bytes_max, h3zero_content_type_none, H3ZERO_USER_AGENT_STRING, stream_ctx->ps.stream_state.wt_protocol);
-						stream_ctx->is_upgraded = 1;
+						if (o_bytes != NULL) {
+							stream_ctx->is_upgraded = 1;
+							if (is_webtransport) {
+								h3zero_track_webtransport_session(app_ctx, stream_ctx);
+							}
+						}
 					}
 				}
 			}
@@ -1366,6 +1429,7 @@ int h3zero_process_request_frame(
 			ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id,
 				buffer, o_bytes - buffer, is_fin_stream, stream_ctx);
 			if (ret != 0) {
+				h3zero_untrack_webtransport_session(app_ctx, stream_ctx);
 				o_bytes = NULL;
 			}
 		}

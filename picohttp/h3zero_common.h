@@ -91,6 +91,7 @@ extern "C" {
         picoquic_cnx_t* cnx;
         unsigned int is_h3:1;
         unsigned int is_upgraded : 1;
+        unsigned int is_webtransport_session_counted : 1;
         unsigned int is_bypass : 1;
         union {
             h3zero_data_stream_state_t stream_state; /* h3 only */
@@ -210,6 +211,7 @@ extern "C" {
         char const* web_folder;
         /* Settings */
         h3zero_settings_t settings;
+        h3zero_settings_t local_settings;
         /* connection wide tracking of stream prefixes */
         h3zero_stream_prefixes_t stream_prefixes;
         uint64_t last_datagram_prefix;
@@ -221,6 +223,7 @@ extern "C" {
         int nb_open_streams;
         int nb_open_files;
         uint32_t nb_client_streams;
+        uint64_t nb_webtransport_sessions;
     } h3zero_callback_ctx_t;
 
     h3zero_callback_ctx_t* h3zero_callback_create_context(picohttp_server_parameters_t* param);
@@ -251,6 +254,7 @@ extern "C" {
         picoquic_cnx_t* opt_cnx);
 
     void h3zero_forget_stream(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* stream_ctx);
+    void h3zero_untrack_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx);
 
     h3zero_content_type_enum h3zero_get_content_type_by_path(const char *path);
 

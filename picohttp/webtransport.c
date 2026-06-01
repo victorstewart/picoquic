@@ -833,6 +833,7 @@ void picowt_deregister(picoquic_cnx_t* cnx,
         }
     }
     /* Then deregister the control stream */
+    h3zero_untrack_webtransport_session(h3_ctx, control_stream_ctx);
     if (!control_stream_ctx->ps.stream_state.is_fin_sent) {
         picoquic_add_to_stream(cnx, control_stream_ctx->stream_id, NULL, 0, 1);
         control_stream_ctx->ps.stream_state.is_fin_sent = 1;
