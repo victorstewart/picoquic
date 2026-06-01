@@ -653,6 +653,20 @@ typedef struct st_h3zero_interesting_header_t {
 
 #define H3ZERO_INTERESTING_HEADER(name, header) { name, sizeof(name) - 1, header }
 
+static int h3zero_header_name_has_uppercase(uint8_t* name, size_t name_length)
+{
+    int ret = 0;
+
+    for (size_t i = 0; i < name_length; i++) {
+        if (name[i] >= 'A' && name[i] <= 'Z') {
+            ret = 1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
 int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int is_huffman)
 {
     static const h3zero_interesting_header_t interesting_header[] = {
@@ -674,15 +688,21 @@ int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int i
 
     if (is_huffman) {
         size_t nb_decoded = 0;
-        if (hzero_qpack_huffman_decode(name, name + name_length, deHuff, sizeof(deHuff), &nb_decoded) == 0){
-            name = deHuff;
-            name_length = nb_decoded;
+        if (hzero_qpack_huffman_decode(name, name + name_length,
+            deHuff, sizeof(deHuff), &nb_decoded) != 0) {
+            return http_header_max;
         }
+        name = deHuff;
+        name_length = nb_decoded;
+    }
+
+    if (h3zero_header_name_has_uppercase(name, name_length)) {
+        return http_header_max;
     }
 
     for (size_t i = 0; interesting_header[i].name != NULL; i++) {
         if (interesting_header[i].name_length == name_length &&
-            picoquic_strncasecmp(interesting_header[i].name, (const char*)name, name_length) == 0) {
+            memcmp(interesting_header[i].name, name, name_length) == 0) {
             val = interesting_header[i].header;
             break;
         }
@@ -835,9 +855,14 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                 }
                 else {
                     http_header_enum_t header_type = h3zero_get_interesting_header_type(bytes, (size_t)n_length, is_huffman);
-                    bytes += n_length;
-                    bytes = h3zero_parse_qpack_header_value(bytes, bytes_max,
-                        header_type, parts);
+                    if (header_type == http_header_max) {
+                        bytes = NULL;
+                    }
+                    else {
+                        bytes += n_length;
+                        bytes = h3zero_parse_qpack_header_value(bytes, bytes_max,
+                            header_type, parts);
+                    }
                 }
             }
         }
