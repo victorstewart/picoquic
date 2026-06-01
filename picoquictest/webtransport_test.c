@@ -2321,6 +2321,176 @@ int picowt_create_local_stream_pair_test(void)
     return ret;
 }
 
+typedef struct st_picowt_local_backpressure_ctx_t {
+    int prepare_calls;
+    uint8_t payload;
+} picowt_local_backpressure_ctx_t;
+
+static int picowt_local_backpressure_callback(picoquic_cnx_t* UNUSED(cnx),
+    uint64_t UNUSED(stream_id), uint8_t* bytes, size_t length,
+    picoquic_call_back_event_t fin_or_event, void* callback_ctx,
+    void* UNUSED(app_stream_ctx))
+{
+    picowt_local_backpressure_ctx_t* ctx =
+        (picowt_local_backpressure_ctx_t*)callback_ctx;
+    int ret = 0;
+
+    if (fin_or_event == picoquic_callback_prepare_to_send) {
+        uint8_t* buffer = picoquic_provide_stream_data_buffer(bytes, 1, 0, 0);
+
+        if (length == 0 || buffer == NULL) {
+            ret = -1;
+        }
+        else {
+            buffer[0] = ctx->payload;
+            ctx->prepare_calls++;
+        }
+    }
+
+    return ret;
+}
+
+static int picowt_format_one_stream_payload(picoquic_cnx_t* cnx,
+    picoquic_stream_head_t* stream, size_t allowed_payload,
+    uint8_t* payload, size_t payload_max, size_t* payload_length)
+{
+    uint8_t packet[128];
+    uint8_t* bytes_next;
+    uint64_t stream_id = UINT64_MAX;
+    uint64_t offset = UINT64_MAX;
+    size_t data_length = 0;
+    size_t consumed = 0;
+    int fin = 0;
+    int more_data = 0;
+    int is_pure_ack = 1;
+    int is_still_active = 0;
+    int format_ret = 0;
+
+    stream->maxdata_remote = stream->sent_offset + allowed_payload;
+    cnx->maxdata_remote = cnx->data_sent + allowed_payload;
+    bytes_next = picoquic_format_stream_frame(cnx, stream, packet,
+        packet + sizeof(packet), &more_data, &is_pure_ack,
+        &is_still_active, &format_ret);
+    if (format_ret != 0 || bytes_next == NULL || bytes_next == packet ||
+        picoquic_parse_stream_header(packet, bytes_next - packet, &stream_id,
+            &offset, &data_length, &fin, &consumed) != 0 ||
+        stream_id != stream->stream_id ||
+        data_length > payload_max ||
+        consumed + data_length != (size_t)(bytes_next - packet)) {
+        return -1;
+    }
+    if (data_length > 0) {
+        memcpy(payload, packet + consumed, data_length);
+    }
+    *payload_length = data_length;
+
+    return 0;
+}
+
+static int picowt_local_stream_backpressure_case(int is_bidir)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* control_stream_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    picoquic_stream_head_t* stream = NULL;
+    picowt_local_backpressure_ctx_t callback_ctx = { 0, 0x9a };
+    uint64_t simulated_time = 0;
+    uint8_t expected_prefix[16];
+    uint8_t* prefix_end = expected_prefix;
+    uint8_t payload[16];
+    size_t payload_length = 0;
+    size_t prefix_length = 0;
+    uint64_t expected_type = is_bidir ? h3zero_frame_webtransport_stream :
+        h3zero_stream_type_webtransport;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0 &&
+        (control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        cnx->max_stream_id_bidir_remote = UINT64_MAX;
+        cnx->max_stream_id_unidir_remote = UINT64_MAX;
+    }
+    if (ret == 0 &&
+        (stream_ctx = picowt_create_local_stream(cnx, is_bidir, h3_ctx,
+            control_stream_ctx->stream_id)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (stream = picoquic_find_stream(cnx, stream_ctx->stream_id)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        picoquic_set_callback(cnx, picowt_local_backpressure_callback,
+            &callback_ctx);
+        if (picoquic_mark_active_stream(cnx, stream_ctx->stream_id, 1,
+            stream_ctx) != 0 ||
+            (prefix_end = picoquic_frames_varint_encode(prefix_end,
+                expected_prefix + sizeof(expected_prefix),
+                expected_type)) == NULL ||
+            (prefix_end = picoquic_frames_varint_encode(prefix_end,
+                expected_prefix + sizeof(expected_prefix),
+                control_stream_ctx->stream_id)) == NULL) {
+            ret = -1;
+        }
+        else {
+            prefix_length = prefix_end - expected_prefix;
+        }
+    }
+    if (ret == 0) {
+        ret = picowt_format_one_stream_payload(cnx, stream, 1, payload,
+            sizeof(payload), &payload_length);
+        if (ret != 0 || payload_length != 1 ||
+            payload[0] != expected_prefix[0] ||
+            callback_ctx.prepare_calls != 0 ||
+            stream->send_queue == NULL ||
+            stream->send_queue->offset != 1) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        ret = picowt_format_one_stream_payload(cnx, stream, prefix_length - 1,
+            payload, sizeof(payload), &payload_length);
+        if (ret != 0 || payload_length != prefix_length - 1 ||
+            memcmp(payload, expected_prefix + 1, prefix_length - 1) != 0 ||
+            callback_ctx.prepare_calls != 0 ||
+            stream->send_queue != NULL) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        ret = picowt_format_one_stream_payload(cnx, stream, 1, payload,
+            sizeof(payload), &payload_length);
+        if (ret != 0 || payload_length != 1 ||
+            payload[0] != callback_ctx.payload ||
+            callback_ctx.prepare_calls != 1) {
+            ret = -1;
+        }
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int picowt_local_stream_backpressure_test(void)
+{
+    int ret = picowt_local_stream_backpressure_case(0);
+
+    if (ret == 0) {
+        ret = picowt_local_stream_backpressure_case(1);
+    }
+
+    return ret;
+}
+
 static int picowt_session_gone_add_stream(picoquic_cnx_t* cnx,
     h3zero_callback_ctx_t* h3_ctx, uint64_t stream_id, uint64_t control_stream_id)
 {
