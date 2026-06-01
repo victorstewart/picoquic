@@ -438,6 +438,7 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
 {
     /* register the stream ID as session ID */
     int ret = 0;
+    int prefix_registered = 0;
     if (ctx == NULL || !ctx->settings.settings_received) {
         ret = H3ZERO_MISSING_SETTINGS;
     }
@@ -446,6 +447,11 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
     }
     else {
         ret = h3zero_declare_stream_prefix(ctx, stream_ctx->stream_id, wt_callback, wt_ctx);
+        prefix_registered = (ret == 0);
+    }
+    if (ret == 0 && wt_available_protocols != NULL &&
+        (stream_ctx->ps.stream_state.wt_available_protocols = picoquic_string_duplicate(wt_available_protocols)) == NULL) {
+        ret = -1;
     }
     if (ret == 0 && cnx != NULL) {
         picoquic_log_app_message(cnx, "Allocated prefix for control stream %" PRIu64, stream_ctx->stream_id);
@@ -513,10 +519,12 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
             ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id, buffer, connect_length,
                     0, stream_ctx);
         }
-
-        if (ret != 0) {
-            /* remove the stream prefix */
-            h3zero_delete_stream_prefix(cnx, ctx, stream_ctx->stream_id);
+    }
+    if (ret != 0 && prefix_registered) {
+        h3zero_delete_stream_prefix(cnx, ctx, stream_ctx->stream_id);
+        if (stream_ctx->ps.stream_state.wt_available_protocols != NULL) {
+            free((char*)stream_ctx->ps.stream_state.wt_available_protocols);
+            stream_ctx->ps.stream_state.wt_available_protocols = NULL;
         }
     }
     return ret;

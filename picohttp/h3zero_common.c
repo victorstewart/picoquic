@@ -1478,6 +1478,39 @@ int h3zero_process_h3_server_data(picoquic_cnx_t* cnx,
 /* H3 Client Data: process data sent by the client.
 */
 
+static int h3zero_protocol_list_contains(char const* list, uint8_t const* protocol, size_t protocol_length)
+{
+	int ret = 0;
+
+	while (list != NULL && *list != 0) {
+		size_t list_length = 0;
+		while (*list == ' ' || *list == '\t' || *list == ',') {
+			list++;
+		}
+		while (list[list_length] != 0 &&
+			list[list_length] != ' ' &&
+			list[list_length] != '\t' &&
+			list[list_length] != ',') {
+			list_length++;
+		}
+		if (list_length == protocol_length &&
+			memcmp(list, protocol, protocol_length) == 0) {
+			ret = 1;
+			break;
+		}
+		list += list_length;
+	}
+	return ret;
+}
+
+static int h3zero_webtransport_protocol_response_is_valid(h3zero_data_stream_state_t* stream_state)
+{
+	return (stream_state->wt_available_protocols == NULL ||
+		(stream_state->header.wt_protocol != NULL &&
+			h3zero_protocol_list_contains(stream_state->wt_available_protocols,
+				stream_state->header.wt_protocol, stream_state->header.wt_protocol_length)));
+}
+
 int h3zero_process_h3_client_data(picoquic_cnx_t* cnx,
 	uint64_t stream_id, uint8_t* bytes, size_t length, int is_fin,
 	h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx, uint64_t* fin_stream_id)
@@ -1515,6 +1548,12 @@ int h3zero_process_h3_client_data(picoquic_cnx_t* cnx,
 						is_success = 0;
 						stream_ctx->is_upgraded = 0;
 						ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+					}
+					if (is_success && stream_ctx->ps.stream_state.is_webtransport_requested &&
+						!h3zero_webtransport_protocol_response_is_valid(&stream_ctx->ps.stream_state)) {
+						is_success = 0;
+						stream_ctx->is_upgraded = 0;
+						ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_ALPN_ERROR);
 					}
 					if (stream_ctx->path_callback != NULL) {
 						stream_ctx->path_callback(cnx, NULL, 0, (is_success) ?

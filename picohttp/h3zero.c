@@ -410,6 +410,76 @@ uint8_t* h3zero_parse_qpack_header_value_string(uint8_t * bytes, uint8_t* decode
     return bytes;
 }
 
+static int h3zero_parse_sf_string_item_in_place(uint8_t* text, size_t text_length, size_t* decoded_length)
+{
+    uint8_t* p = text;
+    uint8_t* end = text + text_length;
+    uint8_t* out = text;
+
+    while (p < end && (*p == ' ' || *p == '\t')) {
+        p++;
+    }
+    if (p >= end || *p++ != '"') {
+        return -1;
+    }
+    while (p < end) {
+        uint8_t c = *p++;
+
+        if (c == '"') {
+            while (p < end && (*p == ' ' || *p == '\t')) {
+                p++;
+            }
+            if (p < end) {
+                if (*p++ != ';') {
+                    return -1;
+                }
+                while (p < end) {
+                    c = *p++;
+                    if (c < 0x20 || c > 0x7e || c == ',') {
+                        return -1;
+                    }
+                    if (c == '"') {
+                        int quoted = 0;
+                        while (p < end) {
+                            c = *p++;
+                            if (c == '\\') {
+                                if (p >= end || (*p != '"' && *p != '\\')) {
+                                    return -1;
+                                }
+                                p++;
+                            }
+                            else if (c == '"') {
+                                quoted = 1;
+                                break;
+                            }
+                            else if (c < 0x20 || c > 0x7e) {
+                                return -1;
+                            }
+                        }
+                        if (!quoted) {
+                            return -1;
+                        }
+                    }
+                }
+            }
+            *out = 0;
+            *decoded_length = (size_t)(out - text);
+            return 0;
+        }
+        if (c == '\\') {
+            if (p >= end || (*p != '"' && *p != '\\')) {
+                return -1;
+            }
+            c = *p++;
+        }
+        else if (c < 0x20 || c > 0x7e) {
+            return -1;
+        }
+        *out++ = c;
+    }
+    return -1;
+}
+
 uint8_t * h3zero_parse_qpack_header_value(uint8_t * bytes, uint8_t * bytes_max,
     http_header_enum_t header, h3zero_header_parts_t * parts)
 {
@@ -549,14 +619,12 @@ uint8_t * h3zero_parse_qpack_header_value(uint8_t * bytes, uint8_t * bytes_max,
                 else {
                     bytes = h3zero_parse_qpack_header_value_string(bytes, decoded,
                         decoded_length, &parts->wt_protocol, &parts->wt_protocol_length);
-                    /* WT-Protocol is a Structured Header String — strip surrounding quotes */
-                    if (parts->wt_protocol != NULL && parts->wt_protocol_length >= 2 &&
-                        parts->wt_protocol[0] == '"' &&
-                        parts->wt_protocol[parts->wt_protocol_length - 1] == '"') {
-                        uint8_t* p = (uint8_t*)parts->wt_protocol;
-                        parts->wt_protocol_length -= 2;
-                        memmove(p, p + 1, parts->wt_protocol_length);
-                        p[parts->wt_protocol_length] = 0;
+                    if (parts->wt_protocol != NULL &&
+                        h3zero_parse_sf_string_item_in_place((uint8_t*)parts->wt_protocol,
+                            parts->wt_protocol_length, &parts->wt_protocol_length) != 0) {
+                        free((uint8_t*)parts->wt_protocol);
+                        *((uint8_t**)&parts->wt_protocol) = NULL;
+                        parts->wt_protocol_length = 0;
                     }
                 }
                 break;
@@ -1115,6 +1183,40 @@ uint8_t* h3zero_create_request_header_frame(uint8_t* bytes, uint8_t* bytes_max,
         NULL, 0, host, H3ZERO_USER_AGENT_STRING);
 }
 
+static int h3zero_format_sf_string_item(char* sf_value, size_t sf_value_max,
+    char const* value, size_t* sf_value_len)
+{
+    size_t o = 0;
+
+    if (sf_value_max < 3) {
+        return -1;
+    }
+    sf_value[o++] = '"';
+    while (*value != 0) {
+        uint8_t c = (uint8_t)*value++;
+        if (c < 0x20 || c > 0x7e) {
+            return -1;
+        }
+        if (c == '"' || c == '\\') {
+            if (o + 1 >= sf_value_max) {
+                return -1;
+            }
+            sf_value[o++] = '\\';
+        }
+        if (o + 1 >= sf_value_max) {
+            return -1;
+        }
+        sf_value[o++] = (char)c;
+    }
+    if (o + 1 >= sf_value_max) {
+        return -1;
+    }
+    sf_value[o++] = '"';
+    sf_value[o] = 0;
+    *sf_value_len = o;
+    return 0;
+}
+
 uint8_t * h3zero_create_response_header_frame_ex(uint8_t * bytes, uint8_t * bytes_max,
     h3zero_content_type_enum doc_type, char const* server_string, 
     char const * wt_protocol)
@@ -1141,12 +1243,16 @@ uint8_t * h3zero_create_response_header_frame_ex(uint8_t * bytes, uint8_t * byte
     }
 
     if (wt_protocol != NULL) {
-        /* WT-Protocol is a Structured Header String and must be quoted per spec */
-        char quoted[258];
-        int quoted_len = snprintf(quoted, sizeof(quoted), "\"%s\"", wt_protocol);
-        bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
-            (uint8_t*)H3ZERO_WT_PROTOCOL, strlen(H3ZERO_WT_PROTOCOL),
-            (uint8_t*)quoted, (size_t)quoted_len);
+        char quoted[512];
+        size_t quoted_len = 0;
+        if (h3zero_format_sf_string_item(quoted, sizeof(quoted), wt_protocol, &quoted_len) != 0) {
+            bytes = NULL;
+        }
+        else {
+            bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+                (uint8_t*)H3ZERO_WT_PROTOCOL, strlen(H3ZERO_WT_PROTOCOL),
+                (uint8_t*)quoted, quoted_len);
+        }
     }
 
     return bytes;
@@ -1308,7 +1414,11 @@ void h3zero_delete_data_stream_state(h3zero_data_stream_state_t * stream_state)
 
     if (stream_state->wt_protocol != NULL) {
         free((char *)stream_state->wt_protocol);
-        stream_state->wt_protocol = NULL;;
+        stream_state->wt_protocol = NULL;
+    }
+    if (stream_state->wt_available_protocols != NULL) {
+        free((char*)stream_state->wt_available_protocols);
+        stream_state->wt_available_protocols = NULL;
     }
 
     if (stream_state->current_frame != NULL) {

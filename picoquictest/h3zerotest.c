@@ -4443,7 +4443,7 @@ int h3zero_wt_protocol_response_test(void)
         return -1;
     }
 
-    /* Decode and verify the parser strips quotes, yielding the bare protocol name */
+    /* Decode and verify the parser yields the bare protocol name */
     if (h3zero_parse_qpack_header_frame(buffer, bytes, &parts) == NULL) {
         DBG_PRINTF("%s", "Failed to parse response header frame");
         ret = -1;
@@ -4455,6 +4455,27 @@ int h3zero_wt_protocol_response_test(void)
         DBG_PRINTF("wt_protocol value wrong: got \"%.*s\", expected \"%s\"",
             (int)parts.wt_protocol_length, parts.wt_protocol, wt_protocol);
         ret = -1;
+    }
+
+    h3zero_release_header_parts(&parts);
+    memset(&parts, 0, sizeof(parts));
+
+    if (ret == 0) {
+        bytes = buffer;
+        *bytes++ = 0;
+        *bytes++ = 0;
+        bytes = h3zero_qpack_code_encode(bytes, bytes_max, 0xC0, 0x3F, H3ZERO_QPACK_CODE_200);
+        bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)H3ZERO_WT_PROTOCOL, strlen(H3ZERO_WT_PROTOCOL),
+            (uint8_t*)wt_protocol, expected_len);
+        if (bytes == NULL || h3zero_parse_qpack_header_frame(buffer, bytes, &parts) == NULL) {
+            DBG_PRINTF("%s", "Failed to parse raw wt-protocol response header frame");
+            ret = -1;
+        }
+        else if (parts.wt_protocol != NULL) {
+            DBG_PRINTF("%s", "Raw wt-protocol was not ignored");
+            ret = -1;
+        }
     }
 
     h3zero_release_header_parts(&parts);
