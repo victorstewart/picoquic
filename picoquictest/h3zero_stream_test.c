@@ -771,6 +771,111 @@ int h3zero_wt_datagram_drop_policy_test(void)
     return ret;
 }
 
+typedef struct st_h3zero_wt_datagram_multi_session_ctx_t {
+    uint8_t expected[2];
+    int received[2];
+    int nb_errors;
+} h3zero_wt_datagram_multi_session_ctx_t;
+
+static int h3zero_wt_datagram_multi_session_callback(
+    picoquic_cnx_t* UNUSED(cnx), uint8_t* bytes, size_t length,
+    picohttp_call_back_event_t fin_or_event,
+    struct st_h3zero_stream_ctx_t* UNUSED(stream_ctx), void* path_app_ctx)
+{
+    h3zero_wt_datagram_multi_session_ctx_t* ctx =
+        (h3zero_wt_datagram_multi_session_ctx_t*)path_app_ctx;
+
+    if (fin_or_event != picohttp_callback_post_datagram ||
+        bytes == NULL || length != 1) {
+        ctx->nb_errors++;
+    }
+    else if (bytes[0] == ctx->expected[0]) {
+        ctx->received[0]++;
+    }
+    else if (bytes[0] == ctx->expected[1]) {
+        ctx->received[1]++;
+    }
+    else {
+        ctx->nb_errors++;
+    }
+
+    return 0;
+}
+
+int h3zero_wt_datagram_multi_session_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id[2] = { 4, 8 };
+    h3zero_stream_ctx_t* session_ctx[2] = { NULL, NULL };
+    h3zero_wt_datagram_multi_session_ctx_t test_ctx[2] = {
+        { { 0xa4, 0xb4 }, { 0, 0 }, 0 },
+        { { 0xa8, 0xb8 }, { 0, 0 }, 0 }
+    };
+    uint8_t h3_datagram[2][2] = {
+        { 0x01, 0xa4 },
+        { 0x02, 0xa8 }
+    };
+    uint8_t capsule_payload[2] = { 0xb4, 0xb8 };
+    h3zero_capsule_t capsule[2] = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    for (size_t i = 0; i < 2; i++) {
+        capsule[i].capsule_buffer = &capsule_payload[i];
+        capsule[i].capsule_length = 1;
+    }
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+    }
+    for (size_t i = 0; ret == 0 && i < 2; i++) {
+        session_ctx[i] = h3zero_find_or_create_stream(cnx, session_id[i],
+            h3_ctx, 1, 1);
+        if (session_ctx[i] == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id[i],
+                h3zero_wt_datagram_multi_session_callback,
+                &test_ctx[i]) != 0) {
+            ret = -1;
+        }
+        else {
+            session_ctx[i]->is_upgraded = 1;
+        }
+    }
+    for (size_t i = 0; ret == 0 && i < 2; i++) {
+        ret = h3zero_callback_datagram(cnx, h3_datagram[i],
+            sizeof(h3_datagram[i]), h3_ctx);
+    }
+    for (size_t i = 0; ret == 0 && i < 2; i++) {
+        h3zero_receive_datagram_capsule(cnx, session_ctx[i], &capsule[i],
+            h3_ctx);
+    }
+    for (size_t i = 0; ret == 0 && i < 2; i++) {
+        if (test_ctx[i].received[0] != 1 ||
+            test_ctx[i].received[1] != 1 ||
+            test_ctx[i].nb_errors != 0 ||
+            cnx->application_error != 0) {
+            DBG_PRINTF("WT datagram multi-session %zu failed, ret=%d, app_error=%" PRIu64 ", received=%d/%d, errors=%d",
+                i, ret, (cnx == NULL) ? UINT64_MAX : cnx->application_error,
+                test_ctx[i].received[0], test_ctx[i].received[1],
+                test_ctx[i].nb_errors);
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 static int h3zero_wt_prefix_fragment_case(int is_bidir, size_t split)
 {
     picoquic_quic_t* quic = NULL;
