@@ -3499,6 +3499,51 @@ static int picowt_receive_flow_control_case(picoquic_cnx_t* cnx, uint64_t capsul
     return ret;
 }
 
+static int picowt_receive_flow_control_sequence_case(picoquic_cnx_t* cnx,
+    uint64_t capsule_type, uint64_t first_value, uint64_t second_value,
+    int expect_second_success)
+{
+    uint8_t buffer[24];
+    uint8_t payload[8];
+    uint8_t* payload_end = picoquic_frames_varint_encode(payload,
+        payload + sizeof(payload), first_value);
+    size_t payload_length = (payload_end == NULL) ? 0 :
+        (size_t)(payload_end - payload);
+    size_t capsule_length = picowt_format_test_capsule(buffer,
+        sizeof(buffer), capsule_type, payload_length, payload);
+    picowt_capsule_t capsule = { 0 };
+    int ret = 0;
+    int capsule_ret = -1;
+
+    if (capsule_length == 0 ||
+        picowt_receive_capsule(cnx, buffer, buffer + capsule_length,
+            &capsule) != 0 ||
+        capsule.flow_control_value != first_value) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        payload_end = picoquic_frames_varint_encode(payload,
+            payload + sizeof(payload), second_value);
+        payload_length = (payload_end == NULL) ? 0 :
+            (size_t)(payload_end - payload);
+        capsule_length = picowt_format_test_capsule(buffer,
+            sizeof(buffer), capsule_type, payload_length, payload);
+        capsule_ret = (capsule_length == 0) ? -1 :
+            picowt_receive_capsule(cnx, buffer, buffer + capsule_length,
+                &capsule);
+        if ((capsule_ret == 0) != expect_second_success) {
+            ret = -1;
+        }
+        else if (expect_second_success &&
+            capsule.flow_control_value != second_value) {
+            ret = -1;
+        }
+    }
+    picowt_release_capsule(&capsule);
+
+    return ret;
+}
+
 static int picowt_decode_queued_flow_control_capsule(picoquic_cnx_t* cnx,
     h3zero_stream_ctx_t* control_stream_ctx, uint64_t* capsule_type, uint64_t* flow_control_value)
 {
@@ -3564,6 +3609,26 @@ int picowt_flow_control_capsule_test(void)
             ret = -1;
         }
         picowt_release_capsule(&capsule);
+    }
+    if (ret == 0) {
+        ret = picowt_receive_flow_control_sequence_case(cnx,
+            picowt_capsule_wt_max_data, 100, 100, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_receive_flow_control_sequence_case(cnx,
+            picowt_capsule_wt_max_data, 100, 99, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_receive_flow_control_sequence_case(cnx,
+            picowt_capsule_wt_max_streams_bidi, 5, 4, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_receive_flow_control_sequence_case(cnx,
+            picowt_capsule_wt_max_streams_uni, 5, 6, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_receive_flow_control_sequence_case(cnx,
+            picowt_capsule_wt_streams_blocked_bidi, 5, 4, 1);
     }
     if (ret == 0 && (control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx)) == NULL) {
         ret = -1;

@@ -98,6 +98,12 @@ extern "C" {
         uint64_t flow_control_value;
         const uint8_t* error_msg;
         size_t error_msg_len;
+        uint64_t wt_max_data;
+        uint64_t wt_max_streams_bidi;
+        uint64_t wt_max_streams_uni;
+        unsigned int wt_max_data_received;
+        unsigned int wt_max_streams_bidi_received;
+        unsigned int wt_max_streams_uni_received;
     } picowt_capsule_t;
 
     int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint8_t* bytes_max, picowt_capsule_t* capsule);

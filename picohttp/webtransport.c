@@ -842,6 +842,27 @@ static int picowt_decode_flow_control_capsule(picowt_capsule_t* capsule,
     return ret;
 }
 
+static int picowt_decode_max_flow_control_capsule(picowt_capsule_t* capsule,
+    uint64_t flow_control_value_max, uint64_t* previous_value,
+    unsigned int* previous_value_received)
+{
+    int ret = picowt_decode_flow_control_capsule(capsule,
+        flow_control_value_max);
+
+    if (ret == 0) {
+        if (*previous_value_received &&
+            capsule->flow_control_value < *previous_value) {
+            ret = -1;
+        }
+        else {
+            *previous_value = capsule->flow_control_value;
+            *previous_value_received = 1;
+        }
+    }
+
+    return ret;
+}
+
 
 /* Receive a WT capsule.
 * With web transport, we expect three types of capsule:
@@ -914,6 +935,15 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                     }
                     break;
                 case picowt_capsule_wt_max_data:
+                    ret = picowt_decode_max_flow_control_capsule(capsule,
+                        UINT64_MAX, &capsule->wt_max_data,
+                        &capsule->wt_max_data_received);
+                    if (ret != 0) {
+                        picoquic_log_app_message(cnx,
+                            "Invalid web transport flow control capsule, type: 0x%" PRIx64,
+                            capsule->h3_capsule.capsule_type);
+                    }
+                    break;
                 case picowt_capsule_wt_data_blocked:
                     ret = picowt_decode_flow_control_capsule(capsule, UINT64_MAX);
                     if (ret != 0) {
@@ -923,7 +953,25 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                     }
                     break;
                 case picowt_capsule_wt_max_streams_bidi:
+                    ret = picowt_decode_max_flow_control_capsule(capsule,
+                        picowt_max_streams_limit, &capsule->wt_max_streams_bidi,
+                        &capsule->wt_max_streams_bidi_received);
+                    if (ret != 0) {
+                        picoquic_log_app_message(cnx,
+                            "Invalid web transport flow control capsule, type: 0x%" PRIx64,
+                            capsule->h3_capsule.capsule_type);
+                    }
+                    break;
                 case picowt_capsule_wt_max_streams_uni:
+                    ret = picowt_decode_max_flow_control_capsule(capsule,
+                        picowt_max_streams_limit, &capsule->wt_max_streams_uni,
+                        &capsule->wt_max_streams_uni_received);
+                    if (ret != 0) {
+                        picoquic_log_app_message(cnx,
+                            "Invalid web transport flow control capsule, type: 0x%" PRIx64,
+                            capsule->h3_capsule.capsule_type);
+                    }
+                    break;
                 case picowt_capsule_wt_streams_blocked_bidi:
                 case picowt_capsule_wt_streams_blocked_uni:
                     ret = picowt_decode_flow_control_capsule(capsule, picowt_max_streams_limit);
@@ -954,6 +1002,7 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
 void picowt_release_capsule(picowt_capsule_t* capsule)
 {
     h3zero_release_capsule(&capsule->h3_capsule);
+    memset(capsule, 0, sizeof(picowt_capsule_t));
 }
 
 static void picowt_abort_stream_on_session_close(picoquic_cnx_t* cnx, uint64_t stream_id)
