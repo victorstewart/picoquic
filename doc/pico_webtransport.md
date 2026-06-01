@@ -67,8 +67,9 @@ requirements are:
 
  * Configure the HTTP3 server to accept and process Web Transport requests by
    configuring a "path table". Each path specifies a local URL, a path callback
-   function, and a path callback context, per `picohttp_server_path_item_t`
-   in `h3zero_common.h`.
+   function, a path callback context, and the required Extended CONNECT
+   protocol `webtransport-h3`, per `picohttp_server_path_item_t` in
+   `h3zero_common.h`.
 
  * Run the server socket loop connected to the picoquic context.
 
@@ -264,5 +265,4 @@ QUIC context and a single UDP port. The requirements are:
 There is an example of this process in `demoserver.c`, with the ALPN selection
 function `picoquic_demo_server_callback_select_alpn` and the redirection
 callback `picoquic_demo_server_callback`.
-
 

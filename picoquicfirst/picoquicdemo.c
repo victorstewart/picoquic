@@ -269,13 +269,15 @@ picohttp_server_path_item_t path_item_list[2] =
         "/post",
         5,
         demoserver_post_callback,
+        NULL,
         NULL
     },
     {
         "/baton",
         6,
         wt_baton_callback,
-        NULL
+        NULL,
+        H3ZERO_WEBTRANSPORT_H3_PROTOCOL
     }
 };
 

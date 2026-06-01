@@ -1072,12 +1072,13 @@ h3zero_content_type_enum h3zero_get_content_type_by_path(const char *path) {
 	return h3zero_content_type_text_plain;
 }
 
-static int h3zero_is_webtransport_protocol(const uint8_t* protocol, size_t protocol_length)
+static int h3zero_protocol_is(const uint8_t* protocol, size_t protocol_length, const char* expected_protocol)
 {
-	return ((protocol_length == strlen(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) &&
-		memcmp(protocol, H3ZERO_WEBTRANSPORT_H3_PROTOCOL, protocol_length) == 0) ||
-		(protocol_length == strlen(H3ZERO_WEBTRANSPORT_LEGACY_PROTOCOL) &&
-			memcmp(protocol, H3ZERO_WEBTRANSPORT_LEGACY_PROTOCOL, protocol_length) == 0));
+	size_t expected_protocol_length = strlen(expected_protocol);
+
+	return (protocol != NULL &&
+		protocol_length == expected_protocol_length &&
+		memcmp(protocol, expected_protocol, expected_protocol_length) == 0);
 }
 
 /* Processing of the request frame.
@@ -1153,9 +1154,10 @@ int h3zero_process_request_frame(
 	}
 	else if (stream_ctx->ps.stream_state.header.method == h3zero_method_connect) {
 		/* The connect handling depends on the requested protocol */
-		int is_webtransport = h3zero_is_webtransport_protocol(
+		int is_webtransport = h3zero_protocol_is(
 			stream_ctx->ps.stream_state.header.protocol,
-			stream_ctx->ps.stream_state.header.protocol_length);
+			stream_ctx->ps.stream_state.header.protocol_length,
+			H3ZERO_WEBTRANSPORT_H3_PROTOCOL);
 
 		if (is_webtransport && app_ctx->settings.settings_received &&
 			!h3zero_webtransport_is_ready(cnx, &app_ctx->settings)) {
@@ -1164,19 +1166,29 @@ int h3zero_process_request_frame(
 		else if (stream_ctx->path_callback == NULL) {
 			int path_item = h3zero_find_path_item(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, app_ctx->path_table, app_ctx->path_table_nb);
 			if (path_item >= 0) {
-				stream_ctx->path_callback = app_ctx->path_table[path_item].path_callback;
-				if (stream_ctx->path_callback(cnx, (uint8_t*)stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, picohttp_callback_connect,
-					stream_ctx, app_ctx->path_table[path_item].path_app_ctx) != 0) {
-					/* This callback is not supported */
-					picoquic_log_app_message(cnx, "Unsupported callback on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, app_ctx->path_table[path_item].path);
-					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "501", H3ZERO_USER_AGENT_STRING);
+				picohttp_server_path_item_t* path_desc = &app_ctx->path_table[path_item];
+				if (path_desc->connect_protocol == NULL ||
+					!h3zero_protocol_is(stream_ctx->ps.stream_state.header.protocol,
+						stream_ctx->ps.stream_state.header.protocol_length,
+						path_desc->connect_protocol)) {
+					picoquic_log_app_message(cnx, "Unsupported CONNECT protocol on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, path_desc->path);
+					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
 				}
 				else {
-					/* Create a connect accept frame */
-					picoquic_log_app_message(cnx, "Connect accepted on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, app_ctx->path_table[path_item].path);
-					/* TODO: path callback, fill additional HTTP headers */
-                    o_bytes = h3zero_create_response_header_frame_ex(o_bytes, o_bytes_max, h3zero_content_type_none, H3ZERO_USER_AGENT_STRING, stream_ctx->ps.stream_state.wt_protocol);
-					stream_ctx->is_upgraded = 1;
+					stream_ctx->path_callback = path_desc->path_callback;
+					if (stream_ctx->path_callback(cnx, (uint8_t*)stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, picohttp_callback_connect,
+						stream_ctx, path_desc->path_app_ctx) != 0) {
+						/* This callback is not supported */
+						picoquic_log_app_message(cnx, "Unsupported callback on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, path_desc->path);
+						o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "501", H3ZERO_USER_AGENT_STRING);
+					}
+					else {
+						/* Create a connect accept frame */
+						picoquic_log_app_message(cnx, "Connect accepted on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, path_desc->path);
+						/* TODO: path callback, fill additional HTTP headers */
+						o_bytes = h3zero_create_response_header_frame_ex(o_bytes, o_bytes_max, h3zero_content_type_none, H3ZERO_USER_AGENT_STRING, stream_ctx->ps.stream_state.wt_protocol);
+						stream_ctx->is_upgraded = 1;
+					}
 				}
 			}
 			else {

@@ -2386,6 +2386,7 @@ picohttp_server_path_item_t ping_test_item = {
     "/ping",
     5,
     h3zero_test_ping_callback,
+    NULL,
     NULL
 };
 

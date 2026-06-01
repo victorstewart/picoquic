@@ -68,6 +68,8 @@ extern "C" {
         size_t path_length;
         picohttp_post_data_cb_fn path_callback;
         void* path_app_ctx;
+        /* Required :protocol for CONNECT requests; NULL means not a CONNECT path. */
+        char const* connect_protocol;
     } picohttp_server_path_item_t;
 
     /* Define stream context common to http 3 and http 09 callbacks
