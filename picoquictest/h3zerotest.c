@@ -839,7 +839,7 @@ static int h3zero_parse_qpack_test_one(size_t i, uint8_t * data, size_t data_len
 {
     int ret = 0;
     uint8_t * bytes;
-    h3zero_header_parts_t parts;
+    h3zero_header_parts_t parts = { 0 };
 
     bytes = h3zero_parse_qpack_header_frame(data, data + data_length, &parts);
 
@@ -1033,6 +1033,115 @@ int h3zero_qpack_duplicate_test(void)
     for (size_t i = 0; ret == 0 &&
         i < sizeof(qpack_duplicate_test_case) / sizeof(qpack_duplicate_test_case_t); i++) {
         ret = h3zero_parse_qpack_duplicate_test_one(i);
+    }
+
+    return ret;
+}
+
+static int h3zero_qpack_parser_policy_literal_connect_test(void)
+{
+    static const uint8_t method_name[] = ":method";
+    static const uint8_t method_value[] = "CONNECT";
+    static const uint8_t scheme_name[] = ":scheme";
+    static const uint8_t scheme_value[] = "https";
+    static const uint8_t path_name[] = ":path";
+    static const uint8_t path_value[] = { CONNECT_TEST_PROTOCOL_PATH };
+    static const uint8_t protocol_name[] = ":protocol";
+    static const uint8_t protocol_value[] = { CONNECT_TEST_PROTOCOL_WTP };
+    static const uint8_t authority_name[] = ":authority";
+    static const uint8_t authority_value[] = { CONNECT_TEST_AUTHORITY };
+    static const uint8_t origin_name[] = "origin";
+    static const uint8_t origin_value[] = { CONNECT_TEST_ORIGIN };
+    static const uint8_t capsule_protocol_name[] = "capsule-protocol";
+    static const uint8_t capsule_protocol_value[] = "1";
+    uint8_t qpack[512];
+    uint8_t* bytes = qpack;
+    uint8_t* bytes_max = qpack + sizeof(qpack);
+    h3zero_header_parts_t parts = { 0 };
+    uint8_t* parsed = NULL;
+    int ret = 0;
+
+    *bytes++ = 0;
+    *bytes++ = 0;
+    if ((bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+        (uint8_t*)method_name, sizeof(method_name) - 1,
+        (uint8_t*)method_value, sizeof(method_value) - 1)) == NULL ||
+        (bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)scheme_name, sizeof(scheme_name) - 1,
+            (uint8_t*)scheme_value, sizeof(scheme_value) - 1)) == NULL ||
+        (bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)path_name, sizeof(path_name) - 1,
+            (uint8_t*)path_value, sizeof(path_value))) == NULL ||
+        (bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)protocol_name, sizeof(protocol_name) - 1,
+            (uint8_t*)protocol_value, sizeof(protocol_value))) == NULL ||
+        (bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)authority_name, sizeof(authority_name) - 1,
+            (uint8_t*)authority_value, sizeof(authority_value))) == NULL ||
+        (bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)origin_name, sizeof(origin_name) - 1,
+            (uint8_t*)origin_value, sizeof(origin_value))) == NULL ||
+        (bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+            (uint8_t*)capsule_protocol_name, sizeof(capsule_protocol_name) - 1,
+            (uint8_t*)capsule_protocol_value,
+            sizeof(capsule_protocol_value) - 1)) == NULL) {
+        ret = -1;
+    }
+    else {
+        parsed = h3zero_parse_qpack_header_frame(qpack, bytes, &parts);
+        if (parsed != bytes ||
+            parts.method != h3zero_method_connect ||
+            parts.scheme == NULL ||
+            parts.scheme_length != sizeof(scheme_value) - 1 ||
+            memcmp(parts.scheme, scheme_value, parts.scheme_length) != 0 ||
+            parts.path == NULL ||
+            parts.path_length != sizeof(path_value) ||
+            memcmp(parts.path, path_value, parts.path_length) != 0 ||
+            parts.protocol == NULL ||
+            parts.protocol_length != sizeof(protocol_value) ||
+            memcmp(parts.protocol, protocol_value, parts.protocol_length) != 0 ||
+            parts.authority == NULL ||
+            parts.authority_length != sizeof(authority_value) ||
+            memcmp(parts.authority, authority_value, parts.authority_length) != 0 ||
+            parts.origin == NULL ||
+            parts.origin_length != sizeof(origin_value) ||
+            memcmp(parts.origin, origin_value, parts.origin_length) != 0) {
+            ret = -1;
+        }
+    }
+
+    h3zero_release_header_parts(&parts);
+    return ret;
+}
+
+static int h3zero_qpack_parser_policy_dynamic_reject_test(void)
+{
+    static uint8_t dynamic_indexed[] = { 0, 0, 0x80 };
+    static uint8_t dynamic_literal_ref[] = { 0, 0, 0x40 };
+    h3zero_header_parts_t parts = { 0 };
+    uint8_t* parsed = h3zero_parse_qpack_header_frame(
+        dynamic_indexed, dynamic_indexed + sizeof(dynamic_indexed), &parts);
+    int ret = (parsed == NULL) ? 0 : -1;
+
+    h3zero_release_header_parts(&parts);
+    if (ret == 0) {
+        parsed = h3zero_parse_qpack_header_frame(dynamic_literal_ref,
+            dynamic_literal_ref + sizeof(dynamic_literal_ref), &parts);
+        if (parsed != NULL) {
+            ret = -1;
+        }
+        h3zero_release_header_parts(&parts);
+    }
+
+    return ret;
+}
+
+int h3zero_qpack_parser_policy_test(void)
+{
+    int ret = h3zero_qpack_parser_policy_literal_connect_test();
+
+    if (ret == 0) {
+        ret = h3zero_qpack_parser_policy_dynamic_reject_test();
     }
 
     return ret;

@@ -386,6 +386,7 @@ int qpack_huffman_test(void);
 int qpack_huffman_base_test(void);
 int h3zero_parse_qpack_test(void);
 int h3zero_qpack_duplicate_test(void);
+int h3zero_qpack_parser_policy_test(void);
 int h3zero_prepare_qpack_test(void);
 int h3zero_user_agent_test(void);
 int h3zero_uri_test(void);
