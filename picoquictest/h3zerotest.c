@@ -3679,6 +3679,95 @@ h3zero_settings_t default_setting_expected = {
     .settings_received = 0
 };
 
+static uint8_t* h3zero_settings_test_component_encode(uint8_t* bytes,
+    const uint8_t* bytes_max, uint64_t setting_key, uint64_t setting_value)
+{
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max, setting_key)) != NULL) {
+        bytes = picoquic_frames_varint_encode(bytes, bytes_max, setting_value);
+    }
+    return bytes;
+}
+
+static int h3zero_settings_unknown_grease_test(void)
+{
+    uint8_t buffer[128];
+    uint8_t* bytes = buffer + 2;
+    uint8_t* bytes_max = buffer + sizeof(buffer);
+    h3zero_settings_t expected = {
+        .webtransport_enabled = 1,
+        .enable_connect_protocol = 1,
+        .h3_datagram = 1
+    };
+
+    buffer[0] = h3zero_frame_settings;
+    bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+        0x123456, 0xdead);
+    if (bytes != NULL) {
+        bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+            h3zero_setting_grease_signature, 0xbeef);
+    }
+    if (bytes != NULL) {
+        bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+            h3zero_settings_enable_connect_protocol, 1);
+    }
+    if (bytes != NULL) {
+        bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+            h3zero_setting_h3_datagram, 1);
+    }
+    if (bytes != NULL) {
+        bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+            h3zero_settings_wt_enabled, 1);
+    }
+    if (bytes == NULL || bytes - (buffer + 2) >= 64) {
+        return -1;
+    }
+
+    buffer[1] = (uint8_t)(bytes - (buffer + 2));
+    return h3zero_settings_decode_test(buffer, bytes - buffer, &expected, 1);
+}
+
+static int h3zero_settings_malformed_length_test(void)
+{
+    uint8_t buffer[16];
+    uint8_t* bytes = buffer + 2;
+    uint8_t* bytes_max = buffer + sizeof(buffer);
+    h3zero_settings_t decoded;
+    int ret = 0;
+
+    buffer[0] = h3zero_frame_settings;
+    bytes = picoquic_frames_varint_encode(bytes, bytes_max, h3zero_settings_wt_enabled);
+    if (bytes == NULL || bytes - (buffer + 2) >= 64) {
+        ret = -1;
+    }
+    else {
+        buffer[1] = (uint8_t)(bytes - (buffer + 2));
+        if (h3zero_settings_decode(buffer, bytes, &decoded) != NULL) {
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        buffer[0] = h3zero_frame_settings;
+        buffer[1] = 1;
+        buffer[2] = 0;
+        buffer[3] = 0;
+        if (h3zero_settings_decode_test(buffer, 4, &decoded, 1) == 0) {
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        buffer[0] = h3zero_frame_settings;
+        buffer[1] = 2;
+        buffer[2] = h3zero_settings_enable_connect_protocol;
+        if (h3zero_settings_decode(buffer, buffer + 3, &decoded) != NULL) {
+            ret = -1;
+        }
+    }
+
+    return ret;
+}
+
 int h3zero_settings_test(void)
 {
     int ret = h3zero_settings_decode_test(h3zero_default_setting_frame + 1, h3zero_default_setting_frame_size - 1, &default_setting_expected, 1);
@@ -3703,6 +3792,12 @@ int h3zero_settings_test(void)
         bytes = h3zero_settings_encode(bytes, bytes_max, &wt_fc_settings);
         ret = (bytes == NULL) ? -1 :
             h3zero_settings_decode_test(buffer, bytes - buffer, &wt_fc_settings, 1);
+    }
+    if (ret == 0) {
+        ret = h3zero_settings_unknown_grease_test();
+    }
+    if (ret == 0) {
+        ret = h3zero_settings_malformed_length_test();
     }
 
     return ret;
