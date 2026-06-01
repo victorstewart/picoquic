@@ -239,20 +239,6 @@ int wt_baton_client(char const* server_name, int server_port, char const* path, 
             sni, path);
     }
     if (ret == 0) {
-        /* Once the application context has been initialized, we pass it to the
-        * "connect" request, with a pointer to the application specific callback.
-        * Of course, other application would follow the same logic and implement their
-        * own callback.
-         */
-        ret = picowt_connect(cnx, h3_ctx, control_stream_ctx, baton_ctx.authority, baton_ctx.server_path,
-            wt_baton_callback, &baton_ctx, "spurious-baton-00");
-
-        if (ret != 0) {
-            fprintf(stderr, "Could not program the web transport connection\n");
-        }
-    }
-
-    if (ret == 0) {
         /*
         * Until the call to `picoquic_start_client_cnx`, the Quic connection
         * is "intert". The previous calls to `wt_prepare_client_cnx` have
@@ -369,6 +355,26 @@ int wt_baton_client(char const* server_name, int server_port, char const* path, 
     return ret;
 }
 
+static int baton_client_start_webtransport(wt_baton_ctx_t* baton_ctx)
+{
+    int ret = 0;
+
+    if (baton_ctx->baton_state == wt_baton_state_none &&
+        baton_ctx->h3_ctx != NULL && baton_ctx->h3_ctx->settings.settings_received) {
+        h3zero_stream_ctx_t* control_stream_ctx = h3zero_find_stream(baton_ctx->h3_ctx, baton_ctx->control_stream_id);
+        if (control_stream_ctx == NULL) {
+            ret = PICOQUIC_ERROR_UNEXPECTED_ERROR;
+        }
+        else {
+            ret = picowt_connect(baton_ctx->cnx, baton_ctx->h3_ctx, control_stream_ctx,
+                baton_ctx->authority, baton_ctx->server_path, wt_baton_callback, baton_ctx,
+                "spurious-baton-00");
+        }
+    }
+
+    return ret;
+}
+
  /* Sample client,  loop call back management.
  * The function "picoquic_packet_loop" will call back the application when it is ready to
  * receive or send packets, after receiving a packet, and after sending a packet.
@@ -392,6 +398,7 @@ int baton_client_loop_cb(picoquic_quic_t* UNUSED(quic), picoquic_packet_loop_cb_
             break;
         case picoquic_packet_loop_after_receive:
         case picoquic_packet_loop_after_send:
+            ret = baton_client_start_webtransport(cb_ctx);
             if (picoquic_get_cnx_state(cb_ctx->cnx) == picoquic_state_disconnected) {
                 ret = PICOQUIC_NO_ERROR_TERMINATE_PACKET_LOOP;
             }

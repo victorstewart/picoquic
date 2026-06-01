@@ -198,7 +198,9 @@ int picowt_reset_stream(picoquic_cnx_t* cnx, h3zero_stream_ctx_t * stream_ctx, u
 * 2- Prepare the application state before the connection. This may
 *    include documenting the control stream context.
 * 
-* 3- Call the picowt_connect API to prepare and queue the web transport
+* 3- Start the H3 connection and wait until peer SETTINGS have been received.
+*
+* 4- Call the picowt_connect API to prepare and queue the web transport
 *    connect message. The API takes the following parameters:
 * 
 *      - cnx: QUIC connection context
@@ -207,7 +209,7 @@ int picowt_reset_stream(picoquic_cnx_t* cnx, h3zero_stream_ctx_t * stream_ctx, u
 *      - wt_callback: the path callback used for the application
 *      - wt_ctx: the web transport application context associated with the path callback
 * 
-* 4- Make sure that the application is ready to process incoming streams.
+* 5- Make sure that the application is ready to process incoming streams.
 */
 
 h3zero_stream_ctx_t* picowt_set_control_stream(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* h3_ctx)
@@ -346,17 +348,30 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
     char const* wt_available_protocols, uint8_t * extra, size_t extra_length)
 {
     /* register the stream ID as session ID */
-    int ret = h3zero_declare_stream_prefix(ctx, stream_ctx->stream_id, wt_callback, wt_ctx);
-    if (cnx != NULL) {
+    int ret = 0;
+    if (ctx == NULL || !ctx->settings.settings_received) {
+        ret = H3ZERO_MISSING_SETTINGS;
+    }
+    else if (!h3zero_webtransport_is_ready(cnx, &ctx->settings)) {
+        ret = H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET;
+    }
+    else {
+        ret = h3zero_declare_stream_prefix(ctx, stream_ctx->stream_id, wt_callback, wt_ctx);
+    }
+    if (ret == 0 && cnx != NULL) {
         picoquic_log_app_message(cnx, "Allocated prefix for control stream %" PRIu64, stream_ctx->stream_id);
     }
-    /* set the required stream parameters for the state of the stream. */
-    stream_ctx->is_open = 1;
-    stream_ctx->path_callback = wt_callback;
-    stream_ctx->path_callback_ctx = wt_ctx;
+    if (ret == 0) {
+        /* set the required stream parameters for the state of the stream. */
+        stream_ctx->is_open = 1;
+        stream_ctx->path_callback = wt_callback;
+        stream_ctx->path_callback_ctx = wt_ctx;
+    }
 
     /* Declare the outgoing connection through the callback, so it can update its own state */
-    ret = wt_callback(cnx, NULL, 0, picohttp_callback_connecting, stream_ctx, wt_ctx);
+    if (ret == 0) {
+        ret = wt_callback(cnx, NULL, 0, picohttp_callback_connecting, stream_ctx, wt_ctx);
+    }
 
     if (ret == 0) {
         /* Format and send the connect frame. */

@@ -308,6 +308,7 @@ typedef struct st_h3zero_data_stream_state_t {
     char const * wt_protocol;
     unsigned int is_upgrade_requested:1;
     unsigned int is_webtransport_requested : 1;
+    unsigned int is_webtransport_pending : 1;
     unsigned int is_web_transport : 1;
     unsigned int frame_prefix_parsed : 1;
     unsigned int header_found : 1;

@@ -41,6 +41,8 @@
 #include "h3zero_common.h"
 
 
+static int h3zero_process_pending_webtransport_requests(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx);
+
 
  /* Stream context splay management */
 
@@ -498,6 +500,11 @@ static uint8_t* h3zero_parse_control_stream(uint8_t* bytes, uint8_t* bytes_max,
 					}
 					else {
 						ctx->settings.settings_received = 1;
+						if (opt_cnx != NULL &&
+							h3zero_process_pending_webtransport_requests((picoquic_cnx_t*)opt_cnx, ctx) != 0) {
+							*error_found = H3ZERO_INTERNAL_ERROR;
+							bytes = NULL;
+						}
 					}
 				}
 				h3zero_reset_control_stream_state(stream_state);
@@ -1081,6 +1088,27 @@ static int h3zero_protocol_is(const uint8_t* protocol, size_t protocol_length, c
 		memcmp(protocol, expected_protocol, expected_protocol_length) == 0);
 }
 
+int h3zero_process_request_frame(
+	picoquic_cnx_t* cnx,
+	h3zero_stream_ctx_t * stream_ctx,
+	h3zero_callback_ctx_t * app_ctx);
+
+static int h3zero_process_pending_webtransport_requests(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx)
+{
+	int ret = 0;
+	picosplay_node_t* node = picosplay_first(&ctx->h3_stream_tree);
+
+	while (ret == 0 && node != NULL) {
+		h3zero_stream_ctx_t* stream_ctx = (h3zero_stream_ctx_t*)picohttp_stream_node_value(node);
+		node = picosplay_next(node);
+		if (stream_ctx->ps.stream_state.is_webtransport_pending) {
+			stream_ctx->ps.stream_state.is_webtransport_pending = 0;
+			ret = h3zero_process_request_frame(cnx, stream_ctx, ctx);
+		}
+	}
+	return ret;
+}
+
 /* Processing of the request frame.
 * This function is called  after verifying that a request was received */
 
@@ -1159,7 +1187,11 @@ int h3zero_process_request_frame(
 			stream_ctx->ps.stream_state.header.protocol_length,
 			H3ZERO_WEBTRANSPORT_H3_PROTOCOL);
 
-		if (is_webtransport && app_ctx->settings.settings_received &&
+		if (is_webtransport && !app_ctx->settings.settings_received) {
+			stream_ctx->ps.stream_state.is_webtransport_pending = 1;
+			return 0;
+		}
+		else if (is_webtransport &&
 			!h3zero_webtransport_is_ready(cnx, &app_ctx->settings)) {
 			ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
 		}

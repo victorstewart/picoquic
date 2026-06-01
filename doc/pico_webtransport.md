@@ -86,7 +86,8 @@ to that connection. In picoquic, this requires:
 
  * Create a stream in the connection.
  
- * Call the API `picowt_connect` defined in `pico_webtransport.h`
+ * Wait until peer HTTP/3 SETTINGS have been received, then call the API
+   `picowt_connect` defined in `pico_webtransport.h`
  
  * Run the server socket loop connected to the picoquic context.
 
@@ -107,7 +108,7 @@ QUIC stack in three ways:
 
 ### Setting up a web transport session on the client
 
-The web transport connection is set in four phases:
+The web transport connection is set in five phases:
  
  1- Create an h3zero stream context for the control stream, using
     the API picowt_set_control_stream.
@@ -115,7 +116,9 @@ The web transport connection is set in four phases:
  2- Prepare the application state before the connection. This may
     include documenting the control stream context.
  
- 3- Call the picowt_connect API to prepare and queue the web transport
+ 3- Start the H3 connection and wait until peer SETTINGS have been received.
+
+ 4- Call the picowt_connect API to prepare and queue the web transport
     connect message. The API takes the following parameters:
  
   - `cnx`: QUIC connection context
@@ -124,7 +127,7 @@ The web transport connection is set in four phases:
   - `wt_callback`: the path callback used for the application
   - `wt_ctx`: the web transport application context associated with the path callback
  
- 4- Make sure that the application is ready to process incoming streams.
+ 5- Make sure that the application is ready to process incoming streams.
 
 The function `wt_baton_connect` in `wt_baton.c` provides an example
 of setting the web transport session on the client._
@@ -265,4 +268,3 @@ QUIC context and a single UDP port. The requirements are:
 There is an example of this process in `demoserver.c`, with the ALPN selection
 function `picoquic_demo_server_callback_select_alpn` and the redirection
 callback `picoquic_demo_server_callback`.
-
