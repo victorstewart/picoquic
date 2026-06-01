@@ -575,6 +575,7 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         stream_ctx->path_callback = wt_callback;
         stream_ctx->path_callback_ctx = wt_ctx;
         stream_ctx->wt_data_received = 0;
+        stream_ctx->wt_data_sent = 0;
         stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
         stream_ctx->wt_max_data_remote = ctx->settings.wt_initial_max_data;
         stream_ctx->wt_streams_bidi_received = 0;

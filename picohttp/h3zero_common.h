@@ -108,6 +108,7 @@ extern "C" {
         unsigned int is_webtransport_session_counted : 1;
         unsigned int is_bypass : 1;
         uint64_t wt_data_received;
+        uint64_t wt_data_sent;
         uint64_t wt_max_data_local;
         uint64_t wt_max_data_remote;
         uint64_t wt_streams_bidi_received;

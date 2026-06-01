@@ -35,6 +35,7 @@
 #include <picotls.h>
 #include "picosplay.h"
 #include "picoquic.h"
+#include "picoquic_internal.h"
 #include "picoquic_utils.h"
 #include "tls_api.h"
 #include "h3zero.h"
@@ -199,6 +200,7 @@ static void h3zero_track_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero
 	if (ctx != NULL && stream_ctx != NULL && !stream_ctx->is_webtransport_session_counted) {
 		stream_ctx->is_webtransport_session_counted = 1;
 		stream_ctx->wt_data_received = 0;
+		stream_ctx->wt_data_sent = 0;
 		stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
 		stream_ctx->wt_max_data_remote = ctx->settings.wt_initial_max_data;
 		stream_ctx->wt_streams_bidi_received = 0;
@@ -1324,6 +1326,74 @@ static int h3zero_account_webtransport_stream_data(picoquic_cnx_t* cnx,
 	return ret;
 }
 
+static int h3zero_stream_is_webtransport_data(
+	const h3zero_stream_ctx_t* stream_ctx)
+{
+	return (stream_ctx != NULL &&
+		stream_ctx->ps.stream_state.control_stream_id != UINT64_MAX &&
+		stream_ctx->ps.stream_state.control_stream_id != stream_ctx->stream_id);
+}
+
+static int h3zero_prepare_webtransport_send_data(picoquic_cnx_t* cnx,
+	void* context, size_t space, h3zero_stream_ctx_t* stream_ctx,
+	h3zero_callback_ctx_t* h3_ctx)
+{
+	int ret = 0;
+	picoquic_stream_data_buffer_argument_t* data_ctx =
+		(picoquic_stream_data_buffer_argument_t*)context;
+	size_t app_space = space;
+	size_t previous_allowed_space = 0;
+	h3zero_stream_ctx_t* control_stream_ctx = NULL;
+
+	if (!h3zero_stream_is_webtransport_data(stream_ctx) ||
+		!h3zero_webtransport_flow_control_is_enabled(h3_ctx)) {
+		return stream_ctx->path_callback(cnx, context, space,
+			picohttp_callback_provide_data, stream_ctx,
+			stream_ctx->path_callback_ctx);
+	}
+
+	control_stream_ctx = h3zero_find_stream(h3_ctx,
+		stream_ctx->ps.stream_state.control_stream_id);
+	if (control_stream_ctx == NULL) {
+		(void)picoquic_provide_stream_data_buffer(context, 0, 0, 0);
+		return 0;
+	}
+
+	if (control_stream_ctx->wt_data_sent >=
+		control_stream_ctx->wt_max_data_remote) {
+		app_space = 0;
+	}
+	else if (control_stream_ctx->wt_max_data_remote -
+		control_stream_ctx->wt_data_sent < app_space) {
+		app_space = (size_t)(control_stream_ctx->wt_max_data_remote -
+			control_stream_ctx->wt_data_sent);
+	}
+	/* WT_MAX_DATA applies to WebTransport Stream Body bytes. The stream
+	 * prefix is queued before this active callback, so only the app-provided
+	 * length is counted, and the real prepare-buffer allowance is clamped.
+	 */
+	previous_allowed_space = data_ctx->allowed_space;
+	if (data_ctx->allowed_space > app_space) {
+		data_ctx->allowed_space = app_space;
+	}
+	ret = stream_ctx->path_callback(cnx, context, app_space,
+		picohttp_callback_provide_data, stream_ctx,
+		stream_ctx->path_callback_ctx);
+	if (ret == 0) {
+		if (data_ctx->length > app_space ||
+			UINT64_MAX - control_stream_ctx->wt_data_sent <
+			data_ctx->length) {
+			ret = -1;
+		}
+		else {
+			control_stream_ctx->wt_data_sent += data_ctx->length;
+		}
+	}
+	data_ctx->allowed_space = previous_allowed_space;
+
+	return ret;
+}
+
 /* The picoquic callback bundles DATA and FIN. 
 * We maintain this bundling, so the application has complete control on
 * the stream context.
@@ -2370,7 +2440,8 @@ int h3zero_callback_prepare_to_send(picoquic_cnx_t* cnx,
 		if (stream_ctx->path_callback != NULL) {
 			/* TODO: should we do that in the case of "post" ? */
 			/* Get data from callback context of specific URL */
-			ret = stream_ctx->path_callback(cnx, context, space, picohttp_callback_provide_data, stream_ctx, stream_ctx->path_callback_ctx);
+			ret = h3zero_prepare_webtransport_send_data(cnx, context,
+				space, stream_ctx, ctx);
 		}
 		else {
 			/* default reply for known URL */
