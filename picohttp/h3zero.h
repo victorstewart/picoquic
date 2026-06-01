@@ -62,6 +62,12 @@ extern "C" {
 
 #define H3ZERO_CAPSULE_CLOSE_WEBTRANSPORT_SESSION 0x2843
 #define H3ZERO_CAPSULE_DRAIN_WEBTRANSPORT_SESSION 0x78ae
+#define H3ZERO_CAPSULE_WT_MAX_DATA 0x190b4d3d
+#define H3ZERO_CAPSULE_WT_MAX_STREAMS_BIDI 0x190b4d3f
+#define H3ZERO_CAPSULE_WT_MAX_STREAMS_UNI 0x190b4d40
+#define H3ZERO_CAPSULE_WT_DATA_BLOCKED 0x190b4d41
+#define H3ZERO_CAPSULE_WT_STREAMS_BLOCKED_BIDI 0x190b4d43
+#define H3ZERO_CAPSULE_WT_STREAMS_BLOCKED_UNI 0x190b4d44
 
 typedef enum {
 	h3zero_frame_data = 0,
@@ -235,6 +241,9 @@ typedef struct st_h3zero_header_parts_t {
 #define h3zero_settings_enable_connect_protocol 0x8
 #define h3zero_setting_h3_datagram 0x33
 #define h3zero_settings_wt_enabled 0x2c7cf000
+#define h3zero_settings_wt_initial_max_data 0x2b61
+#define h3zero_settings_wt_initial_max_streams_uni 0x2b64
+#define h3zero_settings_wt_initial_max_streams_bidi 0x2b65
 #define h3zero_settings_webtransport_max_sessions 0x14e9cd29
 #define h3zero_settings_webtransport_max_sessions_old 0xc671706aull
 /* Chrome compatibility: SETTINGS_ENABLE_WEBTRANSPORT from older draft */
@@ -243,6 +252,9 @@ typedef struct st_h3zero_header_parts_t {
 typedef struct st_h3zero_settings_t {
     uint64_t webtransport_max_sessions;
     uint64_t webtransport_enabled;
+    uint64_t wt_initial_max_data;
+    uint64_t wt_initial_max_streams_uni;
+    uint64_t wt_initial_max_streams_bidi;
     uint64_t table_size;
     uint64_t max_header_list_size;
     uint64_t blocked_streams;

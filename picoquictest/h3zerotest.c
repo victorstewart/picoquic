@@ -3655,11 +3655,27 @@ int h3zero_settings_decode_test(const uint8_t* bytes, size_t length, h3zero_sett
     else if (decoded.webtransport_enabled != ref->webtransport_enabled) {
         ret = -1;
     }
+    else if (decoded.wt_initial_max_data != ref->wt_initial_max_data) {
+        ret = -1;
+    }
+    else if (decoded.wt_initial_max_streams_uni != ref->wt_initial_max_streams_uni) {
+        ret = -1;
+    }
+    else if (decoded.wt_initial_max_streams_bidi != ref->wt_initial_max_streams_bidi) {
+        ret = -1;
+    }
     return ret;
 }
 
 h3zero_settings_t default_setting_expected = {
-    1, 1, 0, 0, 0, 1, 1, 0
+    .webtransport_max_sessions = 1,
+    .webtransport_enabled = 1,
+    .table_size = 0,
+    .max_header_list_size = 0,
+    .blocked_streams = 0,
+    .enable_connect_protocol = 1,
+    .h3_datagram = 1,
+    .settings_received = 0
 };
 
 int h3zero_settings_test(void)
@@ -3668,6 +3684,24 @@ int h3zero_settings_test(void)
 
     if (ret == 0) {
         ret = h3zero_settings_encode_test(h3zero_default_setting_frame + 1, h3zero_default_setting_frame_size - 1, &default_setting_expected);
+    }
+
+    if (ret == 0) {
+        uint8_t buffer[128];
+        uint8_t* bytes = buffer;
+        uint8_t* bytes_max = buffer + sizeof(buffer);
+        h3zero_settings_t wt_fc_settings = {
+            .webtransport_enabled = 1,
+            .wt_initial_max_data = 0x12345,
+            .wt_initial_max_streams_uni = 7,
+            .wt_initial_max_streams_bidi = 5,
+            .enable_connect_protocol = 1,
+            .h3_datagram = 1
+        };
+
+        bytes = h3zero_settings_encode(bytes, bytes_max, &wt_fc_settings);
+        ret = (bytes == NULL) ? -1 :
+            h3zero_settings_decode_test(buffer, bytes - buffer, &wt_fc_settings, 1);
     }
 
     return ret;

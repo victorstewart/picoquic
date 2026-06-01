@@ -676,6 +676,7 @@ int picowt_baton_alpn_test(void);
 int picowt_protocol_select_test(void);
 int picowt_drain_test(void);
 int picowt_receive_drain_test(void);
+int picowt_flow_control_capsule_test(void);
 int picowt_tp_test(void);
 int picowt_requirements_test(void);
 int quicperf_parse_test(void);

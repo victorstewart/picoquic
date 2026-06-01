@@ -30,6 +30,13 @@ extern "C" {
     /* Capsule types defined for web transport */
 #define picowt_capsule_close_webtransport_session 0x2843
 #define picowt_capsule_drain_webtransport_session 0x78ae 
+#define picowt_capsule_wt_max_data H3ZERO_CAPSULE_WT_MAX_DATA
+#define picowt_capsule_wt_max_streams_bidi H3ZERO_CAPSULE_WT_MAX_STREAMS_BIDI
+#define picowt_capsule_wt_max_streams_uni H3ZERO_CAPSULE_WT_MAX_STREAMS_UNI
+#define picowt_capsule_wt_data_blocked H3ZERO_CAPSULE_WT_DATA_BLOCKED
+#define picowt_capsule_wt_streams_blocked_bidi H3ZERO_CAPSULE_WT_STREAMS_BLOCKED_BIDI
+#define picowt_capsule_wt_streams_blocked_uni H3ZERO_CAPSULE_WT_STREAMS_BLOCKED_UNI
+#define picowt_max_streams_limit (1ull << 60)
 
     /* Set required transport parameters for web transport  */
     void picowt_set_transport_parameters(picoquic_cnx_t* cnx); 
@@ -73,12 +80,16 @@ extern "C" {
      */
     int picowt_send_drain_session_message(picoquic_cnx_t* cnx,
         h3zero_stream_ctx_t* control_stream_ctx);
+    int picowt_send_flow_control_capsule(picoquic_cnx_t* cnx,
+        h3zero_stream_ctx_t* control_stream_ctx, uint64_t capsule_type,
+        uint64_t flow_control_value);
     /* accumulate data for the web transport capsule in
      * specified context.
      */
     typedef struct st_picowt_capsule_t {
         h3zero_capsule_t h3_capsule;
         uint32_t error_code;
+        uint64_t flow_control_value;
         const uint8_t* error_msg;
         size_t error_msg_len;
     } picowt_capsule_t;
