@@ -379,6 +379,7 @@ int h3zero_wt_id_error_test(void);
 int h3zero_wt_zero_buffer_test(void);
 int h3zero_unidir_error_test(void);
 int h3zero_setting_error_test(void);
+int h3zero_settings_fragment_test(void);
 int h3zero_capsule_test(void);
 int h3zero_client_data_test(void);
 int qpack_huffman_test(void);

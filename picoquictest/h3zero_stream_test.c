@@ -677,6 +677,147 @@ int h3zero_setting_error_test(void)
     return ret;
 }
 
+static uint8_t* h3zero_settings_fragment_valid_stream(uint8_t* bytes,
+    const uint8_t* bytes_max)
+{
+    h3zero_settings_t settings = {
+        .webtransport_max_sessions = 1,
+        .webtransport_enabled = 1,
+        .wt_initial_max_data = 0x12345,
+        .wt_initial_max_streams_uni = 7,
+        .wt_initial_max_streams_bidi = 5,
+        .enable_connect_protocol = 1,
+        .h3_datagram = 1
+    };
+
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+        h3zero_stream_type_control)) != NULL) {
+        bytes = h3zero_settings_encode(bytes, bytes_max, &settings);
+    }
+
+    return bytes;
+}
+
+static uint8_t* h3zero_settings_fragment_malformed_stream(uint8_t* bytes,
+    const uint8_t* bytes_max, int truncated_varint)
+{
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+        h3zero_stream_type_control)) != NULL &&
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            h3zero_frame_settings)) != NULL &&
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max, 1)) != NULL &&
+        bytes < bytes_max) {
+        *bytes++ = truncated_varint ? 0x40 : h3zero_settings_enable_connect_protocol;
+    }
+    else {
+        bytes = NULL;
+    }
+
+    return bytes;
+}
+
+static int h3zero_settings_fragment_submit(const uint8_t* bytes, size_t length,
+    size_t boundary, int expect_success)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    uint64_t error_found = 0;
+    uint8_t* parsed = NULL;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0 &&
+        (stream_ctx = h3zero_find_or_create_stream(cnx, 3, h3_ctx, 1, 1)) == NULL) {
+        ret = -1;
+    }
+
+    if (ret == 0) {
+        parsed = h3zero_parse_remote_unidir_stream((uint8_t*)bytes,
+            (uint8_t*)bytes + boundary, stream_ctx, h3_ctx, &error_found, NULL);
+        if (parsed == NULL) {
+            if (expect_success || error_found == 0) {
+                ret = -1;
+            }
+        }
+        else if (parsed != (uint8_t*)bytes + boundary ||
+            (expect_success && error_found != 0)) {
+            ret = -1;
+        }
+    }
+    if (ret == 0 && parsed != NULL && boundary < length) {
+        parsed = h3zero_parse_remote_unidir_stream((uint8_t*)bytes + boundary,
+            (uint8_t*)bytes + length, stream_ctx, h3_ctx, &error_found, NULL);
+    }
+
+    if (ret == 0 && expect_success) {
+        if (parsed != (uint8_t*)bytes + length ||
+            error_found != 0 ||
+            !h3_ctx->settings.settings_received ||
+            h3_ctx->settings.enable_connect_protocol != 1 ||
+            h3_ctx->settings.h3_datagram != 1 ||
+            h3_ctx->settings.webtransport_enabled != 1 ||
+            h3_ctx->settings.webtransport_max_sessions != 1 ||
+            h3_ctx->settings.wt_initial_max_data != 0x12345 ||
+            h3_ctx->settings.wt_initial_max_streams_uni != 7 ||
+            h3_ctx->settings.wt_initial_max_streams_bidi != 5) {
+            ret = -1;
+        }
+    }
+    else if (ret == 0 &&
+        (parsed != NULL || error_found != H3ZERO_SETTINGS_ERROR ||
+            h3_ctx->settings.settings_received)) {
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+static int h3zero_settings_fragment_all_boundaries(const uint8_t* bytes,
+    size_t length, int expect_success)
+{
+    int ret = 0;
+
+    for (size_t boundary = 0; ret == 0 && boundary <= length; boundary++) {
+        ret = h3zero_settings_fragment_submit(bytes, length, boundary, expect_success);
+    }
+
+    return ret;
+}
+
+int h3zero_settings_fragment_test(void)
+{
+    uint8_t buffer[256];
+    uint8_t* bytes = h3zero_settings_fragment_valid_stream(buffer,
+        buffer + sizeof(buffer));
+    int ret = (bytes == NULL) ? -1 : h3zero_settings_fragment_all_boundaries(
+        buffer, bytes - buffer, 1);
+
+    if (ret == 0) {
+        bytes = h3zero_settings_fragment_malformed_stream(buffer,
+            buffer + sizeof(buffer), 0);
+        ret = (bytes == NULL) ? -1 : h3zero_settings_fragment_all_boundaries(
+            buffer, bytes - buffer, 0);
+    }
+    if (ret == 0) {
+        bytes = h3zero_settings_fragment_malformed_stream(buffer,
+            buffer + sizeof(buffer), 1);
+        ret = (bytes == NULL) ? -1 : h3zero_settings_fragment_all_boundaries(
+            buffer, bytes - buffer, 0);
+    }
+
+    return ret;
+}
+
 /* Unit test of data callback.
 * 
 * we want to exercise `h3zero_callback_data` without actually setting up connections.
