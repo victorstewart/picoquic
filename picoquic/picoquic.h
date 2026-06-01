@@ -1695,6 +1695,9 @@ uint64_t picoquic_get_application_error(picoquic_cnx_t* cnx);
 /* Returns the remote error for the given stream. */
 uint64_t picoquic_get_remote_stream_error(picoquic_cnx_t* cnx, uint64_t stream_id);
 
+/* Returns the remote STOP_SENDING error for the given stream. */
+uint64_t picoquic_get_remote_stream_stop_error(picoquic_cnx_t* cnx, uint64_t stream_id);
+
 
 uint64_t picoquic_get_data_sent(picoquic_cnx_t * cnx);
 

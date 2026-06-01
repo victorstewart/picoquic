@@ -717,6 +717,7 @@ int picowt_session_limit_test(void);
 int picowt_create_local_stream_pair_test(void);
 int picowt_local_stream_backpressure_test(void);
 int picowt_reset_error_test(void);
+int picowt_receive_stream_error_test(void);
 int picowt_error_code_test(void);
 int picowt_session_gone_test(void);
 int picowt_close_message_test(void);

@@ -160,6 +160,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_create_local_stream_pair", picowt_create_local_stream_pair_test },
     { "picowt_local_stream_backpressure", picowt_local_stream_backpressure_test },
     { "picowt_reset_error", picowt_reset_error_test },
+    { "picowt_receive_stream_error", picowt_receive_stream_error_test },
     { "picowt_error_code", picowt_error_code_test },
     { "picowt_session_gone", picowt_session_gone_test },
     { "picowt_close_message", picowt_close_message_test },

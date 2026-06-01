@@ -63,6 +63,96 @@ static int h3zero_webtransport_flow_control_is_enabled(const h3zero_callback_ctx
 		h3zero_settings_enable_webtransport_flow_control(&ctx->settings));
 }
 
+int h3zero_webtransport_error_to_app(uint64_t h3_error, uint32_t* app_error)
+{
+	uint64_t delta = 0;
+	uint64_t decoded = 0;
+
+	if (h3_error < H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST ||
+		h3_error > H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_LAST) {
+		return -1;
+	}
+	delta = h3_error - H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST;
+	decoded = delta - (delta / 0x1full);
+	if (delta % 0x1full == 0x1eull || decoded > UINT32_MAX) {
+		return -1;
+	}
+	if (app_error != NULL) {
+		*app_error = (uint32_t)decoded;
+	}
+	return 0;
+}
+
+uint64_t h3zero_stream_get_remote_error(const h3zero_stream_ctx_t* stream_ctx,
+	picohttp_call_back_event_t event)
+{
+	uint64_t error = 0;
+
+	if (stream_ctx != NULL) {
+		if (event == picohttp_callback_reset) {
+			error = stream_ctx->last_reset_error;
+		}
+		else if (event == picohttp_callback_stop_sending) {
+			error = stream_ctx->last_stop_sending_error;
+		}
+	}
+	return error;
+}
+
+int h3zero_stream_get_webtransport_error(const h3zero_stream_ctx_t* stream_ctx,
+	picohttp_call_back_event_t event, uint32_t* app_error)
+{
+	uint32_t decoded = 0;
+	int available = 0;
+
+	if (stream_ctx != NULL) {
+		if (event == picohttp_callback_reset) {
+			available = stream_ctx->last_reset_webtransport_error_available;
+			decoded = stream_ctx->last_reset_webtransport_error;
+		}
+		else if (event == picohttp_callback_stop_sending) {
+			available = stream_ctx->last_stop_sending_webtransport_error_available;
+			decoded = stream_ctx->last_stop_sending_webtransport_error;
+		}
+	}
+	if (!available) {
+		return -1;
+	}
+	if (app_error != NULL) {
+		*app_error = decoded;
+	}
+	return 0;
+}
+
+static void h3zero_record_remote_stream_error(picoquic_cnx_t* cnx,
+	uint64_t stream_id, picoquic_call_back_event_t fin_or_event,
+	h3zero_stream_ctx_t* stream_ctx)
+{
+	uint64_t h3_error = 0;
+	uint32_t app_error = 0;
+	int is_wt_error = 0;
+
+	if (stream_ctx == NULL) {
+		return;
+	}
+	if (fin_or_event == picoquic_callback_stream_reset) {
+		h3_error = picoquic_get_remote_stream_error(cnx, stream_id);
+		is_wt_error = (h3zero_webtransport_error_to_app(h3_error,
+			&app_error) == 0);
+		stream_ctx->last_reset_error = h3_error;
+		stream_ctx->last_reset_webtransport_error = app_error;
+		stream_ctx->last_reset_webtransport_error_available = is_wt_error;
+	}
+	else if (fin_or_event == picoquic_callback_stop_sending) {
+		h3_error = picoquic_get_remote_stream_stop_error(cnx, stream_id);
+		is_wt_error = (h3zero_webtransport_error_to_app(h3_error,
+			&app_error) == 0);
+		stream_ctx->last_stop_sending_error = h3_error;
+		stream_ctx->last_stop_sending_webtransport_error = app_error;
+		stream_ctx->last_stop_sending_webtransport_error_available = is_wt_error;
+	}
+}
+
 int h3zero_origin_validator_allow_all(
 	const uint8_t* UNUSED(origin), size_t UNUSED(origin_length),
 	const uint8_t* UNUSED(authority), size_t UNUSED(authority_length),
@@ -2411,6 +2501,8 @@ int h3zero_callback(picoquic_cnx_t* cnx,
 			if (stream_ctx != NULL) {
 				if (stream_ctx->path_callback != NULL) {
 					/* reset post callback. */
+					h3zero_record_remote_stream_error(cnx, stream_id,
+						fin_or_event, stream_ctx);
 					ret = stream_ctx->path_callback(cnx, NULL, 0, (fin_or_event == picoquic_callback_stream_reset)?
 						picohttp_callback_reset:picohttp_callback_stop_sending, stream_ctx, stream_ctx->path_callback_ctx);
 				}

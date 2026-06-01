@@ -119,6 +119,12 @@ extern "C" {
             } hq; /* h09 only */
         } ps; /* Protocol specific state */
         uint64_t stream_id;
+        uint64_t last_reset_error;
+        uint64_t last_stop_sending_error;
+        uint32_t last_reset_webtransport_error;
+        uint32_t last_stop_sending_webtransport_error;
+        unsigned int last_reset_webtransport_error_available : 1;
+        unsigned int last_stop_sending_webtransport_error_available : 1;
         /* Server state file management */
         uint64_t response_length;
         uint64_t echo_length;
@@ -283,6 +289,10 @@ extern "C" {
     int h3zero_callback(picoquic_cnx_t* cnx,
         uint64_t stream_id, uint8_t* bytes, size_t length,
         picoquic_call_back_event_t fin_or_event, void* callback_ctx, void* v_stream_ctx);
+
+    int h3zero_webtransport_error_to_app(uint64_t h3_error, uint32_t* app_error);
+    uint64_t h3zero_stream_get_remote_error(const h3zero_stream_ctx_t* stream_ctx, picohttp_call_back_event_t event);
+    int h3zero_stream_get_webtransport_error(const h3zero_stream_ctx_t* stream_ctx, picohttp_call_back_event_t event, uint32_t* app_error);
 
     h3zero_stream_prefix_t* h3zero_find_stream_prefix(h3zero_callback_ctx_t* ctx, uint64_t prefix);
     int h3zero_declare_stream_prefix(h3zero_callback_ctx_t* ctx, uint64_t prefix, picohttp_post_data_cb_fn function_call, void* function_ctx);
