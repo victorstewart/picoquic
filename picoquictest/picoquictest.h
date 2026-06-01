@@ -382,6 +382,7 @@ int h3zero_wt_prefix_fin_test(void);
 int h3zero_wt_prefix_reset_test(void);
 int h3zero_wt_stream_empty_fin_test(void);
 int h3zero_wt_payload_order_test(void);
+int h3zero_wt_stream_interleave_test(void);
 int h3zero_unidir_error_test(void);
 int h3zero_setting_error_test(void);
 int h3zero_settings_fragment_test(void);

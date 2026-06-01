@@ -971,6 +971,229 @@ int h3zero_wt_payload_order_test(void)
     return ret;
 }
 
+#define H3ZERO_WT_INTERLEAVE_STREAMS 4
+#define H3ZERO_WT_INTERLEAVE_LEN 96
+
+typedef struct st_h3zero_wt_interleave_stream_t {
+    uint64_t stream_id;
+    size_t nb_data;
+    int nb_fin;
+    int error_seen;
+} h3zero_wt_interleave_stream_t;
+
+typedef struct st_h3zero_wt_interleave_test_ctx_t {
+    h3zero_wt_interleave_stream_t streams[H3ZERO_WT_INTERLEAVE_STREAMS];
+    int unknown_stream;
+} h3zero_wt_interleave_test_ctx_t;
+
+static uint8_t h3zero_wt_interleave_byte(size_t stream_index, size_t offset)
+{
+    return (uint8_t)((stream_index * 53 + offset * 29 + 7) & 0xff);
+}
+
+static size_t h3zero_wt_interleave_find_stream(
+    h3zero_wt_interleave_test_ctx_t* ctx, uint64_t stream_id)
+{
+    for (size_t i = 0; i < H3ZERO_WT_INTERLEAVE_STREAMS; i++) {
+        if (ctx->streams[i].stream_id == stream_id) {
+            return i;
+        }
+    }
+
+    return H3ZERO_WT_INTERLEAVE_STREAMS;
+}
+
+static int h3zero_wt_interleave_callback(picoquic_cnx_t* UNUSED(cnx),
+    uint8_t* bytes, size_t length, picohttp_call_back_event_t fin_or_event,
+    struct st_h3zero_stream_ctx_t* stream_ctx, void* path_app_ctx)
+{
+    h3zero_wt_interleave_test_ctx_t* ctx =
+        (h3zero_wt_interleave_test_ctx_t*)path_app_ctx;
+    size_t stream_index = h3zero_wt_interleave_find_stream(ctx,
+        (stream_ctx == NULL) ? UINT64_MAX : stream_ctx->stream_id);
+
+    if (stream_index >= H3ZERO_WT_INTERLEAVE_STREAMS) {
+        ctx->unknown_stream++;
+    }
+    else if (fin_or_event == picohttp_callback_post_data) {
+        h3zero_wt_interleave_stream_t* stream = &ctx->streams[stream_index];
+
+        for (size_t i = 0; i < length; i++) {
+            if (stream->nb_data >= H3ZERO_WT_INTERLEAVE_LEN ||
+                bytes == NULL ||
+                bytes[i] != h3zero_wt_interleave_byte(stream_index,
+                    stream->nb_data)) {
+                stream->error_seen = 1;
+                break;
+            }
+            stream->nb_data++;
+        }
+    }
+    else if (fin_or_event == picohttp_callback_post_fin) {
+        ctx->streams[stream_index].nb_fin++;
+    }
+
+    return 0;
+}
+
+static int h3zero_wt_interleave_send_chunk(picoquic_cnx_t* cnx,
+    h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* stream_ctx,
+    size_t stream_index, size_t* sent, uint8_t* prefix, size_t prefix_length,
+    size_t chunk_length, int include_prefix)
+{
+    uint8_t buffer[32];
+    size_t byte_index = 0;
+    int ret = 0;
+
+    if (*sent + chunk_length > H3ZERO_WT_INTERLEAVE_LEN ||
+        chunk_length + (include_prefix ? prefix_length : 0) > sizeof(buffer)) {
+        ret = -1;
+    }
+    else {
+        if (include_prefix) {
+            memcpy(buffer, prefix, prefix_length);
+            byte_index = prefix_length;
+        }
+        for (size_t i = 0; i < chunk_length; i++) {
+            buffer[byte_index + i] = h3zero_wt_interleave_byte(
+                stream_index, *sent + i);
+        }
+        ret = h3zero_process_remote_stream(cnx, stream_ctx->stream_id, buffer,
+            byte_index + chunk_length, picoquic_callback_stream_data,
+            stream_ctx, h3_ctx);
+        if (ret == 0) {
+            *sent += chunk_length;
+        }
+    }
+
+    return ret;
+}
+
+int h3zero_wt_stream_interleave_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id = 4;
+    const uint64_t stream_ids[H3ZERO_WT_INTERLEAVE_STREAMS] = {
+        6, 8, 10, 12
+    };
+    const int is_bidir[H3ZERO_WT_INTERLEAVE_STREAMS] = {
+        0, 1, 0, 1
+    };
+    const size_t initial_order[H3ZERO_WT_INTERLEAVE_STREAMS] = {
+        0, 2, 1, 3
+    };
+    const size_t round_order[H3ZERO_WT_INTERLEAVE_STREAMS] = {
+        2, 0, 3, 1
+    };
+    const size_t fin_order[H3ZERO_WT_INTERLEAVE_STREAMS] = {
+        3, 1, 2, 0
+    };
+    h3zero_stream_ctx_t* session_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx[H3ZERO_WT_INTERLEAVE_STREAMS] = { 0 };
+    h3zero_wt_interleave_test_ctx_t test_ctx = { 0 };
+    size_t sent[H3ZERO_WT_INTERLEAVE_STREAMS] = { 0 };
+    uint8_t bidi_prefix[] = { 0x40, 0x41, 0x04 };
+    uint8_t unidir_prefix[] = { 0x40, 0x54, 0x04 };
+    uint8_t fin_byte = 0;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    for (size_t i = 0; i < H3ZERO_WT_INTERLEAVE_STREAMS; i++) {
+        test_ctx.streams[i].stream_id = stream_ids[i];
+    }
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        session_ctx = h3zero_find_or_create_stream(cnx, session_id, h3_ctx, 1, 1);
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id,
+                h3zero_wt_interleave_callback, &test_ctx) != 0) {
+            ret = -1;
+        }
+        else {
+            session_ctx->is_upgraded = 1;
+        }
+    }
+    for (size_t i = 0; ret == 0 && i < H3ZERO_WT_INTERLEAVE_STREAMS; i++) {
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_ids[i],
+            &stream_ctx[i]);
+    }
+    for (size_t j = 0; ret == 0 && j < H3ZERO_WT_INTERLEAVE_STREAMS; j++) {
+        size_t i = initial_order[j];
+        uint8_t* prefix = is_bidir[i] ? bidi_prefix : unidir_prefix;
+        size_t prefix_length = is_bidir[i] ? sizeof(bidi_prefix) : sizeof(unidir_prefix);
+
+        ret = h3zero_wt_interleave_send_chunk(cnx, h3_ctx, stream_ctx[i], i,
+            &sent[i], prefix, prefix_length, 7, 1);
+    }
+    while (ret == 0) {
+        int complete = 1;
+
+        for (size_t j = 0; ret == 0 && j < H3ZERO_WT_INTERLEAVE_STREAMS; j++) {
+            size_t i = round_order[j];
+
+            if (sent[i] < H3ZERO_WT_INTERLEAVE_LEN) {
+                size_t chunk = 11 + i;
+
+                if (chunk > H3ZERO_WT_INTERLEAVE_LEN - sent[i]) {
+                    chunk = H3ZERO_WT_INTERLEAVE_LEN - sent[i];
+                }
+                ret = h3zero_wt_interleave_send_chunk(cnx, h3_ctx,
+                    stream_ctx[i], i, &sent[i], NULL, 0, chunk, 0);
+            }
+        }
+        for (size_t i = 0; i < H3ZERO_WT_INTERLEAVE_STREAMS; i++) {
+            if (sent[i] < H3ZERO_WT_INTERLEAVE_LEN) {
+                complete = 0;
+                break;
+            }
+        }
+        if (complete) {
+            break;
+        }
+    }
+    for (size_t j = 0; ret == 0 && j < H3ZERO_WT_INTERLEAVE_STREAMS; j++) {
+        size_t i = fin_order[j];
+
+        ret = h3zero_process_remote_stream(cnx, stream_ids[i], &fin_byte, 0,
+            picoquic_callback_stream_fin, stream_ctx[i], h3_ctx);
+    }
+    if (ret == 0 && (test_ctx.unknown_stream != 0 ||
+        cnx->application_error != 0)) {
+        ret = -1;
+    }
+    for (size_t i = 0; ret == 0 && i < H3ZERO_WT_INTERLEAVE_STREAMS; i++) {
+        if (test_ctx.streams[i].error_seen ||
+            test_ctx.streams[i].nb_data != H3ZERO_WT_INTERLEAVE_LEN ||
+            test_ctx.streams[i].nb_fin != 1 ||
+            stream_ctx[i]->ps.stream_state.control_stream_id != session_id) {
+            DBG_PRINTF("WT interleave stream %zu failed, data=%zu, fin=%d, error=%d",
+                i, test_ctx.streams[i].nb_data,
+                test_ctx.streams[i].nb_fin,
+                test_ctx.streams[i].error_seen);
+            ret = -1;
+        }
+    }
+    if (ret != 0) {
+        DBG_PRINTF("WT interleave failed, ret=%d, app_error=%" PRIu64 ", unknown=%d",
+            ret, (cnx == NULL) ? UINT64_MAX : cnx->application_error,
+            test_ctx.unknown_stream);
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 /*
 * A fraction of the control stream parsing is covered by normal usage :
 * -receive h3 settings on control stream,
