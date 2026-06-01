@@ -67,6 +67,10 @@ uint8_t* h3zero_parse_remote_unidir_stream(
     h3zero_stream_ctx_t* stream_ctx,
     h3zero_callback_ctx_t* ctx,
     uint64_t* error_found, void* opt_cnx);
+int h3zero_process_h3_client_data(picoquic_cnx_t* cnx,
+    uint64_t stream_id, uint8_t* bytes, size_t length, int is_fin,
+    h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx,
+    uint64_t* fin_stream_id);
 
 wt_baton_app_ctx_t baton_test_ctx = {
     15
@@ -910,6 +914,181 @@ int picowt_baton_header_qpack_limit_test(void)
     }
     if (ret == 0) {
         ret = picowt_excessive_header_length_test();
+    }
+
+    return ret;
+}
+
+typedef struct st_picowt_connect_response_test_ctx_t {
+    int accepted;
+    int refused;
+    int post_fin;
+} picowt_connect_response_test_ctx_t;
+
+static int picowt_connect_response_test_callback(picoquic_cnx_t* cnx,
+    uint8_t* bytes, size_t length, picohttp_call_back_event_t wt_event,
+    h3zero_stream_ctx_t* stream_ctx, void* path_app_ctx)
+{
+    picowt_connect_response_test_ctx_t* ctx =
+        (picowt_connect_response_test_ctx_t*)path_app_ctx;
+    (void)cnx;
+    (void)bytes;
+    (void)length;
+    (void)stream_ctx;
+
+    if (ctx != NULL) {
+        if (wt_event == picohttp_callback_connect_accepted) {
+            ctx->accepted++;
+        }
+        else if (wt_event == picohttp_callback_connect_refused) {
+            ctx->refused++;
+        }
+        else if (wt_event == picohttp_callback_post_fin) {
+            ctx->post_fin++;
+        }
+    }
+    return 0;
+}
+
+static void picowt_connect_response_set_ready(
+    picoquic_cnx_t* cnx, h3zero_callback_ctx_t* h3_ctx)
+{
+    h3_ctx->settings.settings_received = 1;
+    h3_ctx->settings.enable_connect_protocol = 1;
+    h3_ctx->settings.h3_datagram = 1;
+    h3_ctx->settings.webtransport_enabled = 1;
+    cnx->local_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+    cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+    cnx->local_parameters.is_reset_stream_at_enabled = 1;
+    cnx->remote_parameters.is_reset_stream_at_enabled = 1;
+}
+
+static int picowt_build_response_header_frame(
+    const char* status, const char* wt_protocol,
+    uint8_t* frame, uint8_t* frame_max, size_t* frame_length)
+{
+    uint8_t qpack[512];
+    uint8_t* qpack_end = NULL;
+    uint8_t* bytes = frame;
+    int ret = 0;
+
+    if (strcmp(status, "200") == 0) {
+        qpack_end = h3zero_create_response_header_frame_ex(qpack,
+            qpack + sizeof(qpack), h3zero_content_type_none, NULL, wt_protocol);
+    }
+    else {
+        qpack_end = h3zero_create_error_frame(qpack, qpack + sizeof(qpack),
+            status, NULL);
+    }
+    if (qpack_end == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, frame_max,
+            h3zero_frame_header)) == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, frame_max,
+            qpack_end - qpack)) == NULL ||
+        bytes + (qpack_end - qpack) > frame_max) {
+        ret = -1;
+    }
+    else {
+        memcpy(bytes, qpack, qpack_end - qpack);
+        bytes += qpack_end - qpack;
+        *frame_length = bytes - frame;
+    }
+    return ret;
+}
+
+static int picowt_connect_response_case(
+    const char* status, const char* wt_available_protocols,
+    const char* wt_protocol, int expect_accept)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    uint64_t simulated_time = 0;
+    uint64_t fin_stream_id = UINT64_MAX;
+    uint8_t frame[768];
+    size_t frame_length = 0;
+    picowt_connect_response_test_ctx_t response_ctx = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        picowt_connect_response_set_ready(cnx, h3_ctx);
+        stream_ctx = h3zero_find_or_create_stream(cnx, 0, h3_ctx, 1, 1);
+        if (stream_ctx == NULL ||
+            picoquic_set_app_stream_ctx(cnx, stream_ctx->stream_id,
+                stream_ctx) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        stream_ctx->is_open = 1;
+        stream_ctx->path_callback = picowt_connect_response_test_callback;
+        stream_ctx->path_callback_ctx = &response_ctx;
+        stream_ctx->ps.stream_state.is_upgrade_requested = 1;
+        stream_ctx->ps.stream_state.is_webtransport_requested = 1;
+        if (wt_available_protocols != NULL &&
+            (stream_ctx->ps.stream_state.wt_available_protocols =
+                picoquic_string_duplicate(wt_available_protocols)) == NULL) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        ret = picowt_build_response_header_frame(status, wt_protocol,
+            frame, frame + sizeof(frame), &frame_length);
+    }
+    if (ret == 0) {
+        ret = h3zero_process_h3_client_data(cnx, stream_ctx->stream_id,
+            frame, frame_length, 0, h3_ctx, stream_ctx, &fin_stream_id);
+    }
+    if (ret == 0) {
+        int status_code = atoi(status);
+        if (stream_ctx->ps.stream_state.header.status != status_code ||
+            stream_ctx->is_upgraded != expect_accept ||
+            response_ctx.accepted != expect_accept ||
+            response_ctx.refused != !expect_accept ||
+            response_ctx.post_fin != 0 ||
+            fin_stream_id != UINT64_MAX) {
+            ret = -1;
+        }
+    }
+    if (ret == 0 && wt_protocol != NULL) {
+        size_t wt_protocol_length = strlen(wt_protocol);
+        if (stream_ctx->ps.stream_state.header.wt_protocol == NULL ||
+            stream_ctx->ps.stream_state.header.wt_protocol_length !=
+            wt_protocol_length ||
+            memcmp(stream_ctx->ps.stream_state.header.wt_protocol,
+                wt_protocol, wt_protocol_length) != 0) {
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int picowt_connect_response_test(void)
+{
+    int ret = picowt_connect_response_case("200", NULL, NULL, 1);
+
+    if (ret == 0) {
+        ret = picowt_connect_response_case("200", PICOWT_BATON_ALPN_AVAILABLE,
+            PICOWT_BATON_ALPN, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_connect_response_case("302", NULL, NULL, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_connect_response_case("404", NULL, NULL, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_connect_response_case("500", NULL, NULL, 0);
     }
 
     return ret;
