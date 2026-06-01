@@ -637,7 +637,7 @@ int picowt_send_drain_session_message(picoquic_cnx_t* cnx,
         ret = -1;
     }
     else {
-        ret = h3zero_send_capsule(cnx, control_stream_ctx, picowt_capsule_close_webtransport_session,
+        ret = h3zero_send_capsule(cnx, control_stream_ctx, picowt_capsule_drain_webtransport_session,
             0, null_msg, 0 /* Do not set fin, there could be other capsules */);
     }
 

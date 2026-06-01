@@ -746,6 +746,34 @@ int picowt_drain_test_one(int expect_error)
         }
         else {
             ret = picowt_send_drain_session_message(cnx, control_stream_ctx);
+            if (ret == 0) {
+                picoquic_stream_head_t* stream = picoquic_find_stream(cnx, control_stream_ctx->stream_id);
+                picoquic_stream_queue_node_t* queued = (stream == NULL) ? NULL : stream->send_queue;
+                const uint8_t* bytes = (queued == NULL) ? NULL : queued->bytes;
+                const uint8_t* bytes_max = (queued == NULL) ? NULL : queued->bytes + queued->length;
+                const uint8_t* data_max = NULL;
+                uint64_t frame_type = UINT64_MAX;
+                uint64_t frame_length = UINT64_MAX;
+                uint64_t capsule_type = UINT64_MAX;
+                uint64_t capsule_length = UINT64_MAX;
+
+                if (bytes == NULL ||
+                    (bytes = picoquic_frames_varint_decode(bytes, bytes_max, &frame_type)) == NULL ||
+                    (bytes = picoquic_frames_varint_decode(bytes, bytes_max, &frame_length)) == NULL ||
+                    frame_length != (uint64_t)(bytes_max - bytes)) {
+                    ret = -1;
+                }
+                else {
+                    data_max = bytes_max;
+                    if (frame_type != h3zero_frame_data ||
+                        (bytes = picoquic_frames_varint_decode(bytes, data_max, &capsule_type)) == NULL ||
+                        (bytes = picoquic_frames_varint_decode(bytes, data_max, &capsule_length)) == NULL ||
+                        capsule_type != picowt_capsule_drain_webtransport_session ||
+                        capsule_length != 0 || bytes != data_max) {
+                        ret = -1;
+                    }
+                }
+            }
         }
     }
 

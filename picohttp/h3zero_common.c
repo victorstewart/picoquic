@@ -2474,7 +2474,8 @@ int h3zero_send_capsule(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* control_stream
 	int ret = 0;
 	uint8_t* bytes;
 	uint8_t* bytes_max = buffer + sizeof(buffer);
-	size_t data_length = ((capsule_type < 64) ? 1 : 2) + ((capsule_length < 64) ? 1 : 2) + capsule_length;
+	size_t data_length = picoquic_frames_varint_encode_length(capsule_type) +
+		picoquic_frames_varint_encode_length(capsule_length) + capsule_length;
 
 	if ((bytes = picoquic_frames_varint_encode(buffer, bytes_max, h3zero_frame_data)) == NULL ||
 		(bytes = picoquic_frames_varint_encode(bytes, bytes_max, data_length)) == NULL ||
