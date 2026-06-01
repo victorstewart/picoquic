@@ -472,6 +472,37 @@ int h3zero_wt_zero_buffer_test(void)
             ret = -1;
         }
     }
+    if (ret == 0) {
+        const uint64_t stream_id = 12;
+        uint8_t bidi_first[] = { 0x40 };
+        uint8_t bidi_second[] = { 0x41, 0x04, 0xf0 };
+
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+        if (ret == 0) {
+            ret = h3zero_process_remote_stream(cnx, stream_id, bidi_first,
+                sizeof(bidi_first), picoquic_callback_stream_data,
+                stream_ctx, h3_ctx);
+        }
+        if (ret != 0 || stream_ctx->ps.stream_state.stream_type != UINT64_MAX ||
+            cnx->application_error != 0 || test_ctx.nb_data != 1) {
+            DBG_PRINTF("Split bidi WT stream prefix first byte failed, ret=%d, app_error=%" PRIu64 ", data=%d",
+                ret, cnx->application_error, test_ctx.nb_data);
+            ret = -1;
+        }
+        if (ret == 0) {
+            ret = h3zero_process_remote_stream(cnx, stream_id, bidi_second,
+                sizeof(bidi_second), picoquic_callback_stream_data,
+                stream_ctx, h3_ctx);
+        }
+        if (ret != 0 ||
+            stream_ctx->ps.stream_state.stream_type != h3zero_frame_webtransport_stream ||
+            stream_ctx->ps.stream_state.control_stream_id != session_id ||
+            cnx->application_error != 0 || test_ctx.nb_data != 2) {
+            DBG_PRINTF("Split bidi WT stream prefix completion failed, ret=%d, app_error=%" PRIu64 ", data=%d",
+                ret, cnx->application_error, test_ctx.nb_data);
+            ret = -1;
+        }
+    }
 
     picoquic_set_callback(cnx, NULL, NULL);
     h3zero_callback_delete_context(cnx, h3_ctx);
