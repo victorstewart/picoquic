@@ -506,6 +506,12 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         stream_ctx->path_callback_ctx = wt_ctx;
         stream_ctx->wt_data_received = 0;
         stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
+        stream_ctx->wt_streams_bidi_received = 0;
+        stream_ctx->wt_streams_uni_received = 0;
+        stream_ctx->wt_max_streams_bidi_local =
+            ctx->local_settings.wt_initial_max_streams_bidi;
+        stream_ctx->wt_max_streams_uni_local =
+            ctx->local_settings.wt_initial_max_streams_uni;
     }
 
     /* Declare the outgoing connection through the callback, so it can update its own state */
@@ -784,6 +790,10 @@ int picowt_send_flow_control_capsule(picoquic_cnx_t* cnx,
         !picowt_flow_control_capsule_is_valid(capsule_type, flow_control_value) ||
         (capsule_type == picowt_capsule_wt_max_data &&
             flow_control_value < control_stream_ctx->wt_max_data_local) ||
+        (capsule_type == picowt_capsule_wt_max_streams_bidi &&
+            flow_control_value < control_stream_ctx->wt_max_streams_bidi_local) ||
+        (capsule_type == picowt_capsule_wt_max_streams_uni &&
+            flow_control_value < control_stream_ctx->wt_max_streams_uni_local) ||
         (bytes = picoquic_frames_varint_encode(buffer, buffer + sizeof(buffer),
             flow_control_value)) == NULL) {
         ret = -1;
@@ -793,6 +803,16 @@ int picowt_send_flow_control_capsule(picoquic_cnx_t* cnx,
             bytes - buffer, buffer, 0);
         if (ret == 0 && capsule_type == picowt_capsule_wt_max_data) {
             control_stream_ctx->wt_max_data_local = flow_control_value;
+        }
+        else if (ret == 0 &&
+            capsule_type == picowt_capsule_wt_max_streams_bidi) {
+            control_stream_ctx->wt_max_streams_bidi_local =
+                flow_control_value;
+        }
+        else if (ret == 0 &&
+            capsule_type == picowt_capsule_wt_max_streams_uni) {
+            control_stream_ctx->wt_max_streams_uni_local =
+                flow_control_value;
         }
     }
 

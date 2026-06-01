@@ -42,6 +42,9 @@
 
 
 static int h3zero_process_pending_webtransport_requests(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx);
+static int h3zero_abort_webtransport_session(picoquic_cnx_t* cnx,
+	h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* control_stream_ctx,
+	uint64_t h3_error_code);
 
 static int h3zero_wt_session_id_is_valid(uint64_t session_id)
 {
@@ -197,6 +200,10 @@ static void h3zero_track_webtransport_session(h3zero_callback_ctx_t* ctx, h3zero
 		stream_ctx->is_webtransport_session_counted = 1;
 		stream_ctx->wt_data_received = 0;
 		stream_ctx->wt_max_data_local = ctx->local_settings.wt_initial_max_data;
+		stream_ctx->wt_streams_bidi_received = 0;
+		stream_ctx->wt_streams_uni_received = 0;
+		stream_ctx->wt_max_streams_bidi_local = ctx->local_settings.wt_initial_max_streams_bidi;
+		stream_ctx->wt_max_streams_uni_local = ctx->local_settings.wt_initial_max_streams_uni;
 		ctx->nb_webtransport_sessions++;
 	}
 }
@@ -809,10 +816,31 @@ uint8_t* h3zero_wt_parse_control_stream_id(
 		}
 		/* Just found the control stream ID */
 		h3zero_stream_prefix_t* stream_prefix;
-		stream_prefix = h3zero_find_ready_webtransport_prefix(ctx, stream_state->control_stream_id, NULL);
+		h3zero_stream_ctx_t* session_ctx = NULL;
+		stream_prefix = h3zero_find_ready_webtransport_prefix(ctx,
+			stream_state->control_stream_id, &session_ctx);
 		if (stream_prefix == NULL) {
 			*error_found = H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED;
 			bytes = NULL;
+		}
+		else if (h3zero_webtransport_flow_control_is_enabled(ctx)) {
+			int is_bidir = IS_BIDIR_STREAM_ID(stream_ctx->stream_id);
+			uint64_t* stream_count = (is_bidir) ?
+				&session_ctx->wt_streams_bidi_received :
+				&session_ctx->wt_streams_uni_received;
+			uint64_t stream_limit = (is_bidir) ?
+				session_ctx->wt_max_streams_bidi_local :
+				session_ctx->wt_max_streams_uni_local;
+
+			if (*stream_count >= stream_limit) {
+				*error_found = H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR;
+				bytes = NULL;
+			}
+			else {
+				*stream_count += 1;
+				stream_ctx->path_callback = stream_prefix->function_call;
+				stream_ctx->path_callback_ctx = stream_prefix->function_ctx;
+			}
 		}
 		else {
 			stream_ctx->path_callback = stream_prefix->function_call;
@@ -921,6 +949,12 @@ uint8_t* h3zero_parse_incoming_remote_stream(
 	}
 	else if (bytes == NULL && error_found == H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED && opt_cnx != NULL) {
 		(void)h3zero_reject_buffered_webtransport_stream(opt_cnx, stream_ctx->stream_id);
+	}
+	else if (bytes == NULL && error_found == H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR && opt_cnx != NULL) {
+		h3zero_stream_ctx_t* session_ctx = h3zero_find_stream(ctx,
+			stream_ctx->ps.stream_state.control_stream_id);
+		(void)h3zero_abort_webtransport_session(opt_cnx, ctx, session_ctx,
+			H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR);
 	}
 	return bytes;
 }
@@ -1394,6 +1428,12 @@ int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
 			}
 			else if (error_found == H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED) {
 				ret = h3zero_reject_buffered_webtransport_stream(cnx, stream_id);
+			}
+			else if (error_found == H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR) {
+				h3zero_stream_ctx_t* session_ctx = h3zero_find_stream(ctx,
+					stream_ctx->ps.stream_state.control_stream_id);
+				ret = h3zero_abort_webtransport_session(cnx, ctx, session_ctx,
+					H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR);
 			}
 			else {
 				ret = picoquic_stop_sending(cnx, stream_id, error_found);
