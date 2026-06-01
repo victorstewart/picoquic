@@ -415,6 +415,40 @@ int picowt_tp_test(void)
     return ret;
 }
 
+int picowt_requirements_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    uint64_t simulated_time = 0;
+    h3zero_settings_t settings = { 0 };
+    int ret = picoquic_test_set_minimal_cnx_with_time(&quic, &cnx, &simulated_time);
+
+    if (ret == 0) {
+        settings.enable_connect_protocol = 1;
+        settings.h3_datagram = 1;
+        settings.webtransport_enabled = 1;
+        cnx->local_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->local_parameters.is_reset_stream_at_enabled = 1;
+        if (h3zero_webtransport_is_ready(cnx, &settings)) {
+            ret = -1;
+        }
+        cnx->remote_parameters.is_reset_stream_at_enabled = 1;
+        if (ret == 0 && !h3zero_webtransport_is_ready(cnx, &settings)) {
+            ret = -1;
+        }
+        settings.webtransport_enabled = 0;
+        if (ret == 0 && h3zero_webtransport_is_ready(cnx, &settings)) {
+            ret = -1;
+        }
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 int h3zero_set_test_context(picoquic_quic_t** quic, picoquic_cnx_t** cnx, h3zero_callback_ctx_t** h3_ctx, uint64_t* simulated_time);
 
 int picowt_drain_test_one(int expect_error)

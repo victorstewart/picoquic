@@ -329,6 +329,25 @@ int h3zero_protocol_init_safe(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx)
 	return ret;
 }
 
+int h3zero_webtransport_is_ready(picoquic_cnx_t* cnx, const h3zero_settings_t* settings)
+{
+	int ret = 0;
+
+	if (cnx != NULL && settings != NULL &&
+		settings->enable_connect_protocol != 0 &&
+		settings->h3_datagram != 0 &&
+		settings->webtransport_enabled != 0) {
+		picoquic_tp_t const* local_tp = picoquic_get_transport_parameters(cnx, 1);
+		picoquic_tp_t const* remote_tp = picoquic_get_transport_parameters(cnx, 0);
+
+		ret = (local_tp->max_datagram_frame_size > 0 &&
+			remote_tp->max_datagram_frame_size > 0 &&
+			local_tp->is_reset_stream_at_enabled != 0 &&
+			remote_tp->is_reset_stream_at_enabled != 0);
+	}
+	return ret;
+}
+
 uint8_t* h3zero_load_frame_content(uint8_t* bytes, uint8_t* bytes_max,
 	h3zero_data_stream_state_t* stream_state, uint64_t* error_found)
 {
@@ -1053,6 +1072,14 @@ h3zero_content_type_enum h3zero_get_content_type_by_path(const char *path) {
 	return h3zero_content_type_text_plain;
 }
 
+static int h3zero_is_webtransport_protocol(const uint8_t* protocol, size_t protocol_length)
+{
+	return ((protocol_length == strlen(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) &&
+		memcmp(protocol, H3ZERO_WEBTRANSPORT_H3_PROTOCOL, protocol_length) == 0) ||
+		(protocol_length == strlen(H3ZERO_WEBTRANSPORT_LEGACY_PROTOCOL) &&
+			memcmp(protocol, H3ZERO_WEBTRANSPORT_LEGACY_PROTOCOL, protocol_length) == 0));
+}
+
 /* Processing of the request frame.
 * This function is called  after verifying that a request was received */
 
@@ -1126,8 +1153,15 @@ int h3zero_process_request_frame(
 	}
 	else if (stream_ctx->ps.stream_state.header.method == h3zero_method_connect) {
 		/* The connect handling depends on the requested protocol */
+		int is_webtransport = h3zero_is_webtransport_protocol(
+			stream_ctx->ps.stream_state.header.protocol,
+			stream_ctx->ps.stream_state.header.protocol_length);
 
-		if (stream_ctx->path_callback == NULL) {
+		if (is_webtransport && app_ctx->settings.settings_received &&
+			!h3zero_webtransport_is_ready(cnx, &app_ctx->settings)) {
+			ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+		}
+		else if (stream_ctx->path_callback == NULL) {
 			int path_item = h3zero_find_path_item(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, app_ctx->path_table, app_ctx->path_table_nb);
 			if (path_item >= 0) {
 				stream_ctx->path_callback = app_ctx->path_table[path_item].path_callback;
@@ -1416,6 +1450,13 @@ int h3zero_process_h3_client_data(picoquic_cnx_t* cnx,
 					if (stream_ctx->ps.stream_state.is_upgrade_requested) {
 						stream_ctx->is_upgraded = is_success;
 					}
+					if (is_success && stream_ctx->ps.stream_state.is_webtransport_requested &&
+						ctx->settings.settings_received &&
+						!h3zero_webtransport_is_ready(cnx, &ctx->settings)) {
+						is_success = 0;
+						stream_ctx->is_upgraded = 0;
+						ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
+					}
 					if (stream_ctx->path_callback != NULL) {
 						stream_ctx->path_callback(cnx, NULL, 0, (is_success) ?
 							picohttp_callback_connect_accepted : picohttp_callback_connect_refused,
@@ -1464,12 +1505,12 @@ int h3zero_process_h3_client_data(picoquic_cnx_t* cnx,
 				picoquic_log_app_message(cnx,
 					"Stream %" PRIu64 " closed when a frame is not complete, error 0x%x", stream_id, H3ZERO_FRAME_ERROR);
 			}
-			else if (h3zero_client_close_stream(cnx, ctx, stream_ctx)) {
-				*fin_stream_id = stream_id;
-				if (stream_id <= 64 && !ctx->no_print) {
-					fprintf(stdout, "Stream %" PRIu64 " ended after %" PRIu64 " bytes\n",
-						stream_id, stream_ctx->received_length);
-				}
+				else if (h3zero_client_close_stream(cnx, ctx, stream_ctx)) {
+					*fin_stream_id = stream_id;
+					if (stream_id <= 64 && !ctx->no_print) {
+						picoquic_log_app_message(cnx, "Stream %" PRIu64 " ended after %" PRIu64 " bytes",
+							stream_id, stream_ctx->received_length);
+					}
 				if (stream_ctx->received_length == 0) {
 					picoquic_log_app_message(cnx, "Stream %" PRIu64 " ended after %" PRIu64 " bytes, ret=0x%x",
 						stream_id, stream_ctx->received_length, ret);
@@ -1526,10 +1567,10 @@ int h3zero_callback_data(picoquic_cnx_t* cnx,
 			if (IS_CLIENT_STREAM_ID(stream_id)) {
 				/* If nothing is known about the stream, it is treated by default as an H3 stream
 				 */
-				if (stream_ctx == NULL) {
-					fprintf(stdout, "unexpected data on local stream context: %" PRIu64 ".\n", stream_id);
-					ret = -1;
-				}
+					if (stream_ctx == NULL) {
+						picoquic_log_app_message(cnx, "unexpected data on local stream context: %" PRIu64, stream_id);
+						ret = -1;
+					}
 				else if (cnx->client_mode) {
 					if (stream_ctx->is_open) {
 						/* Process incoming H3 client data */
@@ -1916,13 +1957,13 @@ int h3zero_callback(picoquic_cnx_t* cnx,
 			break;
 		case picoquic_callback_stateless_reset:
 		case picoquic_callback_close: /* Received connection close */
-		case picoquic_callback_application_close: /* Received application close */
-			if (cnx->client_mode) {
-				if (!ctx->no_print) {
-					fprintf(stdout, "Received a %s\n",
-						(fin_or_event == picoquic_callback_close) ? "connection close request" : (
-							(fin_or_event == picoquic_callback_application_close) ?
-							"request to close the application" :
+			case picoquic_callback_application_close: /* Received application close */
+				if (cnx->client_mode) {
+					if (!ctx->no_print) {
+						picoquic_log_app_message(cnx, "Received a %s",
+							(fin_or_event == picoquic_callback_close) ? "connection close request" : (
+								(fin_or_event == picoquic_callback_application_close) ?
+								"request to close the application" :
 							"stateless reset"));
 				}
 				ctx->connection_closed = 1;
@@ -1932,18 +1973,26 @@ int h3zero_callback(picoquic_cnx_t* cnx,
 				picoquic_log_app_message(cnx, "Clearing context on connection close (%d)", fin_or_event);
 				h3zero_callback_delete_context(cnx, ctx);
 				picoquic_set_callback(cnx, NULL, NULL);
-			}
-			break;
-		case picoquic_callback_version_negotiation:
-			if (cnx->client_mode && !ctx->no_print) {
-				fprintf(stdout, "Received a version negotiation request:");
-				for (size_t byte_index = 0; byte_index + 4 <= length; byte_index += 4) {
-					uint32_t vn = PICOPARSE_32(bytes + byte_index);
-					fprintf(stdout, "%s%08x", (byte_index == 0) ? " " : ", ", vn);
 				}
-				fprintf(stdout, "\n");
-			}
-			break;
+				break;
+			case picoquic_callback_version_negotiation:
+				if (cnx->client_mode && !ctx->no_print) {
+					char vn_text[256];
+					size_t vn_text_len = 0;
+					vn_text[0] = 0;
+					for (size_t byte_index = 0; byte_index + 4 <= length; byte_index += 4) {
+						uint32_t vn = PICOPARSE_32(bytes + byte_index);
+						size_t nb_chars = 0;
+						(void)picoquic_sprintf(vn_text + vn_text_len, sizeof(vn_text) - vn_text_len, &nb_chars,
+							"%s%08x", (byte_index == 0) ? "" : ", ", vn);
+						vn_text_len += nb_chars;
+						if (vn_text_len + 16 >= sizeof(vn_text)) {
+							break;
+						}
+					}
+					picoquic_log_app_message(cnx, "Received a version negotiation request: %s", vn_text);
+				}
+				break;
 		case picoquic_callback_stream_gap:
 			/* Gap indication, when unreliable streams are supported */
 			ret = -1;

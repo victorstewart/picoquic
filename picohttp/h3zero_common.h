@@ -169,6 +169,7 @@ extern "C" {
     uint8_t* h3zero_settings_encode(uint8_t* bytes, const uint8_t* bytes_max, const h3zero_settings_t* settings);
     const uint8_t* h3zero_settings_components_decode(const uint8_t* bytes, const uint8_t* bytes_max, h3zero_settings_t* settings);
     const uint8_t* h3zero_settings_decode(const uint8_t* bytes, const uint8_t* bytes_max, h3zero_settings_t* settings);
+    int h3zero_webtransport_is_ready(picoquic_cnx_t* cnx, const h3zero_settings_t* settings);
 
     /* Handling of stream prefixes, for applications that use it.
      */

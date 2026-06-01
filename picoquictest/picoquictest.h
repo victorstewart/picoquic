@@ -667,6 +667,7 @@ int picowt_baton_reset_test(void);
 int picowt_baton_wildcard_test(void);
 int picowt_drain_test(void);
 int picowt_tp_test(void);
+int picowt_requirements_test(void);
 int quicperf_parse_test(void);
 int quicperf_batch_test(void);
 int quicperf_datagram_test(void);

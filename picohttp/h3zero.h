@@ -50,8 +50,12 @@ extern "C" {
 #define H3ZERO_QPACK_DECODER_STREAM_ERROR 0x0202 /* Error on the decoder stream */
 #define H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED 0x3994bd84 /* Stream arrived before webtransport session established */
 #define H3ZERO_WEBTRANSPORT_SESSION_GONE 0x170d7b68 /* Stream arrived after web transport session closed */
+#define H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET 0x212c0d48 /* Missing SETTINGS or transport parameters for WebTransport */
 #define H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(code) (0x52e4a40fa8dbull + code) /* see spec for skipping grease points when mapping codes */
 #define H3ZERO_USER_AGENT_STRING "H3Zero/1.0"
+
+#define H3ZERO_WEBTRANSPORT_H3_PROTOCOL "webtransport-h3"
+#define H3ZERO_WEBTRANSPORT_LEGACY_PROTOCOL "webtransport"
 
 #define H3ZERO_WT_AVAILABLE_PROTOCOLS "wt-available-protocols"
 #define H3ZERO_WT_PROTOCOL "wt-protocol"
@@ -299,6 +303,7 @@ typedef struct st_h3zero_data_stream_state_t {
     size_t frame_header_read;
     char const * wt_protocol;
     unsigned int is_upgrade_requested:1;
+    unsigned int is_webtransport_requested : 1;
     unsigned int is_web_transport : 1;
     unsigned int frame_prefix_parsed : 1;
     unsigned int header_found : 1;

@@ -387,6 +387,7 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
             }
             size_t connect_length = bytes - buffer;
             stream_ctx->ps.stream_state.is_upgrade_requested = 1;
+            stream_ctx->ps.stream_state.is_webtransport_requested = 1;
 
             if (extra != NULL && extra_length > 0 && connect_length + extra_length <= sizeof(buffer)) {
                 memcpy(buffer + connect_length, extra, extra_length);
