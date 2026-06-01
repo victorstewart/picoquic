@@ -51,6 +51,7 @@ static const picoquic_test_def_t test_table[] = {
     { "h3zero_wt_id_error", h3zero_wt_id_error_test },
     { "h3zero_wt_zero_buffer", h3zero_wt_zero_buffer_test },
     { "h3zero_wt_prefix_fragment", h3zero_wt_prefix_fragment_test },
+    { "h3zero_wt_first_payload_split", h3zero_wt_first_payload_split_test },
     { "h3zero_wt_prefix_fin", h3zero_wt_prefix_fin_test },
     { "h3zero_wt_prefix_reset", h3zero_wt_prefix_reset_test },
     { "h3zero_wt_stream_empty_fin", h3zero_wt_stream_empty_fin_test },
