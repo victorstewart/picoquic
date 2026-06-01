@@ -752,6 +752,169 @@ int picowt_baton_empty_path_test(void)
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 0, 0, 404);
 }
 
+static int picowt_parse_header_block(
+    const uint8_t* qpack, size_t qpack_length,
+    h3zero_data_stream_state_t* stream_state, uint64_t expected_error)
+{
+    size_t frame_capacity = qpack_length + 16;
+    uint8_t* frame = (uint8_t*)malloc(frame_capacity);
+    uint8_t* bytes = frame;
+    uint8_t* bytes_max = (frame == NULL) ? NULL : frame + frame_capacity;
+    uint8_t* parsed = NULL;
+    size_t available_data = 0;
+    uint64_t error_found = 0;
+    int ret = (frame == NULL) ? -1 : 0;
+
+    if (ret == 0 &&
+        ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            h3zero_frame_header)) == NULL ||
+            (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+                qpack_length)) == NULL ||
+            bytes + qpack_length > bytes_max)) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        memcpy(bytes, qpack, qpack_length);
+        bytes += qpack_length;
+        parsed = h3zero_parse_data_stream(frame, bytes, stream_state,
+            &available_data, &error_found);
+        if (expected_error == 0) {
+            if (parsed != bytes || error_found != 0 || available_data != 0 ||
+                !stream_state->header_found) {
+                ret = -1;
+            }
+        }
+        else if (parsed != NULL || error_found != expected_error) {
+            ret = -1;
+        }
+    }
+
+    if (frame != NULL) {
+        free(frame);
+    }
+    return ret;
+}
+
+static int picowt_malformed_huffman_path_header_test(void)
+{
+    static const uint8_t malformed_huffman_path[] = { 0x80 | 1, 0x00 };
+    uint8_t qpack[64];
+    uint8_t* bytes = qpack;
+    uint8_t* bytes_max = qpack + sizeof(qpack);
+    h3zero_data_stream_state_t stream_state = { 0 };
+    int ret = 0;
+
+    *bytes++ = 0;
+    *bytes++ = 0;
+    if ((bytes = h3zero_qpack_code_encode(bytes, bytes_max,
+        0xC0, 0x3F, H3ZERO_QPACK_CODE_CONNECT)) == NULL ||
+        (bytes = h3zero_qpack_code_encode(bytes, bytes_max,
+            0xC0, 0x3F, H3ZERO_QPACK_SCHEME_HTTPS)) == NULL ||
+        (bytes = h3zero_qpack_code_encode(bytes, bytes_max,
+            0x50, 0x0F, H3ZERO_QPACK_CODE_PATH)) == NULL ||
+        bytes + sizeof(malformed_huffman_path) > bytes_max) {
+        ret = -1;
+    }
+    else {
+        memcpy(bytes, malformed_huffman_path, sizeof(malformed_huffman_path));
+        bytes += sizeof(malformed_huffman_path);
+        ret = picowt_parse_header_block(qpack, bytes - qpack, &stream_state,
+            H3ZERO_FRAME_ERROR);
+    }
+
+    h3zero_delete_data_stream_state(&stream_state);
+    return ret;
+}
+
+static int picowt_large_connect_header_test(void)
+{
+    const size_t path_length = 4096;
+    uint8_t* path = (uint8_t*)malloc(path_length);
+    uint8_t* qpack = (uint8_t*)malloc(path_length + 1024);
+    uint8_t* bytes = qpack;
+    uint8_t* bytes_max = (qpack == NULL) ? NULL : qpack + path_length + 1024;
+    h3zero_data_stream_state_t stream_state = { 0 };
+    char origin[256];
+    int ret = (path == NULL || qpack == NULL) ? -1 : 0;
+
+    if (ret == 0) {
+        path[0] = '/';
+        memset(path + 1, 'a', path_length - 1);
+        if (picoquic_sprintf(origin, sizeof(origin), NULL,
+            "https://%s", PICOQUIC_TEST_SNI) != 0 ||
+            (bytes = h3zero_create_connect_header_frame_ex(bytes, bytes_max,
+                PICOQUIC_TEST_SNI, strlen(PICOQUIC_TEST_SNI),
+                path, path_length,
+                H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+                sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1,
+                origin, strlen(origin), NULL, 0, NULL)) == NULL) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        ret = picowt_parse_header_block(qpack, bytes - qpack, &stream_state, 0);
+    }
+    if (ret == 0 &&
+        (stream_state.header.method != h3zero_method_connect ||
+            stream_state.header.path_length != path_length ||
+            stream_state.header.path == NULL ||
+            memcmp(stream_state.header.path, path, path_length) != 0)) {
+        ret = -1;
+    }
+
+    h3zero_delete_data_stream_state(&stream_state);
+    if (qpack != NULL) {
+        free(qpack);
+    }
+    if (path != NULL) {
+        free(path);
+    }
+    return ret;
+}
+
+static int picowt_excessive_header_length_test(void)
+{
+    uint8_t frame[16];
+    uint8_t* bytes = frame;
+    uint8_t* bytes_max = frame + sizeof(frame);
+    h3zero_data_stream_state_t stream_state = { 0 };
+    size_t available_data = 0;
+    uint64_t error_found = 0;
+    uint8_t* parsed = NULL;
+    int ret = 0;
+
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+        h3zero_frame_header)) == NULL ||
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            0x10001)) == NULL) {
+        ret = -1;
+    }
+    else {
+        parsed = h3zero_parse_data_stream(frame, bytes, &stream_state,
+            &available_data, &error_found);
+        if (parsed != NULL || error_found != H3ZERO_INTERNAL_ERROR) {
+            ret = -1;
+        }
+    }
+
+    h3zero_delete_data_stream_state(&stream_state);
+    return ret;
+}
+
+int picowt_baton_header_qpack_limit_test(void)
+{
+    int ret = picowt_malformed_huffman_path_header_test();
+
+    if (ret == 0) {
+        ret = picowt_large_connect_header_test();
+    }
+    if (ret == 0) {
+        ret = picowt_excessive_header_length_test();
+    }
+
+    return ret;
+}
+
 int picowt_baton_origin_test(void)
 {
     return picowt_baton_test_one_ex(16, "/baton?baton=240", 0, 2000000, NULL, NULL,

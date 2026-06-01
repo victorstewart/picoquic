@@ -505,6 +505,9 @@ uint8_t * h3zero_parse_qpack_header_value(uint8_t * bytes, uint8_t * bytes_max,
             {
                 decoded = deHuff;
             }
+            else if (is_huffman) {
+                return NULL;
+            }
             else {
                 decoded = bytes;
                 decoded_length = (size_t) v_length;
