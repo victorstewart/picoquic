@@ -659,10 +659,10 @@ static uint8_t qpack_get_long_file_name[] = {
 };
 
 /* 
-* From RFC 8441 and draft-ietf-webtrans-http3-01.html :
+* From RFC 8441 and draft-ietf-webtrans-http3:
 *   HEADERS + END_HEADERS
 *   :method = CONNECT
-*   : protocol = webtransport
+*   : protocol = webtransport-h3
 *   : scheme = https
 *   : path = /wtp
 *   : authority = example.com
@@ -673,8 +673,8 @@ static uint8_t qpack_get_long_file_name[] = {
 #define CONNECT_TEST_PROTOCOL_PATH_LEN 4
 #define CONNECT_TEST_PROTOCOL_PSH ':', 'p', 'r', 'o', 't', 'o', 'c', 'o', 'l'
 #define CONNECT_TEST_PROTOCOL_PSH_LEN 9
-#define CONNECT_TEST_PROTOCOL_WTP 'w', 'e', 'b', 't', 'r', 'a', 'n', 's', 'p', 'o', 'r', 't'
-#define CONNECT_TEST_PROTOCOL_WTP_LEN 12
+#define CONNECT_TEST_PROTOCOL_WTP 'w', 'e', 'b', 't', 'r', 'a', 'n', 's', 'p', 'o', 'r', 't', '-', 'h', '3'
+#define CONNECT_TEST_PROTOCOL_WTP_LEN 15
 #define CONNECT_TEST_AUTHORITY 'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm'
 #define CONNECT_TEST_AUTHORITY_LEN 11
 #define CONNECT_TEST_ORIGIN 'h', 't', 't', 'p', 's', ':', '/', '/', CONNECT_TEST_AUTHORITY

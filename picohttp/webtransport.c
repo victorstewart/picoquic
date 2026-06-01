@@ -367,7 +367,7 @@ int picowt_connect_ex(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx,  h3zero_s
         *bytes++ = h3zero_frame_header;
         bytes += 2; /* reserve two bytes for frame length */
 
-        bytes = h3zero_create_connect_header_frame(bytes, bytes_max, authority, (const uint8_t*)path, strlen(path), "webtransport", NULL,
+        bytes = h3zero_create_connect_header_frame(bytes, bytes_max, authority, (const uint8_t*)path, strlen(path), H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL,
             H3ZERO_USER_AGENT_STRING, wt_available_protocols);
 
         if (bytes == NULL) {
