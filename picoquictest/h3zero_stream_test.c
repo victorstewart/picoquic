@@ -395,6 +395,73 @@ static int h3zero_wt_create_stream_pair(picoquic_cnx_t* cnx, h3zero_callback_ctx
     return ret;
 }
 
+static int h3zero_wt_unknown_session_case(int is_bidir)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t stream_id = is_bidir ? 12 : 6;
+    const uint64_t session_id = 4;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    picoquic_stream_head_t* stream = NULL;
+    uint8_t input[16];
+    uint8_t* bytes = input;
+    uint8_t* bytes_max = input + sizeof(input);
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 0;
+        cnx->cnx_state = picoquic_state_ready;
+        ret = h3zero_wt_create_stream_pair(cnx, h3_ctx, stream_id, &stream_ctx);
+    }
+    if (ret == 0 &&
+        ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            is_bidir ? h3zero_frame_webtransport_stream :
+            h3zero_stream_type_webtransport)) == NULL ||
+            (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+                session_id)) == NULL)) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = h3zero_process_remote_stream(cnx, stream_id, input,
+            bytes - input, picoquic_callback_stream_data, stream_ctx, h3_ctx);
+    }
+    stream = (cnx == NULL) ? NULL : picoquic_find_stream(cnx, stream_id);
+    if (ret != 0 || stream == NULL || !stream->stop_sending_requested ||
+        stream->local_stop_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED ||
+        stream->reset_requested != is_bidir ||
+        (is_bidir &&
+            stream->local_error != H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED) ||
+        cnx->application_error != 0) {
+        DBG_PRINTF("WT %s unknown session reject failed, ret=%d, app_error=%" PRIu64,
+            is_bidir ? "bidi" : "uni", ret,
+            (cnx == NULL) ? UINT64_MAX : cnx->application_error);
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+int h3zero_wt_unknown_session_test(void)
+{
+    int ret = h3zero_wt_unknown_session_case(0);
+
+    if (ret == 0) {
+        ret = h3zero_wt_unknown_session_case(1);
+    }
+
+    return ret;
+}
+
 int h3zero_wt_zero_buffer_test(void)
 {
     picoquic_quic_t* quic = NULL;
