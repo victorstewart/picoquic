@@ -390,7 +390,7 @@ static int picowt_baton_test_one_ex(
                 ret = -1;
             }
         }
-        else if (test_id == 3 || test_id == 4 ||
+        else if (test_id == 4 ||
             ((baton_ctx.baton_state == wt_baton_state_done || baton_ctx.baton_state == wt_baton_state_closed) &&
                 baton_ctx.nb_turns >= 8 &&
                 baton_ctx.lanes_completed == baton_ctx.nb_lanes &&
@@ -485,7 +485,8 @@ int picowt_baton_long_test(void)
 
 int picowt_baton_wrong_test(void)
 {
-    int ret = picowt_baton_test_one(3, "/wrong_baton", 0, 2000000, ".", ".");
+    int ret = picowt_baton_test_one_ex(3, "/wrong_baton", 0, 2000000, NULL, NULL,
+        path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 0, 0, 404);
 
     return ret;
 }
@@ -683,11 +684,72 @@ int picowt_baton_authority_test(void)
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, "", NULL, 0, 0, 1);
 }
 
+typedef struct st_picowt_authority_policy_test_ctx_t {
+    const char* expected_authority;
+} picowt_authority_policy_test_ctx_t;
+
+static int picowt_authority_policy_test_validator(
+    const uint8_t* origin, size_t origin_length,
+    const uint8_t* authority, size_t authority_length,
+    void* origin_validator_ctx)
+{
+    static const uint8_t https_prefix[] = "https://";
+    picowt_authority_policy_test_ctx_t* policy =
+        (picowt_authority_policy_test_ctx_t*)origin_validator_ctx;
+    size_t expected_authority_length = (policy == NULL ||
+        policy->expected_authority == NULL) ? 0 : strlen(policy->expected_authority);
+
+    if (expected_authority_length == 0 ||
+        authority == NULL ||
+        authority_length != expected_authority_length ||
+        memcmp(authority, policy->expected_authority, expected_authority_length) != 0) {
+        return -1;
+    }
+
+    return (origin != NULL &&
+        origin_length == sizeof(https_prefix) - 1 + authority_length &&
+        memcmp(origin, https_prefix, sizeof(https_prefix) - 1) == 0 &&
+        memcmp(origin + sizeof(https_prefix) - 1, authority, authority_length) == 0) ? 0 : -1;
+}
+
+static int picowt_baton_authority_policy_case(
+    uint8_t test_id, const char* connect_authority, int expected_status)
+{
+    picowt_authority_policy_test_ctx_t policy = { PICOQUIC_TEST_SNI };
+    picohttp_server_path_item_t authority_table[1] = {
+        { "/baton", 6, wt_baton_callback, &baton_test_ctx,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+            sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1, 0,
+            picowt_authority_policy_test_validator, &policy }
+    };
+
+    return picowt_baton_test_one_ex(test_id, "/baton?baton=240", 0, 2000000,
+        NULL, NULL, authority_table, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+        connect_authority, NULL, 0, 0, expected_status);
+}
+
+int picowt_baton_authority_policy_test(void)
+{
+    int ret = picowt_baton_authority_policy_case(26, NULL, 0);
+
+    if (ret == 0) {
+        ret = picowt_baton_authority_policy_case(27, "wrong.example", 403);
+    }
+
+    return ret;
+}
+
 int picowt_baton_path_test(void)
 {
     return picowt_baton_test_one_ex(19, NULL, 0, 2000000, NULL, NULL,
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
         PICOQUIC_TEST_SNI, NULL, 0, 0, 1);
+}
+
+int picowt_baton_empty_path_test(void)
+{
+    return picowt_baton_test_one_ex(28, "", 0, 2000000, NULL, NULL,
+        path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 0, 0, 404);
 }
 
 int picowt_baton_origin_test(void)
