@@ -853,6 +853,13 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                             capsule->h3_capsule.capsule_type);
                     }
                     break;
+                case picowt_capsule_wt_max_stream_data:
+                case picowt_capsule_wt_stream_data_blocked:
+                    picoquic_log_app_message(cnx,
+                        "Prohibited web transport capsule type: 0x%" PRIx64,
+                        capsule->h3_capsule.capsule_type);
+                    ret = -1;
+                    break;
                 default:
                     picoquic_log_app_message(cnx, "Unexpected web transport capsule type: 0x%" PRIx64, capsule->h3_capsule.capsule_type);
                     break;

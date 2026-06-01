@@ -3493,6 +3493,65 @@ int picowt_flow_control_capsule_test(void)
     return ret;
 }
 
+int picowt_prohibited_capsule_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    uint8_t buffer[32];
+    uint8_t payload[] = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        picowt_capsule_t capsule = { 0 };
+        size_t capsule_length = picowt_format_test_capsule(buffer,
+            sizeof(buffer), picowt_capsule_wt_max_stream_data,
+            sizeof(payload), payload);
+
+        if (capsule_length == 0 ||
+            picowt_receive_capsule(cnx, buffer,
+                buffer + capsule_length, &capsule) == 0) {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+    if (ret == 0) {
+        picowt_capsule_t capsule = { 0 };
+        size_t capsule_length = picowt_format_test_capsule(buffer,
+            sizeof(buffer), picowt_capsule_wt_stream_data_blocked,
+            sizeof(payload), payload);
+
+        if (capsule_length == 0 ||
+            picowt_receive_capsule(cnx, buffer,
+                buffer + capsule_length, &capsule) == 0) {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+    if (ret == 0) {
+        picowt_capsule_t capsule = { 0 };
+        size_t capsule_length = picowt_format_test_capsule(buffer,
+            sizeof(buffer), 0x1f, sizeof(payload), payload);
+
+        if (capsule_length == 0 ||
+            picowt_receive_capsule(cnx, buffer,
+                buffer + capsule_length, &capsule) != 0 ||
+            !capsule.h3_capsule.is_stored ||
+            capsule.h3_capsule.capsule_type != 0x1f ||
+            capsule.h3_capsule.capsule_length != sizeof(payload)) {
+            ret = -1;
+        }
+        picowt_release_capsule(&capsule);
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    h3zero_callback_delete_context(cnx, h3_ctx);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 typedef struct st_picowt_session_limit_test_ctx_t {
     h3zero_callback_ctx_t* h3_ctx;
     int nb_connects;

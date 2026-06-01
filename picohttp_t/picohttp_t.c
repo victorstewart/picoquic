@@ -159,6 +159,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_capsule_framing", picowt_capsule_framing_test },
     { "picowt_receive_drain", picowt_receive_drain_test },
     { "picowt_flow_control_capsule", picowt_flow_control_capsule_test },
+    { "picowt_prohibited_capsule", picowt_prohibited_capsule_test },
     { "picowt_session_limit", picowt_session_limit_test },
     { "picowt_create_local_stream_pair", picowt_create_local_stream_pair_test },
     { "picowt_local_stream_backpressure", picowt_local_stream_backpressure_test },
