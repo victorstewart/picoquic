@@ -43,6 +43,11 @@
 
 static int h3zero_process_pending_webtransport_requests(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx);
 
+static int h3zero_wt_session_id_is_valid(uint64_t session_id)
+{
+	return IS_CLIENT_STREAM_ID(session_id) && IS_BIDIR_STREAM_ID(session_id);
+}
+
 
  /* Stream context splay management */
 
@@ -518,13 +523,18 @@ uint8_t* h3zero_wt_parse_control_stream_id(
 	uint8_t* bytes, uint8_t* bytes_max,
 	h3zero_data_stream_state_t* stream_state,
 	h3zero_stream_ctx_t* stream_ctx,
-	h3zero_callback_ctx_t* ctx)
+	h3zero_callback_ctx_t* ctx,
+	uint64_t* error_found)
 {
 	if (stream_state->control_stream_id == UINT64_MAX) {
 		bytes = h3zero_varint_from_stream(bytes, bytes_max, &stream_state->control_stream_id, stream_state->frame_header, &stream_state->frame_header_read);
 		if (stream_state->control_stream_id == UINT64_MAX) {
 			/* Control stream ID not updated */
 			return bytes;
+		}
+		if (!h3zero_wt_session_id_is_valid(stream_state->control_stream_id)) {
+			*error_found = H3ZERO_ID_ERROR;
+			return NULL;
 		}
 		/* Just found the control stream ID */
 		h3zero_stream_prefix_t* stream_prefix;
@@ -551,7 +561,8 @@ uint8_t* h3zero_wt_parse_control_stream_id(
 uint8_t* h3zero_parse_remote_bidir_stream(
 	uint8_t* bytes, uint8_t* bytes_max,
 	h3zero_stream_ctx_t* stream_ctx,
-	h3zero_callback_ctx_t* ctx)
+	h3zero_callback_ctx_t* ctx,
+	uint64_t* error_found)
 {
 	h3zero_data_stream_state_t* stream_state = &stream_ctx->ps.stream_state;
 
@@ -563,10 +574,11 @@ uint8_t* h3zero_parse_remote_bidir_stream(
 		}
 	}
 	if (stream_state->stream_type == h3zero_frame_webtransport_stream) {
-		bytes = h3zero_wt_parse_control_stream_id(bytes, bytes_max, stream_state, stream_ctx, ctx);
+		bytes = h3zero_wt_parse_control_stream_id(bytes, bytes_max, stream_state, stream_ctx, ctx, error_found);
 	}
 	else {
 		/* Not and expected stream */
+		*error_found = H3ZERO_ID_ERROR;
 		bytes = NULL;
 	}
 	return bytes;
@@ -606,7 +618,7 @@ uint8_t* h3zero_parse_remote_unidir_stream(
 		bytes = bytes_max;
 		break;
 	case h3zero_stream_type_webtransport: /* unidir stream is used as specified in web transport */
-		bytes = h3zero_wt_parse_control_stream_id(bytes, bytes_max, stream_state, stream_ctx, ctx);
+		bytes = h3zero_wt_parse_control_stream_id(bytes, bytes_max, stream_state, stream_ctx, ctx, error_found);
 		break;
 	default:
 		/* Per section 6.2 of RFC 9114, unknown stream types are just ignored */
@@ -627,10 +639,13 @@ uint8_t* h3zero_parse_incoming_remote_stream(
 	uint64_t error_found = 0;
 
 	if (IS_BIDIR_STREAM_ID(stream_ctx->stream_id)) {
-		bytes = h3zero_parse_remote_bidir_stream(bytes, bytes_max, stream_ctx, ctx);
+		bytes = h3zero_parse_remote_bidir_stream(bytes, bytes_max, stream_ctx, ctx, &error_found);
 	}
 	else {
 		bytes = h3zero_parse_remote_unidir_stream(bytes, bytes_max, stream_ctx, ctx, &error_found, opt_cnx);
+	}
+	if (bytes == NULL && error_found == H3ZERO_ID_ERROR && opt_cnx != NULL) {
+		(void)picoquic_close(opt_cnx, H3ZERO_ID_ERROR);
 	}
 	return bytes;
 }
@@ -956,7 +971,7 @@ int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
 		uint8_t* bytes_max = bytes + length;
 
 		if (IS_BIDIR_STREAM_ID(stream_id)) {
-			bytes = h3zero_parse_remote_bidir_stream(bytes, bytes_max, stream_ctx, ctx);
+			bytes = h3zero_parse_remote_bidir_stream(bytes, bytes_max, stream_ctx, ctx, &error_found);
 		}
 		else {
 			bytes = h3zero_parse_remote_unidir_stream(bytes, bytes_max, stream_ctx, ctx, &error_found, cnx);
@@ -965,7 +980,9 @@ int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
 		if (bytes == NULL) {
 			picoquic_log_app_message(cnx, "Cannot parse incoming stream: %" PRIu64", error: %" PRIu64,
 				stream_id, error_found);
-			ret = picoquic_stop_sending(cnx, stream_id, error_found);
+			ret = (error_found == H3ZERO_ID_ERROR) ?
+				picoquic_close(cnx, H3ZERO_ID_ERROR) :
+				picoquic_stop_sending(cnx, stream_id, error_found);
 		}
 		else if (bytes < bytes_max || fin_or_event == picoquic_callback_stream_fin) {
 			ret = h3zero_post_data_or_fin(cnx, bytes, bytes_max - bytes, fin_or_event, stream_ctx);
@@ -1839,8 +1856,11 @@ int h3zero_callback_datagram(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
 		/* find the control stream context, using the full stream ID */
 		h3zero_stream_prefix_t* prefix_ctx = h3zero_find_stream_prefix(h3_ctx, quarter_stream_id*4);
 
-		if (prefix_ctx == NULL || prefix_ctx->function_call == NULL) {
-			/* Should signal the error HTTP_DATAGRAM_ERROR */
+		if (prefix_ctx == NULL) {
+			/* Session not available yet. Buffering policy is handled by the caller. */
+		}
+		else if (prefix_ctx->function_call == NULL) {
+			ret = picoquic_close(cnx, H3ZERO_INTERNAL_ERROR);
 		} else {
 			h3zero_stream_ctx_t* stream_ctx = h3zero_find_stream(h3_ctx, prefix_ctx->prefix);
 			if (stream_ctx == NULL) {
@@ -1861,8 +1881,11 @@ void h3zero_receive_datagram_capsule(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* s
 	}
 	else {
 		h3zero_stream_prefix_t* prefix_ctx = h3zero_find_stream_prefix(h3_ctx, stream_ctx->stream_id);
-		if ( prefix_ctx == NULL || prefix_ctx->function_call == NULL) {
-			/* Should signal the error HTTP_DATAGRAM_ERROR */
+		if (prefix_ctx == NULL) {
+			/* Session not available yet. Buffering policy is handled by the caller. */
+		}
+		else if (prefix_ctx->function_call == NULL) {
+			(void)picoquic_close(cnx, H3ZERO_INTERNAL_ERROR);
 		}
 		else {
 			prefix_ctx->function_call(cnx, capsule->capsule_buffer, capsule->capsule_length, picohttp_callback_post_datagram, stream_ctx, prefix_ctx->function_ctx);

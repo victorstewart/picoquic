@@ -277,6 +277,48 @@ int h3zero_incoming_unidir_test(void)
     return ret;
 }
 
+int h3zero_process_remote_stream(picoquic_cnx_t* cnx,
+    uint64_t stream_id, uint8_t* bytes, size_t length,
+    picoquic_call_back_event_t fin_or_event,
+    h3zero_stream_ctx_t* stream_ctx,
+    h3zero_callback_ctx_t* ctx);
+
+int h3zero_wt_id_error_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    uint64_t stream_id = 3;
+    h3zero_stream_ctx_t* stream_ctx = NULL;
+    uint8_t unidir_input[] = { 0x40, 0x54, 0x02 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+
+    if (ret == 0) {
+        stream_ctx = h3zero_find_or_create_stream(cnx, stream_id, h3_ctx, 1, 1);
+        if (stream_ctx == NULL) {
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
+        cnx->cnx_state = picoquic_state_ready;
+        ret = h3zero_process_remote_stream(cnx, stream_id, unidir_input, sizeof(unidir_input),
+            picoquic_callback_stream_data, stream_ctx, h3_ctx);
+        if (ret != 0 || cnx->application_error != H3ZERO_ID_ERROR) {
+            DBG_PRINTF("Invalid WT stream ID error: ret=%d, app_error=%" PRIu64,
+                ret, cnx->application_error);
+            ret = -1;
+        }
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    h3zero_callback_delete_context(cnx, h3_ctx);
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 /*
 * A fraction of the control stream parsing is covered by normal usage :
 * -receive h3 settings on control stream,

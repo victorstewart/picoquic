@@ -48,6 +48,7 @@ static const picoquic_test_def_t test_table[] = {
     { "h3zero_integer", h3zero_integer_test },
     { "h3zero_varint_stream", h3zero_varint_stream_test },
     { "h3zero_incoming_unidir", h3zero_incoming_unidir_test },
+    { "h3zero_wt_id_error", h3zero_wt_id_error_test },
     { "h3zero_unidir_error", h3zero_unidir_error_test },
     { "h3zero_setting_error", h3zero_setting_error_test },
     { "h3zero_capsule", h3zero_capsule_test },
