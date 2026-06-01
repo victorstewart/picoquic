@@ -677,22 +677,11 @@ int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int i
     return val;
 }
 
-static int h3zero_qpack_set_static_string(const char* content, const uint8_t** value, size_t* value_length)
+static void h3zero_qpack_set_static_string(const char* content, const uint8_t** value,
+    size_t* value_length)
 {
-    int ret = 0;
-
+    *value = (const uint8_t*)content;
     *value_length = strlen(content);
-    *((uint8_t**)value) = malloc(*value_length + 1);
-    if (*value == NULL) {
-        *value_length = 0;
-        ret = -1;
-    }
-    else {
-        memcpy((uint8_t*)*value, content, *value_length);
-        ((uint8_t*)*value)[*value_length] = 0;
-    }
-
-    return ret;
 }
 
 uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max, 
@@ -759,8 +748,10 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                         /* Duplicate path! */
                         bytes = NULL;
                     }
-                    else if (h3zero_qpack_set_static_string(qpack_static[s_index].content, &parts->path, &parts->path_length) != 0) {
-                        bytes = NULL;
+                    else {
+                        h3zero_qpack_set_static_string(qpack_static[s_index].content,
+                            &parts->path, &parts->path_length);
+                        parts->path_is_static = 1;
                     }
                     break;
                 case http_pseudo_header_scheme:
@@ -768,8 +759,10 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                         /* Duplicate scheme! */
                         bytes = NULL;
                     }
-                    else if (h3zero_qpack_set_static_string(qpack_static[s_index].content, &parts->scheme, &parts->scheme_length) != 0) {
-                        bytes = NULL;
+                    else {
+                        h3zero_qpack_set_static_string(qpack_static[s_index].content,
+                            &parts->scheme, &parts->scheme_length);
+                        parts->scheme_is_static = 1;
                     }
                     break;
                 case http_header_origin:
@@ -777,9 +770,10 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                         /* Duplicate origin! */
                         bytes = NULL;
                     }
-                    else if (qpack_static[s_index].content != NULL &&
-                        h3zero_qpack_set_static_string(qpack_static[s_index].content, &parts->origin, &parts->origin_length) != 0) {
-                        bytes = NULL;
+                    else if (qpack_static[s_index].content != NULL) {
+                        h3zero_qpack_set_static_string(qpack_static[s_index].content,
+                            &parts->origin, &parts->origin_length);
+                        parts->origin_is_static = 1;
                     }
                     break;
                 case http_pseudo_header_protocol:
@@ -1361,9 +1355,12 @@ uint8_t * h3zero_varint_from_stream(uint8_t* bytes, uint8_t* bytes_max, uint64_t
 void h3zero_release_header_parts(h3zero_header_parts_t* header)
 {
     if (header->path != NULL) {
-        free((uint8_t*)header->path);
+        if (!header->path_is_static) {
+            free((uint8_t*)header->path);
+        }
         *((uint8_t**)&header->path) = NULL;
         header->path_length = 0;
+        header->path_is_static = 0;
     }
     if (header->authority != NULL) {
         free((uint8_t*)header->authority);
@@ -1371,14 +1368,20 @@ void h3zero_release_header_parts(h3zero_header_parts_t* header)
         header->authority_length = 0;
     }
     if (header->scheme != NULL) {
-        free((uint8_t*)header->scheme);
+        if (!header->scheme_is_static) {
+            free((uint8_t*)header->scheme);
+        }
         *((uint8_t**)&header->scheme) = NULL;
         header->scheme_length = 0;
+        header->scheme_is_static = 0;
     }
     if (header->origin != NULL) {
-        free((uint8_t*)header->origin);
+        if (!header->origin_is_static) {
+            free((uint8_t*)header->origin);
+        }
         *((uint8_t**)&header->origin) = NULL;
         header->origin_length = 0;
+        header->origin_is_static = 0;
     }
     if (header->range != NULL) {
         free((uint8_t*)header->range);

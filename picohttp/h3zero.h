@@ -216,6 +216,9 @@ typedef struct st_h3zero_header_parts_t {
     size_t scheme_length;
     uint8_t const* origin;
     size_t origin_length;
+    unsigned int path_is_static : 1;
+    unsigned int scheme_is_static : 1;
+    unsigned int origin_is_static : 1;
 } h3zero_header_parts_t;
 
 /* Setting codes.

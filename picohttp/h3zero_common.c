@@ -1079,14 +1079,16 @@ h3zero_content_type_enum h3zero_get_content_type_by_path(const char *path) {
 	return h3zero_content_type_text_plain;
 }
 
-static int h3zero_protocol_is(const uint8_t* protocol, size_t protocol_length, const char* expected_protocol)
+static int h3zero_protocol_is_n(const uint8_t* protocol, size_t protocol_length,
+	const char* expected_protocol, size_t expected_protocol_length)
 {
-	size_t expected_protocol_length = strlen(expected_protocol);
-
 	return (protocol != NULL &&
 		protocol_length == expected_protocol_length &&
 		memcmp(protocol, expected_protocol, expected_protocol_length) == 0);
 }
+
+#define h3zero_protocol_is_literal(protocol, protocol_length, expected_protocol) \
+	h3zero_protocol_is_n(protocol, protocol_length, expected_protocol, sizeof(expected_protocol) - 1)
 
 int h3zero_process_request_frame(
 	picoquic_cnx_t* cnx,
@@ -1182,7 +1184,7 @@ int h3zero_process_request_frame(
 	}
 	else if (stream_ctx->ps.stream_state.header.method == h3zero_method_connect) {
 		/* The connect handling depends on the requested protocol */
-		int is_webtransport = h3zero_protocol_is(
+		int is_webtransport = h3zero_protocol_is_literal(
 			stream_ctx->ps.stream_state.header.protocol,
 			stream_ctx->ps.stream_state.header.protocol_length,
 			H3ZERO_WEBTRANSPORT_H3_PROTOCOL);
@@ -1195,7 +1197,7 @@ int h3zero_process_request_frame(
 			!h3zero_webtransport_is_ready(cnx, &app_ctx->settings)) {
 			ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
 		}
-		else if (is_webtransport && !h3zero_protocol_is(stream_ctx->ps.stream_state.header.scheme,
+		else if (is_webtransport && !h3zero_protocol_is_literal(stream_ctx->ps.stream_state.header.scheme,
 			stream_ctx->ps.stream_state.header.scheme_length, "https")) {
 			picoquic_log_app_message(cnx, "Invalid WebTransport CONNECT scheme on stream: %"PRIu64, stream_ctx->stream_id);
 			o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
@@ -1215,9 +1217,9 @@ int h3zero_process_request_frame(
 			if (path_item >= 0) {
 				picohttp_server_path_item_t* path_desc = &app_ctx->path_table[path_item];
 				if (path_desc->connect_protocol == NULL ||
-					!h3zero_protocol_is(stream_ctx->ps.stream_state.header.protocol,
+					!h3zero_protocol_is_n(stream_ctx->ps.stream_state.header.protocol,
 						stream_ctx->ps.stream_state.header.protocol_length,
-						path_desc->connect_protocol)) {
+						path_desc->connect_protocol, strlen(path_desc->connect_protocol))) {
 					picoquic_log_app_message(cnx, "Unsupported CONNECT protocol on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, path_desc->path);
 					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
 				}
