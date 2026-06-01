@@ -93,7 +93,8 @@ static int picowt_baton_test_reset(wt_baton_ctx_t * baton_ctx, int* reset_needed
 }
 
 static int picowt_connect_test_protocol(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx, h3zero_stream_ctx_t* stream_ctx,
-    const char* authority, const char* path, const char* connect_protocol, picohttp_post_data_cb_fn wt_callback, void* wt_ctx,
+    const char* authority, const char* path, const char* connect_scheme, const char* connect_protocol,
+    picohttp_post_data_cb_fn wt_callback, void* wt_ctx,
     char const* wt_available_protocols)
 {
     int ret = h3zero_declare_stream_prefix(ctx, stream_ctx->stream_id, wt_callback, wt_ctx);
@@ -116,8 +117,29 @@ static int picowt_connect_test_protocol(picoquic_cnx_t* cnx, h3zero_callback_ctx
         *bytes++ = h3zero_frame_header;
         bytes += 2;
 
-        bytes = h3zero_create_connect_header_frame(bytes, bytes_max, authority, (const uint8_t*)path, strlen(path),
-            connect_protocol, NULL, H3ZERO_USER_AGENT_STRING, wt_available_protocols);
+        *bytes++ = 0;
+        *bytes++ = 0;
+        bytes = h3zero_qpack_code_encode(bytes, bytes_max, 0xC0, 0x3F, H3ZERO_QPACK_CODE_CONNECT);
+        if (connect_scheme != NULL && strcmp(connect_scheme, "http") == 0) {
+            bytes = h3zero_qpack_code_encode(bytes, bytes_max, 0xC0, 0x3F, H3ZERO_QPACK_SCHEME_HTTP);
+        }
+        else if (connect_scheme != NULL) {
+            bytes = h3zero_qpack_code_encode(bytes, bytes_max, 0xC0, 0x3F, H3ZERO_QPACK_SCHEME_HTTPS);
+        }
+        bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_CODE_PATH, (const uint8_t*)path, strlen(path));
+        if (connect_protocol != NULL) {
+            bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max, (uint8_t*)":protocol", 9,
+                (uint8_t*)connect_protocol, strlen(connect_protocol));
+        }
+        if (authority != NULL) {
+            bytes = h3zero_qpack_literal_plus_ref_encode(bytes, bytes_max, H3ZERO_QPACK_AUTHORITY,
+                (const uint8_t*)authority, strlen(authority));
+        }
+        if (wt_available_protocols != NULL) {
+            bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
+                (uint8_t*)H3ZERO_WT_AVAILABLE_PROTOCOLS, strlen(H3ZERO_WT_AVAILABLE_PROTOCOLS),
+                (uint8_t*)wt_available_protocols, strlen(wt_available_protocols));
+        }
         if (bytes == NULL) {
             ret = -1;
         }
@@ -145,7 +167,7 @@ static int picowt_baton_test_one_ex(
     uint8_t test_id, const char* baton_path,
     uint64_t do_losses, uint64_t completion_target, const char* client_qlog_dir,
     const char* server_qlog_dir, picohttp_server_path_item_t* table, size_t table_nb,
-    const char* connect_protocol, int expect_refused)
+    const char* connect_scheme, const char* connect_protocol, int expect_refused)
 {
     char const* alpn = "h3";
     uint64_t simulated_time = 0;
@@ -207,21 +229,23 @@ static int picowt_baton_test_one_ex(
         }
 
         if (ret == 0) {
-            if (test_id == 8 && connect_protocol != NULL &&
+            if (test_id == 8 && connect_scheme != NULL && strcmp(connect_scheme, "https") == 0 &&
+                connect_protocol != NULL &&
                 strcmp(connect_protocol, H3ZERO_WEBTRANSPORT_H3_PROTOCOL) == 0) {
                 uint8_t grease_capsule[12] = { 0x00,0x0a,0xc0,0xe9,0x89,0x05,0x97,0xf9,0x46,0xe4,0x01,0x1d };
                 ret = picowt_connect_ex(test_ctx->cnx_client, h3zero_cb, control_stream_ctx,
                     baton_ctx.authority, baton_ctx.server_path,
                     wt_baton_callback, &baton_ctx, PICOWT_BATON_ALPN, grease_capsule, 12);
             }
-            else if (connect_protocol != NULL && strcmp(connect_protocol, H3ZERO_WEBTRANSPORT_H3_PROTOCOL) == 0) {
+            else if (connect_scheme != NULL && strcmp(connect_scheme, "https") == 0 &&
+                connect_protocol != NULL && strcmp(connect_protocol, H3ZERO_WEBTRANSPORT_H3_PROTOCOL) == 0) {
                 ret = picowt_connect(test_ctx->cnx_client, h3zero_cb, control_stream_ctx,
                     baton_ctx.authority, baton_ctx.server_path,
                     wt_baton_callback, &baton_ctx, PICOWT_BATON_ALPN_AVAILABLE);
             }
             else {
                 ret = picowt_connect_test_protocol(test_ctx->cnx_client, h3zero_cb, control_stream_ctx,
-                    baton_ctx.authority, baton_ctx.server_path, connect_protocol,
+                    baton_ctx.authority, baton_ctx.server_path, connect_scheme, connect_protocol,
                     wt_baton_callback, &baton_ctx, PICOWT_BATON_ALPN_AVAILABLE);
             }
         }
@@ -352,7 +376,7 @@ static int picowt_baton_test_one(
     const char* server_qlog_dir)
 {
     return picowt_baton_test_one_ex(test_id, baton_path, do_losses, completion_target,
-        client_qlog_dir, server_qlog_dir, path_item_list, 1, H3ZERO_WEBTRANSPORT_H3_PROTOCOL, 0);
+        client_qlog_dir, server_qlog_dir, path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, 0);
 }
 
 int picowt_baton_basic_test(void)
@@ -425,13 +449,13 @@ int picowt_baton_wildcard_test(void)
     };
     /* /baton is not a specific entry in wildcard_table; the '*' handler must catch it */
     return picowt_baton_test_one_ex(1, "/baton?baton=240", 0, 2000000, ".", ".",
-        wildcard_table, 1, H3ZERO_WEBTRANSPORT_H3_PROTOCOL, 0);
+        wildcard_table, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, 0);
 }
 
 static int picowt_baton_protocol_refusal_test_one(uint8_t test_id, const char* connect_protocol)
 {
     return picowt_baton_test_one_ex(test_id, "/baton?baton=240", 0, 2000000, NULL, NULL,
-        path_item_list, 1, connect_protocol, 1);
+        path_item_list, 1, "https", connect_protocol, 1);
 }
 
 int picowt_baton_protocol_test(void)
@@ -440,6 +464,23 @@ int picowt_baton_protocol_test(void)
 
     if (ret == 0) {
         ret = picowt_baton_protocol_refusal_test_one(11, NULL);
+    }
+
+    return ret;
+}
+
+static int picowt_baton_scheme_refusal_test_one(uint8_t test_id, const char* connect_scheme)
+{
+    return picowt_baton_test_one_ex(test_id, "/baton?baton=240", 0, 2000000, NULL, NULL,
+        path_item_list, 1, connect_scheme, H3ZERO_WEBTRANSPORT_H3_PROTOCOL, 1);
+}
+
+int picowt_baton_scheme_test(void)
+{
+    int ret = picowt_baton_scheme_refusal_test_one(12, "http");
+
+    if (ret == 0) {
+        ret = picowt_baton_scheme_refusal_test_one(13, NULL);
     }
 
     return ret;

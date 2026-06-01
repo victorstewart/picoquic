@@ -681,6 +681,7 @@ static uint8_t qpack_get_long_file_name[] = {
 #define CONNECT_TEST_ORIGIN_LEN (8 + CONNECT_TEST_AUTHORITY_LEN)
 
 char const web_transport_str[] = { CONNECT_TEST_PROTOCOL_WTP, 0 };
+char const https_str[] = "https";
 
 static uint8_t qpack_connect_webtransport[] = {
     QPACK_TEST_HEADER_BLOCK_PREFIX, 
@@ -810,7 +811,8 @@ static qpack_test_case_t qpack_test_case[] = {
         qpack_connect_webtransport, sizeof(qpack_connect_webtransport),
         { h3zero_method_connect, qpack_test_string_wtp, sizeof(qpack_test_string_wtp), NULL /* authority */, 0 /* authority_length */, NULL, 0, 0, 0,
         (uint8_t *)web_transport_str, CONNECT_TEST_PROTOCOL_WTP_LEN,
-        NULL /* wt_available_protocols */, 0 /* wt_available_protocols_length */, NULL /* wt_protocol */, 0 /* wt_protocol_length */, 0 }
+        NULL /* wt_available_protocols */, 0 /* wt_available_protocols_length */, NULL /* wt_protocol */, 0 /* wt_protocol_length */, 0,
+        (uint8_t*)https_str, 5 }
     },
     {
         qpack_test_get_slash_range, sizeof(qpack_test_get_slash_range),
@@ -898,6 +900,20 @@ static int h3zero_parse_qpack_test_one(size_t i, uint8_t * data, size_t data_len
     else if (parts.protocol != NULL && parts.protocol_length > 0 &&
         memcmp(parts.protocol, qpack_test_case[i].parts.protocol, parts.protocol_length) != 0) {
         DBG_PRINTF("Qpack case %d parse wrong path", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.scheme != NULL &&
+        parts.scheme_length != qpack_test_case[i].parts.scheme_length) {
+        DBG_PRINTF("Qpack case %d parse wrong scheme length", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.scheme != NULL && parts.scheme == NULL) {
+        DBG_PRINTF("Qpack case %d parse scheme not null", i);
+        ret = -1;
+    }
+    else if (qpack_test_case[i].parts.scheme != NULL && parts.scheme_length > 0 &&
+        memcmp(parts.scheme, qpack_test_case[i].parts.scheme, parts.scheme_length) != 0) {
+        DBG_PRINTF("Qpack case %d parse wrong scheme", i);
         ret = -1;
     }
 

@@ -489,6 +489,16 @@ uint8_t * h3zero_parse_qpack_header_value(uint8_t * bytes, uint8_t * bytes_max,
                         decoded_length, &parts->authority, &parts->authority_length);
                 }
                 break;
+            case http_pseudo_header_scheme:
+                if (parts->scheme != NULL) {
+                    /* Duplicate scheme! */
+                    bytes = 0;
+                }
+                else {
+                    bytes = h3zero_parse_qpack_header_value_string(bytes, decoded,
+                        decoded_length, &parts->scheme, &parts->scheme_length);
+                }
+                break;
             case http_header_range:
                 if (parts->range != NULL) {
                     /* Duplicate content type! */
@@ -557,7 +567,7 @@ uint8_t * h3zero_parse_qpack_header_value(uint8_t * bytes, uint8_t * bytes_max,
 int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int is_huffman)
 {
     char const  * interesting_header_name[] = {
-     ":method", ":path", ":authority", ":status", "content-type", ":protocol", "origin", "range",
+     ":method", ":path", ":authority", ":status", "content-type", ":protocol", "origin", "range", ":scheme",
      H3ZERO_WT_AVAILABLE_PROTOCOLS, H3ZERO_WT_PROTOCOL,
      NULL};
     const http_header_enum_t interesting_header[] = {
@@ -565,7 +575,7 @@ int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int i
         http_pseudo_header_authority,
         http_pseudo_header_status, http_header_content_type,
         http_pseudo_header_protocol, http_header_origin,
-        http_header_range, http_header_wt_available_protocols, http_header_wt_protocol
+        http_header_range, http_pseudo_header_scheme, http_header_wt_available_protocols, http_header_wt_protocol
     };
     http_header_enum_t val = http_header_unknown;
     uint8_t deHuff[256];
@@ -587,6 +597,24 @@ int h3zero_get_interesting_header_type(uint8_t * name, size_t name_length, int i
     }
 
     return val;
+}
+
+static int h3zero_qpack_set_static_string(const char* content, const uint8_t** value, size_t* value_length)
+{
+    int ret = 0;
+
+    *value_length = strlen(content);
+    *((uint8_t**)value) = malloc(*value_length + 1);
+    if (*value == NULL) {
+        *value_length = 0;
+        ret = -1;
+    }
+    else {
+        memcpy((uint8_t*)*value, content, *value_length);
+        ((uint8_t*)*value)[*value_length] = 0;
+    }
+
+    return ret;
 }
 
 uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max, 
@@ -653,18 +681,17 @@ uint8_t * h3zero_parse_qpack_header_frame(uint8_t * bytes, uint8_t * bytes_max,
                         /* Duplicate path! */
                         bytes = NULL;
                     }
-                    else {
-                        parts->path_length = strlen(qpack_static[s_index].content);
-                        parts->path = malloc(parts->path_length + 1);
-                        if (parts->path == NULL) {
-                            /* internal error */
-                            bytes = NULL;
-                            parts->path_length = 0;
-                        }
-                        else {
-                            memcpy((uint8_t *)parts->path, qpack_static[s_index].content, parts->path_length);
-                            ((uint8_t*)parts->path)[parts->path_length] = 0;
-                        }
+                    else if (h3zero_qpack_set_static_string(qpack_static[s_index].content, &parts->path, &parts->path_length) != 0) {
+                        bytes = NULL;
+                    }
+                    break;
+                case http_pseudo_header_scheme:
+                    if (parts->scheme != NULL) {
+                        /* Duplicate scheme! */
+                        bytes = NULL;
+                    }
+                    else if (h3zero_qpack_set_static_string(qpack_static[s_index].content, &parts->scheme, &parts->scheme_length) != 0) {
+                        bytes = NULL;
                     }
                     break;
                 case http_header_origin:
@@ -1141,6 +1168,11 @@ void h3zero_release_header_parts(h3zero_header_parts_t* header)
         free((uint8_t*)header->authority);
         *((uint8_t**)&header->authority) = NULL;
         header->authority_length = 0;
+    }
+    if (header->scheme != NULL) {
+        free((uint8_t*)header->scheme);
+        *((uint8_t**)&header->scheme) = NULL;
+        header->scheme_length = 0;
     }
     if (header->range != NULL) {
         free((uint8_t*)header->range);

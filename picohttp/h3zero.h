@@ -151,6 +151,7 @@ typedef enum {
 #define H3ZERO_QPACK_CODE_200 25
 #define H3ZERO_QPACK_ALLOW_GET 76
 #define H3ZERO_QPACK_AUTHORITY 0
+#define H3ZERO_QPACK_SCHEME_HTTP 22
 #define H3ZERO_QPACK_SCHEME_HTTPS 23
 #define H3ZERO_QPACK_TEXT_PLAIN 53
 #define H3ZERO_QPACK_RANGE 55
@@ -210,6 +211,8 @@ typedef struct st_h3zero_header_parts_t {
     size_t wt_protocol_length;
 
     unsigned int path_is_huffman : 1;
+    uint8_t const* scheme;
+    size_t scheme_length;
 } h3zero_header_parts_t;
 
 /* Setting codes.

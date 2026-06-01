@@ -1163,6 +1163,11 @@ int h3zero_process_request_frame(
 			!h3zero_webtransport_is_ready(cnx, &app_ctx->settings)) {
 			ret = picoquic_close(cnx, H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET);
 		}
+		else if (is_webtransport && !h3zero_protocol_is(stream_ctx->ps.stream_state.header.scheme,
+			stream_ctx->ps.stream_state.header.scheme_length, "https")) {
+			picoquic_log_app_message(cnx, "Invalid WebTransport CONNECT scheme on stream: %"PRIu64, stream_ctx->stream_id);
+			o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "400", H3ZERO_USER_AGENT_STRING);
+		}
 		else if (stream_ctx->path_callback == NULL) {
 			int path_item = h3zero_find_path_item(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length, app_ctx->path_table, app_ctx->path_table_nb);
 			if (path_item >= 0) {
