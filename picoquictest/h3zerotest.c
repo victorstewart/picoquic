@@ -1591,13 +1591,31 @@ static uint8_t h3zero_stream_test2[] = {
     h3zero_frame_data, 12,
     H3ZERO_STREAM_TEST2_DATA };
 
+#define H3ZERO_STREAM_TRAILER_X_TEST 0x00, 0x00, 0x20 | 6, 'x', '-', 't', 'e', 's', 't', 1, '1'
+
 static uint8_t h3zero_stream_test3[] = {
     h3zero_frame_header, 0x40, 4,
     QPACK_TEST_HEADER_BLOCK_PREFIX, 0xC0 | 25, 0xC0 | 52,
     h3zero_frame_data, 12,
     H3ZERO_STREAM_TEST2_DATA,
-    h3zero_frame_header, 8,
-    QPACK_TEST_HEADER_BLOCK_PREFIX, 0x50 | 0x0F, 13, 3, '4', '0', '4'
+    h3zero_frame_header, 11,
+    H3ZERO_STREAM_TRAILER_X_TEST
+};
+
+static uint8_t h3zero_stream_test_double_headers[] = {
+    h3zero_frame_header, 4,
+    QPACK_TEST_HEADER_BLOCK_PREFIX, 0xC0 | 17, 0xC0 | 1,
+    h3zero_frame_header, 4,
+    QPACK_TEST_HEADER_BLOCK_PREFIX, 0xC0 | 17, 0xC0 | 1
+};
+
+static uint8_t h3zero_stream_test_pseudo_trailer[] = {
+    h3zero_frame_header, 4,
+    QPACK_TEST_HEADER_BLOCK_PREFIX, 0xC0 | 25, 0xC0 | 52,
+    h3zero_frame_data, 12,
+    H3ZERO_STREAM_TEST2_DATA,
+    h3zero_frame_header, 3,
+    QPACK_TEST_HEADER_BLOCK_PREFIX, 0xC0 | 27
 };
 
 static uint8_t h3zero_stream_test_grease[] = {
@@ -1712,6 +1730,32 @@ int h3zero_stream_test_one(uint8_t * bytes, size_t nb_bytes,
     return ret;
 }
 
+static int h3zero_stream_test_error_one(
+    uint8_t* bytes, size_t nb_bytes, uint64_t expected_error)
+{
+    h3zero_data_stream_state_t stream_state = { 0 };
+    size_t available_data = 0;
+    uint64_t error_found = 0;
+    uint8_t* p = bytes;
+    uint8_t* p_max = bytes + nb_bytes;
+    int ret = 0;
+
+    while (p != NULL && p < p_max) {
+        available_data = 0;
+        p = h3zero_parse_data_stream(p, p_max, &stream_state,
+            &available_data, &error_found);
+        if (p != NULL) {
+            p += available_data;
+        }
+    }
+    if (p != NULL || error_found != expected_error) {
+        ret = -1;
+    }
+
+    h3zero_delete_data_stream_state(&stream_state);
+    return ret;
+}
+
 int h3zero_stream_test(void)
 {
     int ret = h3zero_stream_test_one(h3zero_stream_test1, sizeof(h3zero_stream_test1), NULL, 0, 0);
@@ -1724,6 +1768,15 @@ int h3zero_stream_test(void)
     if (ret == 0) {
         ret = h3zero_stream_test_one(h3zero_stream_test3, sizeof(h3zero_stream_test3),
             h3zero_stream_test2_data, sizeof(h3zero_stream_test2_data), 1);
+    }
+    if (ret == 0) {
+        ret = h3zero_stream_test_error_one(h3zero_stream_test_double_headers,
+            sizeof(h3zero_stream_test_double_headers),
+            H3ZERO_FRAME_UNEXPECTED);
+    }
+    if (ret == 0) {
+        ret = h3zero_stream_test_error_one(h3zero_stream_test_pseudo_trailer,
+            sizeof(h3zero_stream_test_pseudo_trailer), H3ZERO_FRAME_ERROR);
     }
 
     if (ret == 0) {

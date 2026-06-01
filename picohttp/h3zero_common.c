@@ -964,6 +964,16 @@ static uint8_t* h3zero_parse_frame_prefix(uint8_t* bytes, uint8_t* bytes_max,
 	return bytes;
 }
 
+static int h3zero_header_parts_has_pseudo(const h3zero_header_parts_t* parts)
+{
+	return parts->method != h3zero_method_none ||
+		parts->path != NULL ||
+		parts->authority != NULL ||
+		parts->scheme != NULL ||
+		parts->status != 0 ||
+		parts->protocol != NULL;
+}
+
 uint8_t* h3zero_parse_header_frame(uint8_t* bytes, size_t available,
 	h3zero_data_stream_state_t* stream_state, uint64_t* error_found)
 {
@@ -990,6 +1000,11 @@ uint8_t* h3zero_parse_header_frame(uint8_t* bytes, size_t available,
 				stream_state->current_frame + stream_state->current_frame_length, parts);
 			if (parsed == NULL || (size_t)(parsed - stream_state->current_frame) != stream_state->current_frame_length) {
 				/* protocol error */
+				*error_found = H3ZERO_FRAME_ERROR;
+				bytes = NULL;
+			}
+			else if (stream_state->trailer_found &&
+				h3zero_header_parts_has_pseudo(parts)) {
 				*error_found = H3ZERO_FRAME_ERROR;
 				bytes = NULL;
 			}
