@@ -280,6 +280,7 @@ int h3zero_protocol_init(picoquic_cnx_t* cnx)
 	 */
 	if (cnx->local_parameters.max_datagram_frame_size > 0) {
 		settings.h3_datagram = 1;
+		settings.webtransport_enabled = 1;
 		settings.webtransport_max_sessions = 1;
 	}
 
@@ -2014,6 +2015,7 @@ uint8_t* h3zero_settings_encode(uint8_t* bytes, const uint8_t* bytes_max, const 
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_qpack_blocked_streams, settings->blocked_streams, UINT64_MAX)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_enable_connect_protocol, settings->enable_connect_protocol, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_setting_h3_datagram, settings->h3_datagram, 0)) != NULL &&
+				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_wt_enabled, settings->webtransport_enabled, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions, settings->webtransport_max_sessions, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions_old, settings->webtransport_max_sessions, 0)) != NULL &&
 				/* Chrome compatibility: also send SETTINGS_ENABLE_WEBTRANSPORT (0x2b603742) */
@@ -2055,6 +2057,9 @@ const uint8_t* h3zero_settings_components_decode(const uint8_t* bytes, const uin
 			break;
 		case h3zero_setting_h3_datagram:
 			settings->h3_datagram = (unsigned int)component_value;
+			break;
+		case h3zero_settings_wt_enabled:
+			settings->webtransport_enabled = component_value;
 			break;
 		case h3zero_settings_webtransport_max_sessions:
 		case h3zero_settings_webtransport_max_sessions_old:
