@@ -235,6 +235,82 @@
     return transportOptions;
   }
 
+  function closeConstructedTransport(transport) {
+    try {
+      transport.ready.catch(function () {});
+    } catch (_) {}
+    try {
+      transport.closed.catch(function () {});
+    } catch (_) {}
+    try {
+      transport.close({ closeCode: 0, reason: "constructor-test" });
+    } catch (_) {}
+  }
+
+  function buildProtocolConstructorOptions(options, protocols) {
+    var transportOptions = buildTransportOptions({
+      certificateHash: options.certificateHash,
+      certificateHashAlgorithm: options.certificateHashAlgorithm,
+      requireDatagram: false
+    });
+    transportOptions.requireUnreliable = false;
+    transportOptions.protocols = protocols;
+    return transportOptions;
+  }
+
+  function runProtocolConstructorTests(options) {
+    if (typeof WebTransport !== "function") {
+      throw new Error("WebTransport is unavailable");
+    }
+
+    var result = {
+      ok: false,
+      tests: []
+    };
+    var url = options.url || defaultTarget();
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    function expectThrows(name, protocols, expectedName) {
+      try {
+        var transport = new WebTransport(url,
+          buildProtocolConstructorOptions(options, protocols));
+        closeConstructedTransport(transport);
+        record(name, false, "constructor did not throw");
+      } catch (error) {
+        record(name, error && error.name === expectedName, errorText(error));
+      }
+    }
+
+    function expectConstructs(name, protocols) {
+      try {
+        var transport = new WebTransport(url,
+          buildProtocolConstructorOptions(options, protocols));
+        closeConstructedTransport(transport);
+        record(name, true, "");
+      } catch (error) {
+        record(name, false, errorText(error));
+      }
+    }
+
+    expectConstructs("valid-protocol", [DEFAULT_PROTOCOL]);
+    expectThrows("duplicate-protocol", [DEFAULT_PROTOCOL, DEFAULT_PROTOCOL], "SyntaxError");
+    expectThrows("empty-protocol", [""], "SyntaxError");
+    expectThrows("long-protocol", [new Array(514).join("a")], "SyntaxError");
+    expectThrows("non-isomorphic-protocol", ["\u0100"], "SyntaxError");
+
+    result.ok = result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   function withTimeout(promise, timeoutMs, onTimeout) {
     var timer = 0;
     var timeout = new Promise(function (_, reject) {
@@ -565,6 +641,7 @@
   window.picoquicWebTransportBaton = {
     defaultTarget: defaultTarget,
     makeBatonPacket: makeBatonPacket,
+    runProtocolConstructorTests: runProtocolConstructorTests,
     runBatonTest: runBatonTest
   };
 

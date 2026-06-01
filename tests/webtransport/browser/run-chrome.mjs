@@ -311,6 +311,33 @@ function assertHarnessResult(result) {
   }
 }
 
+async function readProtocolConstructorResult(cdp, certificateHash) {
+  const options = JSON.stringify({
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL
+  });
+  const result = await cdp.send("Runtime.evaluate", {
+    expression: `window.picoquicWebTransportBaton.runProtocolConstructorTests(${options})`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+
+  if (result.exceptionDetails) {
+    const text = result.exceptionDetails.exception &&
+      result.exceptionDetails.exception.description;
+    throw new Error(text || result.exceptionDetails.text ||
+      "browser protocol constructor tests failed");
+  }
+  return result.result.value;
+}
+
+function assertProtocolConstructorResult(result) {
+  if (!result || result.ok !== true) {
+    throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
+  }
+}
+
 async function main() {
   assertFile(BATON, "pico_baton");
 
@@ -388,6 +415,8 @@ async function main() {
     await waitForHarness(cdp);
     const result = await readHarnessResult(cdp);
     assertHarnessResult(result);
+    result.protocolConstructor = await readProtocolConstructorResult(cdp, certConfig.hash);
+    assertProtocolConstructorResult(result.protocolConstructor);
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     const output = serverOutput.trim();
