@@ -658,6 +658,7 @@ int h3zero_get_content_type_by_path_test(void);
 int picomask_udp_test(void);
 int picomask_udp_path_test(void);
 int picowt_wire_harness_test(void);
+int picowt_wire_fragment_test(void);
 int picowt_baton_basic_test(void);
 int picowt_baton_error_test(void);
 int picowt_baton_long_test(void);
