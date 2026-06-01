@@ -1257,6 +1257,48 @@ static int h3zero_qpack_parser_policy_pseudo_order_test(void)
     return ret;
 }
 
+typedef struct st_h3zero_qpack_parser_policy_bad_case_t {
+    const uint8_t* bytes;
+    size_t length;
+} h3zero_qpack_parser_policy_bad_case_t;
+
+#define H3ZERO_QPACK_BAD_CASE(x) { x, sizeof(x) }
+
+static int h3zero_qpack_parser_policy_malformed_integer_test(void)
+{
+    static const uint8_t bad_prefix_base[] = { 0, 0xff };
+    static const uint8_t bad_indexed_static[] = { 0, 0, 0xff };
+    static const uint8_t bad_literal_ref_index[] = { 0, 0, 0x5f };
+    static const uint8_t bad_literal_ref_value[] = { 0, 0, 0x51, 0xff };
+    static const uint8_t bad_literal_name_length[] = { 0, 0, 0x27 };
+    static const uint8_t bad_literal_name_value[] = { 0, 0, 0x21, 'x', 0xff };
+    static const h3zero_qpack_parser_policy_bad_case_t bad_case[] = {
+        H3ZERO_QPACK_BAD_CASE(bad_prefix_base),
+        H3ZERO_QPACK_BAD_CASE(bad_indexed_static),
+        H3ZERO_QPACK_BAD_CASE(bad_literal_ref_index),
+        H3ZERO_QPACK_BAD_CASE(bad_literal_ref_value),
+        H3ZERO_QPACK_BAD_CASE(bad_literal_name_length),
+        H3ZERO_QPACK_BAD_CASE(bad_literal_name_value)
+    };
+    int ret = 0;
+
+    for (size_t i = 0; ret == 0 &&
+        i < sizeof(bad_case) / sizeof(h3zero_qpack_parser_policy_bad_case_t);
+        i++) {
+        h3zero_header_parts_t parts = { 0 };
+        uint8_t* parsed = h3zero_parse_qpack_header_frame(
+            (uint8_t*)bad_case[i].bytes,
+            (uint8_t*)bad_case[i].bytes + bad_case[i].length, &parts);
+
+        if (parsed != NULL) {
+            ret = -1;
+        }
+        h3zero_release_header_parts(&parts);
+    }
+
+    return ret;
+}
+
 int h3zero_qpack_parser_policy_test(void)
 {
     int ret = h3zero_qpack_parser_policy_literal_connect_test();
@@ -1269,6 +1311,9 @@ int h3zero_qpack_parser_policy_test(void)
     }
     if (ret == 0) {
         ret = h3zero_qpack_parser_policy_pseudo_order_test();
+    }
+    if (ret == 0) {
+        ret = h3zero_qpack_parser_policy_malformed_integer_test();
     }
 
     return ret;
