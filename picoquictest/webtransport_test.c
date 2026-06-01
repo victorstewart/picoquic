@@ -792,6 +792,18 @@ int picowt_reset_error_test(void)
     return ret;
 }
 
+int picowt_error_code_test(void)
+{
+    return (H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED != 0x3994bd84 ||
+        H3ZERO_WEBTRANSPORT_SESSION_GONE != 0x170d7b68 ||
+        H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR != 0x045d4487 ||
+        H3ZERO_WEBTRANSPORT_ALPN_ERROR != 0x0817b3dd ||
+        H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET != 0x212c0d48 ||
+        H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST != 0x52e4a40fa8dbull ||
+        H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_LAST != 0x52e5ac983162ull ||
+        H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(0x1e) != 0x52e4a40fa8faull) ? -1 : 0;
+}
+
 int picowt_drain_test_one(int expect_error)
 {
     picoquic_quic_t* quic = NULL;

@@ -50,6 +50,7 @@ extern "C" {
 #define H3ZERO_QPACK_DECODER_STREAM_ERROR 0x0202 /* Error on the decoder stream */
 #define H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED 0x3994bd84 /* Stream arrived before webtransport session established */
 #define H3ZERO_WEBTRANSPORT_SESSION_GONE 0x170d7b68 /* Stream arrived after web transport session closed */
+#define H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR 0x045d4487 /* WebTransport session flow-control error */
 #define H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET 0x212c0d48 /* Missing SETTINGS or transport parameters for WebTransport */
 #define H3ZERO_WEBTRANSPORT_ALPN_ERROR 0x0817b3dd /* WebTransport application protocol negotiation failed */
 #define H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST 0x52e4a40fa8dbull

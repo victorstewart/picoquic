@@ -122,6 +122,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_flow_control_capsule", picowt_flow_control_capsule_test },
     { "picowt_session_limit", picowt_session_limit_test },
     { "picowt_reset_error", picowt_reset_error_test },
+    { "picowt_error_code", picowt_error_code_test },
     { "picowt_tp", picowt_tp_test },
     { "picowt_requirements", picowt_requirements_test },
     { "quicperf_parse", quicperf_parse_test },
