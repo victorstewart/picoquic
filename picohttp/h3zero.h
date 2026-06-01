@@ -52,7 +52,9 @@ extern "C" {
 #define H3ZERO_WEBTRANSPORT_SESSION_GONE 0x170d7b68 /* Stream arrived after web transport session closed */
 #define H3ZERO_WEBTRANSPORT_REQUIREMENTS_NOT_MET 0x212c0d48 /* Missing SETTINGS or transport parameters for WebTransport */
 #define H3ZERO_WEBTRANSPORT_ALPN_ERROR 0x0817b3dd /* WebTransport application protocol negotiation failed */
-#define H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(code) (0x52e4a40fa8dbull + code) /* see spec for skipping grease points when mapping codes */
+#define H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST 0x52e4a40fa8dbull
+#define H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_LAST 0x52e5ac983162ull
+#define H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(code) (H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST + (uint64_t)(code) + ((uint64_t)(code) / 0x1eull))
 #define H3ZERO_USER_AGENT_STRING "H3Zero/1.0"
 
 #define H3ZERO_WEBTRANSPORT_H3_PROTOCOL "webtransport-h3"

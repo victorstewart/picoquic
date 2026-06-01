@@ -107,7 +107,7 @@ extern "C" {
     h3zero_stream_ctx_t* picowt_create_local_stream(picoquic_cnx_t* cnx, int is_bidir, h3zero_callback_ctx_t* h3_ctx,
         uint64_t control_stream_id);
 
-    /* Reset local stream
+    /* Reset local stream with a 32-bit WebTransport application error.
      */
     int picowt_reset_stream(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* stream_ctx, uint64_t local_stream_error);
 

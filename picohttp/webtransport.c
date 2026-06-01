@@ -171,15 +171,19 @@ int picowt_reset_stream(picoquic_cnx_t* cnx, h3zero_stream_ctx_t * stream_ctx, u
     int is_bidir = IS_BIDIR_STREAM_ID(stream_ctx->stream_id);
     int is_local = IS_LOCAL_STREAM_ID(stream_ctx->stream_id, cnx->client_mode);
 
-    if (!is_local && !is_bidir) {
+    if (local_stream_error > UINT32_MAX) {
+        ret = -1;
+    }
+    else if (!is_local && !is_bidir) {
         ret = -1;
     }
     else {
         size_t reliable_size = 0;
+        uint64_t h3_stream_error = H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(local_stream_error);
         if (is_local) {
             reliable_size = 2 + picoquic_frames_varint_encode_length(stream_ctx->ps.stream_state.control_stream_id);
         }
-        ret = picoquic_reset_stream_at(cnx, stream_ctx->stream_id, local_stream_error, reliable_size);
+        ret = picoquic_reset_stream_at(cnx, stream_ctx->stream_id, h3_stream_error, reliable_size);
         stream_ctx->ps.stream_state.is_fin_sent = 1;
     }
 
