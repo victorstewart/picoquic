@@ -103,7 +103,7 @@ extern "C" {
     /* Select the protocol to use for the web transport session, among the ones supported by the peer.
      * This should be called by the server before accepting a web transport session.
      * If the peer provided a "WT_AVAILABLE_PROTOCOLS" header, the code will parse the
-     * parameter list and select the first protocol that is also present in the
+     * Structured Fields string list and select the first protocol that is also present in the
      * "supported" list provided as argument.
      * 
      * The supported list is a character string with the format "protocol1, protocol2, protocol3",

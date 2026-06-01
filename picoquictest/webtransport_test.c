@@ -140,9 +140,7 @@ static int picowt_connect_test_protocol(picoquic_cnx_t* cnx, h3zero_callback_ctx
                 (const uint8_t*)connect_origin, strlen(connect_origin));
         }
         if (wt_available_protocols != NULL) {
-            bytes = h3zero_qpack_literal_plus_name_encode(bytes, bytes_max,
-                (uint8_t*)H3ZERO_WT_AVAILABLE_PROTOCOLS, strlen(H3ZERO_WT_AVAILABLE_PROTOCOLS),
-                (uint8_t*)wt_available_protocols, strlen(wt_available_protocols));
+            bytes = h3zero_encode_wt_available_protocols_header(bytes, bytes_max, wt_available_protocols);
         }
         if (bytes == NULL) {
             ret = -1;
@@ -546,6 +544,48 @@ int picowt_baton_settings_test(void)
 {
     return picowt_baton_test_one_ex(16, "/baton?baton=240", 0, 2000000, NULL, NULL,
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 1, 0);
+}
+
+static int picowt_protocol_select_test_one(char const* wt_available_protocols, int expect_success)
+{
+    h3zero_stream_ctx_t stream_ctx;
+    int ret = 0;
+
+    memset(&stream_ctx, 0, sizeof(stream_ctx));
+    stream_ctx.ps.stream_state.header.wt_available_protocols = (uint8_t const*)wt_available_protocols;
+    stream_ctx.ps.stream_state.header.wt_available_protocols_length = strlen(wt_available_protocols);
+
+    if (picowt_select_wt_protocol(&stream_ctx, PICOWT_BATON_ALPN_FILTER) == 0) {
+        if (!expect_success ||
+            stream_ctx.ps.stream_state.wt_protocol == NULL ||
+            strcmp(stream_ctx.ps.stream_state.wt_protocol, PICOWT_BATON_ALPN) != 0) {
+            ret = -1;
+        }
+    }
+    else if (expect_success) {
+        ret = -1;
+    }
+
+    if (stream_ctx.ps.stream_state.wt_protocol != NULL) {
+        free((char*)stream_ctx.ps.stream_state.wt_protocol);
+    }
+    return ret;
+}
+
+int picowt_protocol_select_test(void)
+{
+    int ret = picowt_protocol_select_test_one("\"wrong-end-baton\", \"devious-baton-00\"", 1);
+
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one("\"wrong-end-baton\";v=\"x,y\", \"devious-baton-00\";v=1", 1);
+    }
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one("wrong-end-baton, devious-baton-00", 0);
+    }
+    if (ret == 0) {
+        ret = picowt_protocol_select_test_one("\"devious-baton-00\", wrong-end-baton", 0);
+    }
+    return ret;
 }
 
 int picowt_tp_test(void)

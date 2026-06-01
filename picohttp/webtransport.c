@@ -272,64 +272,153 @@ int picowt_set_wt_protocol(h3zero_stream_ctx_t* stream_ctx, const char* selected
 * - If there is a match, set the selected protocol in the context, and return 0.
 * - If there is no match, return -1.
 */
+static char const* picowt_skip_ows(char const* p)
+{
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    return p;
+}
+
+static int picowt_parse_sf_string(char const** pp, char* decoded, size_t decoded_max, size_t* decoded_length)
+{
+    char const* p = *pp;
+    size_t length = 0;
+    int ret = -1;
+
+    if (*p == '"') {
+        p++;
+        ret = 0;
+        while (ret == 0 && *p != 0 && *p != '"') {
+            uint8_t c = (uint8_t)*p++;
+            if (c == '\\') {
+                c = (uint8_t)*p++;
+                if (c != '"' && c != '\\') {
+                    ret = -1;
+                    break;
+                }
+            }
+            else if (c < 0x20 || c > 0x7e || c == '\\') {
+                ret = -1;
+                break;
+            }
+            if (length + 1 >= decoded_max) {
+                ret = -1;
+                break;
+            }
+            decoded[length++] = (char)c;
+        }
+        if (ret == 0 && *p == '"') {
+            decoded[length] = 0;
+            *decoded_length = length;
+            *pp = p + 1;
+        }
+        else {
+            ret = -1;
+        }
+    }
+    return ret;
+}
+
+static int picowt_skip_sf_parameters(char const** pp)
+{
+    char const* p = picowt_skip_ows(*pp);
+    int ret = 0;
+
+    while (ret == 0 && *p == ';') {
+        p++;
+        while (ret == 0 && *p != 0 && *p != ',') {
+            if (*p == '"') {
+                p++;
+                while (*p != 0 && *p != '"') {
+                    if (*p == '\\') {
+                        p++;
+                        if (*p != '"' && *p != '\\') {
+                            ret = -1;
+                            break;
+                        }
+                    }
+                    else if ((uint8_t)*p < 0x20 || (uint8_t)*p > 0x7e) {
+                        ret = -1;
+                        break;
+                    }
+                    p++;
+                }
+                if (ret == 0 && *p == '"') {
+                    p++;
+                }
+                else {
+                    ret = -1;
+                }
+            }
+            else {
+                p++;
+            }
+        }
+        p = picowt_skip_ows(p);
+    }
+    *pp = p;
+    return ret;
+}
+
+static int picowt_protocol_is_supported(char const* supported, char const* candidate, size_t candidate_length)
+{
+    int ret = 0;
+
+    while (supported != NULL && *supported != 0) {
+        size_t supported_length = 0;
+        while (*supported == ' ' || *supported == '\t' || *supported == ',') {
+            supported++;
+        }
+        while (supported[supported_length] != 0 &&
+            supported[supported_length] != ' ' &&
+            supported[supported_length] != '\t' &&
+            supported[supported_length] != ',') {
+            supported_length++;
+        }
+        if (supported_length == candidate_length &&
+            memcmp(supported, candidate, candidate_length) == 0) {
+            ret = 1;
+            break;
+        }
+        supported += supported_length;
+    }
+    return ret;
+}
+
 int picowt_select_wt_protocol(h3zero_stream_ctx_t* stream_ctx, char const* supported)
 {
     char candidate[256];
     size_t candidate_length;
+    char selected[256];
+    size_t selected_length = 0;
     char const* a = (char const *)stream_ctx->ps.stream_state.header.wt_available_protocols;
-    size_t s_len = strlen(supported);
     int ret = -1;
 
+    selected[0] = 0;
     while (a != NULL && *a != 0) {
-        /* isolate the next available */
-        candidate_length = 0;
-
-        while (*a == ' ' || *a == '\t') {
-            a++;
+        a = picowt_skip_ows(a);
+        if (picowt_parse_sf_string(&a, candidate, sizeof(candidate), &candidate_length) != 0 ||
+            picowt_skip_sf_parameters(&a) != 0) {
+            selected_length = 0;
+            break;
         }
-        while (*a != ',' && *a != 0 && *a != ' ' && *a != '\t' && candidate_length < 254) {
-            /* Skip quotes - HTTP structured fields use quoted strings */
-            if (*a != '"') {
-                candidate[candidate_length] = *a;
-                candidate_length++;
-            }
-            a++;
-        }
-        while (*a == ' ' || *a == '\t') {
-            a++;
-        }
-        candidate[candidate_length] = 0;
+        a = picowt_skip_ows(a);
         if (*a == ',') {
             a++;
         }
         else if (*a != 0) {
+            selected_length = 0;
             a = NULL;
         }
-        if (candidate_length > 0) {
-            /* check whether there is a match*/
-            int os = 0;
-            while (os + candidate_length <= s_len) {
-                if (supported[os] == ' ' || supported[os] == '\t' || supported[os] == ',') {
-                    os++;
-                }
-                else {
-                    if ((os + candidate_length == s_len ||
-                        supported[os + candidate_length] == ' ' ||
-                        supported[os + candidate_length] == '\t' ||
-                        supported[os + candidate_length] == ',') &&
-                        memcmp(&supported[os], candidate, candidate_length) == 0) {
-                        /* found it. set the value. */
-                        ret = picowt_set_wt_protocol(stream_ctx, candidate);
-                        a = NULL;
-                        break;
-                    }
-                    else while (os + candidate_length <= s_len &&
-                        supported[os] != ' ' && supported[os] != '\t') {
-                        os++;
-                    }
-                }
-            }
+        if (candidate_length > 0 && selected_length == 0 &&
+            picowt_protocol_is_supported(supported, candidate, candidate_length)) {
+            memcpy(selected, candidate, candidate_length + 1);
+            selected_length = candidate_length;
         }
+    }
+    if (a != NULL && *a == 0 && selected_length > 0) {
+        ret = picowt_set_wt_protocol(stream_ctx, selected);
     }
     return ret;
 }

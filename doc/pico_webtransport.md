@@ -167,7 +167,7 @@ in `wt_baton.c`._
 ### WT Protocol negotiation
 
 The web transport protocol is negotiated as part of the HTTP3 connection.
-The client proposes a list of avalaible protocols as an argument
+The client proposes a list of available protocols as an argument
 to "picowt_connect":
 
 ```
@@ -177,10 +177,9 @@ to "picowt_connect":
     char const* wt_available_protocols);
 ```
 
-The list of protocols is encoded as a comma separated list of protocol identifiers,
-as specified in the
-[web transport draft](https://datatracker.ietf.org/doc/draft-ietf-webtrans-http3/),
-for example: "protocol1, protocol2, protocol3".
+The API argument is a comma-separated list of protocol identifiers, for example
+`"protocol1, protocol2, protocol3"`. H3zero encodes this as a
+`WT-Available-Protocols` Structured Fields list of strings on the wire.
 
 The server selects the protocol by calling the `picowt_select_wt_protocol` API:
 
