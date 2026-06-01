@@ -46,6 +46,8 @@ static int h3zero_process_pending_webtransport_requests(picoquic_cnx_t* cnx, h3z
 static int h3zero_abort_webtransport_session(picoquic_cnx_t* cnx,
 	h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* control_stream_ctx,
 	uint64_t h3_error_code);
+static int h3zero_stream_is_webtransport_data(
+	const h3zero_stream_ctx_t* stream_ctx);
 
 static int h3zero_wt_session_id_is_valid(uint64_t session_id)
 {
@@ -812,7 +814,13 @@ uint8_t* h3zero_wt_parse_control_stream_id(
 	uint64_t* error_found)
 {
 	if (stream_state->control_stream_id == UINT64_MAX) {
+		uint8_t* bytes_before = bytes;
+
 		bytes = h3zero_varint_from_stream(bytes, bytes_max, &stream_state->control_stream_id, stream_state->frame_header, &stream_state->frame_header_read);
+		if (bytes != NULL) {
+			stream_state->wt_stream_prefix_length +=
+				(uint64_t)(bytes - bytes_before);
+		}
 		if (stream_state->control_stream_id == UINT64_MAX) {
 			/* Control stream ID not updated */
 			return bytes;
@@ -874,7 +882,13 @@ uint8_t* h3zero_parse_remote_bidir_stream(
 	h3zero_data_stream_state_t* stream_state = &stream_ctx->ps.stream_state;
 
 	if (stream_state->stream_type == UINT64_MAX) {
+		uint8_t* bytes_before = bytes;
+
 		bytes = h3zero_varint_from_stream(bytes, bytes_max, &stream_state->stream_type, stream_state->frame_header, &stream_state->frame_header_read);
+		if (bytes != NULL) {
+			stream_state->wt_stream_prefix_length +=
+				(uint64_t)(bytes - bytes_before);
+		}
 		if (stream_state->stream_type == UINT64_MAX) {
 			/* stream type was not updated */
 			return bytes;
@@ -901,7 +915,13 @@ uint8_t* h3zero_parse_remote_unidir_stream(
 	h3zero_data_stream_state_t* stream_state = &stream_ctx->ps.stream_state;
 
 	if (stream_state->stream_type == UINT64_MAX) {
+		uint8_t* bytes_before = bytes;
+
 		bytes = h3zero_varint_from_stream(bytes, bytes_max, &stream_state->stream_type, stream_state->frame_header, &stream_state->frame_header_read);
+		if (bytes != NULL) {
+			stream_state->wt_stream_prefix_length +=
+				(uint64_t)(bytes - bytes_before);
+		}
 		if (stream_state->stream_type == UINT64_MAX) {
 			/* stream type was not updated */
 			return bytes;
@@ -1310,6 +1330,8 @@ static int h3zero_account_webtransport_stream_data(picoquic_cnx_t* cnx,
 	control_stream_ctx = h3zero_find_stream(h3_ctx,
 		stream_ctx->ps.stream_state.control_stream_id);
 	if (control_stream_ctx == NULL ||
+		UINT64_MAX - stream_ctx->ps.stream_state.wt_body_bytes_received <
+			length ||
 		UINT64_MAX - control_stream_ctx->wt_data_received < length ||
 		control_stream_ctx->wt_data_received + length >
 			control_stream_ctx->wt_max_data_local) {
@@ -1320,7 +1342,61 @@ static int h3zero_account_webtransport_stream_data(picoquic_cnx_t* cnx,
 			control_stream_ctx, H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR);
 	}
 	else {
+		stream_ctx->ps.stream_state.wt_body_bytes_received += length;
 		control_stream_ctx->wt_data_received += length;
+	}
+
+	return ret;
+}
+
+static int h3zero_account_webtransport_reset_final_size(
+	picoquic_cnx_t* cnx, uint64_t stream_id, h3zero_stream_ctx_t* stream_ctx,
+	h3zero_callback_ctx_t* h3_ctx, int* session_aborted)
+{
+	int ret = 0;
+	h3zero_stream_ctx_t* control_stream_ctx = NULL;
+	picoquic_stream_head_t* stream = NULL;
+	uint64_t body_final_size = 0;
+
+	if (session_aborted != NULL) {
+		*session_aborted = 0;
+	}
+	if (!h3zero_stream_is_webtransport_data(stream_ctx) ||
+		!h3zero_webtransport_flow_control_is_enabled(h3_ctx)) {
+		return 0;
+	}
+
+	control_stream_ctx = h3zero_find_stream(h3_ctx,
+		stream_ctx->ps.stream_state.control_stream_id);
+	stream = picoquic_find_stream(cnx, stream_id);
+	if (control_stream_ctx == NULL || stream == NULL ||
+		stream->fin_offset <=
+			stream_ctx->ps.stream_state.wt_stream_prefix_length) {
+		return 0;
+	}
+
+	body_final_size = stream->fin_offset -
+		stream_ctx->ps.stream_state.wt_stream_prefix_length;
+	if (body_final_size >
+		stream_ctx->ps.stream_state.wt_body_bytes_received) {
+		uint64_t delta = body_final_size -
+			stream_ctx->ps.stream_state.wt_body_bytes_received;
+
+		if (UINT64_MAX - control_stream_ctx->wt_data_received < delta ||
+			control_stream_ctx->wt_data_received + delta >
+				control_stream_ctx->wt_max_data_local) {
+			if (session_aborted != NULL) {
+				*session_aborted = 1;
+			}
+			ret = h3zero_abort_webtransport_session(cnx, h3_ctx,
+				control_stream_ctx,
+				H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR);
+		}
+		else {
+			stream_ctx->ps.stream_state.wt_body_bytes_received =
+				body_final_size;
+			control_stream_ctx->wt_data_received += delta;
+		}
 	}
 
 	return ret;
@@ -2697,17 +2773,26 @@ int h3zero_callback(picoquic_cnx_t* cnx,
 				stream_ctx = h3zero_find_stream(ctx, stream_id);
 			}
 			if (stream_ctx != NULL) {
-				if (stream_ctx->path_callback != NULL) {
+				int session_aborted = 0;
+
+				if (fin_or_event == picoquic_callback_stream_reset) {
+					ret = h3zero_account_webtransport_reset_final_size(cnx,
+						stream_id, stream_ctx, ctx, &session_aborted);
+				}
+				if (ret == 0 && !session_aborted &&
+					stream_ctx->path_callback != NULL) {
 					/* reset post callback. */
 					h3zero_record_remote_stream_error(cnx, stream_id,
 						fin_or_event, stream_ctx);
 					ret = stream_ctx->path_callback(cnx, NULL, 0, (fin_or_event == picoquic_callback_stream_reset)?
 						picohttp_callback_reset:picohttp_callback_stop_sending, stream_ctx, stream_ctx->path_callback_ctx);
 				}
-				else if (h3zero_remote_wt_prefix_incomplete(stream_id, &stream_ctx->ps.stream_state)) {
+				else if (ret == 0 && !session_aborted &&
+					h3zero_remote_wt_prefix_incomplete(stream_id,
+						&stream_ctx->ps.stream_state)) {
 					ret = h3zero_reject_buffered_webtransport_stream(cnx, stream_id);
 				}
-				else {
+				else if (ret == 0 && !session_aborted) {
 					/* If a file is open on a client, close and do the accounting. */
 					ret = h3zero_client_close_stream(cnx, ctx, stream_ctx);
 					if (IS_BIDIR_STREAM_ID(stream_id)) {

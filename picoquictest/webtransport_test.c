@@ -3672,6 +3672,7 @@ static int picowt_decode_queued_flow_control_capsule(picoquic_cnx_t* cnx,
 
 typedef struct st_picowt_max_data_test_ctx_t {
     size_t nb_data;
+    int nb_reset;
     int nb_deregister;
 } picowt_max_data_test_ctx_t;
 
@@ -3687,6 +3688,9 @@ static int picowt_max_data_callback(picoquic_cnx_t* cnx,
     if (wt_event == picohttp_callback_post_data ||
         wt_event == picohttp_callback_post_fin) {
         test_ctx->nb_data += length;
+    }
+    else if (wt_event == picohttp_callback_reset) {
+        test_ctx->nb_reset++;
     }
     else if (wt_event == picohttp_callback_deregister) {
         h3zero_callback_ctx_t* h3_ctx =
@@ -3942,6 +3946,129 @@ static size_t picowt_format_stream_prefix_test(uint8_t* buffer,
     }
 
     return (bytes == NULL) ? 0 : (size_t)(bytes - buffer);
+}
+
+static int picowt_max_data_reset_final_size_case(size_t delivered_body,
+    size_t final_body, int expect_abort)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t* control_stream_ctx = NULL;
+    h3zero_stream_ctx_t* data_stream_ctx = NULL;
+    picoquic_stream_head_t* control_stream = NULL;
+    picoquic_stream_head_t* data_stream = NULL;
+    uint64_t simulated_time = 0;
+    uint64_t control_stream_id = UINT64_MAX;
+    uint64_t data_stream_id = 1;
+    uint8_t buffer[32];
+    size_t prefix_length = 0;
+    picowt_max_data_test_ctx_t test_ctx = { 0 };
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    if (ret == 0) {
+        cnx->client_mode = 1;
+        cnx->cnx_state = picoquic_state_ready;
+        h3_ctx->local_settings.wt_initial_max_data = 3;
+        h3_ctx->settings.wt_initial_max_data = 3;
+        h3_ctx->local_settings.wt_initial_max_streams_bidi = 1;
+        h3_ctx->settings.wt_initial_max_streams_bidi = 1;
+    }
+    if (ret == 0 &&
+        (control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        control_stream_id = control_stream_ctx->stream_id;
+        control_stream_ctx->is_upgraded = 1;
+        control_stream_ctx->wt_max_data_local =
+            h3_ctx->local_settings.wt_initial_max_data;
+        control_stream_ctx->wt_max_streams_bidi_local =
+            h3_ctx->local_settings.wt_initial_max_streams_bidi;
+        ret = h3zero_declare_stream_prefix(h3_ctx, control_stream_id,
+            picowt_max_data_callback, &test_ctx);
+    }
+    if (ret == 0 &&
+        (picoquic_create_stream(cnx, data_stream_id) == NULL ||
+            (data_stream_ctx = h3zero_find_or_create_stream(cnx,
+                data_stream_id, h3_ctx, 1, 1)) == NULL ||
+            picoquic_set_app_stream_ctx(cnx, data_stream_id,
+                data_stream_ctx) != 0)) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        prefix_length = picowt_format_stream_prefix_test(buffer,
+            sizeof(buffer), 1, control_stream_id);
+        if (prefix_length == 0 ||
+            prefix_length + delivered_body > sizeof(buffer)) {
+            ret = -1;
+        }
+        else {
+            memset(buffer + prefix_length, 0xa5, delivered_body);
+            ret = h3zero_process_remote_stream(cnx, data_stream_id, buffer,
+                prefix_length + delivered_body,
+                picoquic_callback_stream_data, data_stream_ctx, h3_ctx);
+        }
+    }
+    if (ret == 0 &&
+        (test_ctx.nb_data != delivered_body ||
+            control_stream_ctx->wt_data_received != delivered_body ||
+            data_stream_ctx->ps.stream_state.wt_stream_prefix_length !=
+                prefix_length ||
+            data_stream_ctx->ps.stream_state.wt_body_bytes_received !=
+                delivered_body)) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (data_stream = picoquic_find_stream(cnx, data_stream_id)) == NULL) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        data_stream->fin_offset = prefix_length + final_body;
+        data_stream->remote_error =
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST;
+        ret = h3zero_callback(cnx, data_stream_id, NULL, 0,
+            picoquic_callback_stream_reset, h3_ctx, data_stream_ctx);
+    }
+    if (ret == 0) {
+        control_stream = picoquic_find_stream(cnx, control_stream_id);
+        if (control_stream == NULL) {
+            ret = -1;
+        }
+        else if (expect_abort) {
+            if (!control_stream->reset_requested ||
+                control_stream->local_error !=
+                    H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR ||
+                !control_stream->stop_sending_requested ||
+                control_stream->local_stop_error !=
+                    H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR ||
+                h3zero_find_stream_prefix(h3_ctx, control_stream_id) != NULL ||
+                control_stream_ctx->wt_data_received != delivered_body ||
+                data_stream_ctx->ps.stream_state.wt_body_bytes_received !=
+                    delivered_body ||
+                test_ctx.nb_reset != 0 ||
+                test_ctx.nb_deregister != 1) {
+                ret = -1;
+            }
+        }
+        else if (control_stream->reset_requested ||
+            control_stream_ctx->wt_data_received != final_body ||
+            data_stream_ctx->ps.stream_state.wt_body_bytes_received !=
+                final_body ||
+            test_ctx.nb_reset != 1 ||
+            test_ctx.nb_deregister != 0) {
+            ret = -1;
+        }
+    }
+
+    picoquic_set_callback(cnx, NULL, NULL);
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
 }
 
 static int picowt_max_streams_receive_limit_case(int is_bidir)
@@ -4353,6 +4480,12 @@ int picowt_flow_control_capsule_test(void)
 
     if (ret == 0) {
         ret = picowt_max_data_receive_limit_case();
+    }
+    if (ret == 0) {
+        ret = picowt_max_data_reset_final_size_case(2, 3, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_max_data_reset_final_size_case(2, 4, 1);
     }
     if (ret == 0) {
         ret = picowt_local_max_data_send_case(0);

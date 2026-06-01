@@ -330,6 +330,8 @@ typedef struct st_h3zero_data_stream_state_t {
     uint64_t current_frame_length;
     uint64_t current_frame_read;
     uint64_t control_stream_id;
+    uint64_t wt_stream_prefix_length;
+    uint64_t wt_body_bytes_received;
     uint8_t frame_header[16];
     size_t frame_header_read;
     char const * wt_protocol;
