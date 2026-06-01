@@ -95,6 +95,7 @@ extern "C" {
     typedef struct st_picowt_capsule_t {
         h3zero_capsule_t h3_capsule;
         uint32_t error_code;
+        uint64_t h3_error_code;
         uint64_t flow_control_value;
         const uint8_t* error_msg;
         size_t error_msg_len;
@@ -108,6 +109,9 @@ extern "C" {
 
     int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint8_t* bytes_max, picowt_capsule_t* capsule);
     void picowt_release_capsule(picowt_capsule_t* capsule);
+    int picowt_abort_session(picoquic_cnx_t* cnx,
+        h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* control_stream_ctx,
+        uint64_t h3_error_code);
 
     void picowt_deregister(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* control_stream_ctx);
 

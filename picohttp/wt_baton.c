@@ -344,7 +344,16 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
      */
     if (stream_ctx->stream_id == baton_ctx->control_stream_id) {
             ret = picowt_receive_capsule(cnx, bytes, (bytes == NULL)?NULL:(bytes + length), &baton_ctx->capsule);
-            if (ret == 0 && is_fin) {
+            if (ret != 0) {
+                uint64_t h3_error_code = (baton_ctx->capsule.h3_error_code == 0) ?
+                    H3ZERO_GENERAL_PROTOCOL_ERROR : baton_ctx->capsule.h3_error_code;
+                picoquic_log_app_message(cnx,
+                    "Aborting WebTransport session on malformed capsule, error=0x%" PRIx64,
+                    h3_error_code);
+                return picowt_abort_session(cnx, baton_ctx->h3_ctx, stream_ctx,
+                    h3_error_code);
+            }
+            if (is_fin) {
                 stream_ctx->ps.stream_state.is_fin_received = 1;
                 baton_ctx->baton_state = wt_baton_state_closed;
                 if (baton_ctx->is_client) {

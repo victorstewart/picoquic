@@ -852,6 +852,7 @@ static int picowt_decode_max_flow_control_capsule(picowt_capsule_t* capsule,
     if (ret == 0) {
         if (*previous_value_received &&
             capsule->flow_control_value < *previous_value) {
+            capsule->h3_error_code = H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR;
             ret = -1;
         }
         else {
@@ -882,15 +883,18 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
 
         if (bytes == NULL) {
             picoquic_log_app_message(cnx, "Cannot parse %zu capsule bytes", bytes_max - bytes_first);
+            capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
             ret = -1;
             break;
         }
         else{
             if (capsule->h3_capsule.is_stored) {
+                capsule->h3_error_code = 0;
                 switch (capsule->h3_capsule.capsule_type) {
                 case picowt_capsule_drain_webtransport_session:
                     if (capsule->h3_capsule.capsule_length != 0) {
                         picoquic_log_app_message(cnx, "Web transport drain capsule length is %zu bytes", capsule->h3_capsule.capsule_length);
+                        capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
                         ret = -1;
                     }
                     else {
@@ -906,6 +910,7 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                     if (capsule->h3_capsule.capsule_length < 4 ||
                         capsule->h3_capsule.capsule_length > 4 + picowt_close_message_max) {
                         picoquic_log_app_message(cnx, "Invalid web transport close capsule length: %zu bytes", capsule->h3_capsule.capsule_length);
+                        capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
                         ret = -1;
                     }
                     else {
@@ -919,6 +924,7 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                             capsule->error_msg_len)) {
                             picoquic_log_app_message(cnx,
                                 "Invalid web transport close capsule UTF-8 message");
+                            capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
                             ret = -1;
                         }
                         else {
@@ -939,6 +945,9 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                         UINT64_MAX, &capsule->wt_max_data,
                         &capsule->wt_max_data_received);
                     if (ret != 0) {
+                        if (capsule->h3_error_code == 0) {
+                            capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
+                        }
                         picoquic_log_app_message(cnx,
                             "Invalid web transport flow control capsule, type: 0x%" PRIx64,
                             capsule->h3_capsule.capsule_type);
@@ -947,6 +956,7 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                 case picowt_capsule_wt_data_blocked:
                     ret = picowt_decode_flow_control_capsule(capsule, UINT64_MAX);
                     if (ret != 0) {
+                        capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
                         picoquic_log_app_message(cnx,
                             "Invalid web transport flow control capsule, type: 0x%" PRIx64,
                             capsule->h3_capsule.capsule_type);
@@ -957,6 +967,9 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                         picowt_max_streams_limit, &capsule->wt_max_streams_bidi,
                         &capsule->wt_max_streams_bidi_received);
                     if (ret != 0) {
+                        if (capsule->h3_error_code == 0) {
+                            capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
+                        }
                         picoquic_log_app_message(cnx,
                             "Invalid web transport flow control capsule, type: 0x%" PRIx64,
                             capsule->h3_capsule.capsule_type);
@@ -967,6 +980,9 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                         picowt_max_streams_limit, &capsule->wt_max_streams_uni,
                         &capsule->wt_max_streams_uni_received);
                     if (ret != 0) {
+                        if (capsule->h3_error_code == 0) {
+                            capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
+                        }
                         picoquic_log_app_message(cnx,
                             "Invalid web transport flow control capsule, type: 0x%" PRIx64,
                             capsule->h3_capsule.capsule_type);
@@ -976,6 +992,7 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                 case picowt_capsule_wt_streams_blocked_uni:
                     ret = picowt_decode_flow_control_capsule(capsule, picowt_max_streams_limit);
                     if (ret != 0) {
+                        capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
                         picoquic_log_app_message(cnx,
                             "Invalid web transport flow control capsule, type: 0x%" PRIx64,
                             capsule->h3_capsule.capsule_type);
@@ -986,6 +1003,7 @@ int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint
                     picoquic_log_app_message(cnx,
                         "Prohibited web transport capsule type: 0x%" PRIx64,
                         capsule->h3_capsule.capsule_type);
+                    capsule->h3_error_code = H3ZERO_GENERAL_PROTOCOL_ERROR;
                     ret = -1;
                     break;
                 default:
@@ -1003,6 +1021,27 @@ void picowt_release_capsule(picowt_capsule_t* capsule)
 {
     h3zero_release_capsule(&capsule->h3_capsule);
     memset(capsule, 0, sizeof(picowt_capsule_t));
+}
+
+int picowt_abort_session(picoquic_cnx_t* cnx,
+    h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* control_stream_ctx,
+    uint64_t h3_error_code)
+{
+    int ret = -1;
+
+    if (cnx != NULL && h3_ctx != NULL && control_stream_ctx != NULL) {
+        ret = picoquic_reset_stream(cnx, control_stream_ctx->stream_id,
+            h3_error_code);
+        if (ret == 0) {
+            ret = picoquic_stop_sending(cnx, control_stream_ctx->stream_id,
+                h3_error_code);
+        }
+        control_stream_ctx->ps.stream_state.is_fin_sent = 1;
+        control_stream_ctx->ps.stream_state.is_fin_received = 1;
+        h3zero_delete_stream_prefix(cnx, h3_ctx, control_stream_ctx->stream_id);
+    }
+
+    return ret;
 }
 
 static void picowt_abort_stream_on_session_close(picoquic_cnx_t* cnx, uint64_t stream_id)
