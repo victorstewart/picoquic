@@ -545,7 +545,6 @@
     var url = options.url || defaultTarget();
     var transport = null;
     var datagramWriter = null;
-    var streamWriter = null;
 
     function record(target, name, ok, detail) {
       target.tests.push({
@@ -559,6 +558,24 @@
       target.ok = target.tests.length > 0 && target.tests.every(function (entry) {
         return entry.ok;
       });
+    }
+
+    async function checkStreamWritable(name, writable) {
+      var writer = writable.getWriter();
+      try {
+        await writer.ready;
+        try {
+          await writer.write("not a BufferSource");
+          record(result.streamWritable, name, false, "write resolved");
+        } catch (error) {
+          record(result.streamWritable, name,
+            error && error.name === "TypeError", errorText(error));
+        }
+      } finally {
+        try {
+          writer.releaseLock();
+        } catch (_) {}
+      }
     }
 
     try {
@@ -584,15 +601,18 @@
         }
       }
 
-      var writable = await transport.createUnidirectionalStream();
-      streamWriter = writable.getWriter();
-      await streamWriter.ready;
       try {
-        await streamWriter.write("not a BufferSource");
-        record(result.streamWritable, "string-chunk", false, "write resolved");
+        var uniWritable = await transport.createUnidirectionalStream();
+        await checkStreamWritable("unidirectional-string-chunk", uniWritable);
       } catch (error) {
-        record(result.streamWritable, "string-chunk",
-          error && error.name === "TypeError", errorText(error));
+        record(result.streamWritable, "unidirectional-setup", false, errorText(error));
+      }
+
+      try {
+        var bidiStream = await transport.createBidirectionalStream();
+        await checkStreamWritable("bidirectional-string-chunk", bidiStream.writable);
+      } catch (error) {
+        record(result.streamWritable, "bidirectional-setup", false, errorText(error));
       }
     } catch (error) {
       if (result.datagramWritable.tests.length === 0) {
@@ -602,11 +622,6 @@
         record(result.streamWritable, "setup", false, errorText(error));
       }
     } finally {
-      if (streamWriter) {
-        try {
-          streamWriter.releaseLock();
-        } catch (_) {}
-      }
       if (datagramWriter) {
         try {
           datagramWriter.releaseLock();

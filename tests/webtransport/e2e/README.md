@@ -31,8 +31,8 @@ interop on it yet.
 Use `datagramWritableOk` on positive scenarios that must prove
 `datagrams.writable` rejects a non-`BufferSource` chunk with `TypeError` while
 the main scenario still successfully sends the expected baton datagram.
-Use `streamWritableOk` the same way for an outgoing unidirectional stream
-writer.
+Use `streamWritableOk` the same way for outgoing unidirectional and
+bidirectional stream writers.
 
 Run the portable core scenario in Chrome:
 

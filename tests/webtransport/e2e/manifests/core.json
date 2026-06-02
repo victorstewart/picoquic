@@ -262,7 +262,9 @@
         "incoming-bidirectional-stream",
         "outgoing-unidirectional-stream",
         "stream-bad-chunk",
+        "unidirectional-stream-bad-chunk",
         "outgoing-bidirectional-stream",
+        "bidirectional-stream-bad-chunk",
         "datagram-send",
         "datagram-bad-chunk",
         "datagram-receive"
@@ -310,7 +312,9 @@
         "incoming-bidirectional-stream",
         "outgoing-unidirectional-stream",
         "stream-bad-chunk",
+        "unidirectional-stream-bad-chunk",
         "outgoing-bidirectional-stream",
+        "bidirectional-stream-bad-chunk",
         "datagram-send",
         "datagram-bad-chunk",
         "datagram-receive"
