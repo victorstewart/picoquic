@@ -479,6 +479,89 @@
       }
     },
     {
+      "id": "datagrams.optional-unreliable",
+      "title": "Datagrams work when requireUnreliable is disabled",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "requireUnreliable-optional",
+        "ready",
+        "closed",
+        "Origin-header",
+        "origin-policy-allow",
+        "WT-Protocol",
+        "incoming-unidirectional-stream",
+        "incoming-bidirectional-stream",
+        "outgoing-unidirectional-stream",
+        "outgoing-bidirectional-stream",
+        "datagram-send",
+        "datagram-receive",
+        "datagram-available-without-requireUnreliable"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "received": [251, 253, 255],
+        "sent": [252, 254, 0],
+        "datagramsReceived": [252],
+        "datagramsSent": 1,
+        "eventsInclude": [
+          "ready",
+          "received 251 on remote-uni",
+          "datagram sent",
+          "sent 252",
+          "datagram 252",
+          "received 253 on local-bidi",
+          "sent 254",
+          "received 255 on remote-bidi",
+          "sent 0",
+          "closed"
+        ],
+        "datagramWritableOk": true,
+        "datagramWritableTestsInclude": ["string-chunk"],
+        "streamWritableOk": true,
+        "streamWritableTestsInclude": [
+          "unidirectional-string-chunk",
+          "bidirectional-string-chunk"
+        ],
+        "protocolConstructorOk": true,
+        "protocolConstructorTestsInclude": [
+          "valid-protocol",
+          "duplicate-protocol",
+          "empty-protocol",
+          "long-protocol",
+          "non-isomorphic-protocol"
+        ],
+        "urlConstructorOk": true,
+        "urlConstructorTestsInclude": [
+          "http-url",
+          "url-fragment",
+          "malformed-url"
+        ],
+        "optionsConstructorTestsInclude": [
+          "allow-pooling-with-certificate-hash"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "closeSessionReceivedMin": 1,
+          "writableBadChunkCloseReceived": true
+        }
+      }
+    },
+    {
       "id": "baton.core.compact-default-reader",
       "title": "Baton stream/datagram/protocol exchange with compact packets",
       "runner": "browser-baton",

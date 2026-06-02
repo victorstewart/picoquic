@@ -28,6 +28,10 @@ where that API requirement is known to be implemented. Chrome `148.0.7778.181`
 on macOS was observed to construct instead of throwing for that case, so the
 portable core manifest records the diagnostic but does not gate picoquic server
 interop on it yet.
+Set `requireDatagram: false` on positive scenarios that should prove
+`requireUnreliable` is only a constructor requirement knob; when picoquic
+advertises datagram support, those scenarios may still assert exact datagram
+send/receive payloads.
 Use `datagramWritableOk` on positive scenarios that must prove
 `datagrams.writable` rejects a non-`BufferSource` chunk with `TypeError` while
 the main scenario still successfully sends and receives the exact expected
