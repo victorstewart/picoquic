@@ -89,6 +89,26 @@
           "writableBadChunkCloseReceived": null
         }
       }
+    },
+    {
+      "scenario": "baton.core.medium-padded-default-reader",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not claim selected WT-Protocol exposure. The medium-padded scenario should still complete the same WebTransport stream/datagram data path, but it inherits the Firefox protocol-constructor, selected-protocol, close-capsule, and writable diagnostic caveats as the other positive Firefox baton scenarios.",
+      "evidence": "GitHub WebTransportBrowser run 26830637957, Firefox job passed after the standalone smoke stopped gating on the already documented bidirectional bad-chunk diagnostic. Earlier Firefox positive-path evidence is recorded on baton.core.compact-default-reader and datagrams.optional-unreliable.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=1200&protocol=optional",
+        "protocol": "",
+        "protocolConstructorOk": false,
+        "streamWritableOk": null,
+        "streamWritableTestsInclude": ["unidirectional-string-chunk"],
+        "server": {
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": null
+        }
+      }
     }
   ]
 }
