@@ -30,6 +30,7 @@ const EXPECT_ORDERED = process.env.PICOQUIC_WT_EXPECT_ORDERED !== "0";
 const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED === "1";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
+const SERVER_SUMMARY_WAIT_MS = Number(process.env.PICOQUIC_WT_SERVER_SUMMARY_WAIT_MS || 2000);
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const CDP_PORT = Number(process.env.PICOQUIC_WT_CDP_PORT || 9223);
 const CDP_TIMEOUT_MS = Number(process.env.PICOQUIC_WT_CDP_TIMEOUT_MS || 30000);
@@ -607,6 +608,23 @@ function countMatches(text, pattern) {
   return matches ? matches.length : 0;
 }
 
+function serverOutputHasBrowserClose(output) {
+  return /error: 2a \(browser-close-test\)/.test(output);
+}
+
+async function waitForServerOutput(predicate, getOutput, timeoutMs = SERVER_SUMMARY_WAIT_MS) {
+  const boundedTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 0;
+  const deadline = Date.now() + boundedTimeoutMs;
+
+  while (!predicate(getOutput())) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+    await sleep(Math.min(25, remaining));
+  }
+}
+
 function summarizeServerOutput(output) {
   return {
     bytesCaptured: output.length,
@@ -621,8 +639,7 @@ function summarizeServerOutput(output) {
       /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
     writableBadChunkCloseReceived:
       output.includes("error: 0 (writable-bad-chunk-test)"),
-    browserCloseReceived:
-      /error: 2a \(browser-close-test\)/.test(output)
+    browserCloseReceived: serverOutputHasBrowserClose(output)
   };
 }
 
@@ -729,6 +746,15 @@ async function main() {
       result.streamWritable = writableBadChunk.streamWritable;
       assertStreamWritableResult(result.streamWritable);
       result.closeSession = await readCloseSessionResult(cdp, certConfig.hash);
+      if (INCLUDE_SERVER_SUMMARY && result.closeSession && result.closeSession.ok === true) {
+        /* GitHub run 26838267520 showed Chrome job 79137977278 and Edge job
+         * 79137977123 completing the browser close diagnostic before Node had
+         * received pico_baton's close-capsule log. The Chrome rerun job
+         * 79138790636 reproduced it. Keep the server assertion, but wait
+         * briefly for the expected trace line before summarizing.
+         */
+        await waitForServerOutput(serverOutputHasBrowserClose, () => serverOutput);
+      }
     }
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);
