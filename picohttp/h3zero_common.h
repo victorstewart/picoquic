@@ -48,7 +48,7 @@ extern "C" {
         picohttp_callback_provide_datagram, /* Ready to send datagram in this context */
         picohttp_callback_reset, /* Stream has been abandoned by peer. */
         picohttp_callback_stop_sending, /* Peer asking to reset the stream. */
-        picohttp_callback_drain, /* Peer sent GOAWAY; initiate graceful WebTransport shutdown. */
+        picohttp_callback_drain, /* Peer initiated graceful WebTransport drain. */
         picohttp_callback_deregister, /* Context has been deregistered */
         picohttp_callback_free
     } picohttp_call_back_event_t;
@@ -111,6 +111,7 @@ extern "C" {
         unsigned int wt_streams_bidi_blocked_sent : 1;
         unsigned int wt_streams_uni_blocked_sent : 1;
         unsigned int wt_drain_sent : 1;
+        unsigned int wt_drain_received : 1;
         uint64_t wt_data_received;
         uint64_t wt_data_sent;
         uint64_t wt_max_data_local;

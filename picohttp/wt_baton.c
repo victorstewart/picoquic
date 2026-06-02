@@ -358,6 +358,15 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             if (ret == 0 &&
                 baton_ctx->capsule.h3_capsule.is_stored &&
                 baton_ctx->capsule.h3_capsule.capsule_type ==
+                    picowt_capsule_drain_webtransport_session &&
+                !stream_ctx->wt_drain_received) {
+                stream_ctx->wt_drain_received = 1;
+                ret = wt_baton_callback(cnx, NULL, 0,
+                    picohttp_callback_drain, stream_ctx, path_app_ctx);
+            }
+            if (ret == 0 &&
+                baton_ctx->capsule.h3_capsule.is_stored &&
+                baton_ctx->capsule.h3_capsule.capsule_type ==
                     picowt_capsule_close_webtransport_session) {
                 int is_client = baton_ctx->is_client;
 
