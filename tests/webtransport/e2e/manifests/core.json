@@ -263,6 +263,7 @@
         "outgoing-unidirectional-stream",
         "outgoing-bidirectional-stream",
         "datagram-send",
+        "datagram-bad-chunk",
         "datagram-receive"
       ],
       "expect": {
@@ -276,6 +277,7 @@
         "sent": [252, 254, 0],
         "datagramsReceivedMin": 1,
         "datagramsSent": 1,
+        "datagramWritableOk": true,
         "protocolConstructorOk": true,
         "urlConstructorOk": true,
         "server": {
@@ -307,6 +309,7 @@
         "outgoing-unidirectional-stream",
         "outgoing-bidirectional-stream",
         "datagram-send",
+        "datagram-bad-chunk",
         "datagram-receive"
       ],
       "expect": {
@@ -320,6 +323,7 @@
         "sent": [252, 254, 0],
         "datagramsReceivedMin": 1,
         "datagramsSent": 1,
+        "datagramWritableOk": true,
         "protocolConstructorOk": true,
         "urlConstructorOk": true,
         "server": {

@@ -325,6 +325,11 @@ function assertScenarioResult(id, result, expect) {
       result.optionsConstructor.ok !== expect.optionsConstructorOk)) {
     throw new Error(`${id}: options constructor check failed`);
   }
+  if (expect.datagramWritableOk !== undefined &&
+    (!result.datagramWritable ||
+      result.datagramWritable.ok !== expect.datagramWritableOk)) {
+    throw new Error(`${id}: datagram writable check failed`);
+  }
   if (expect.server) {
     if (!result.server) {
       throw new Error(`${id}: missing server summary`);

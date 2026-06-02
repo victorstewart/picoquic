@@ -533,6 +533,36 @@ async function readOptionsConstructorResult(endpoint, sessionId, certificateHash
   return wrapped.value;
 }
 
+async function readDatagramWritableResult(endpoint, sessionId, certificateHash) {
+  const wrapped = await executeAsyncScript(endpoint, sessionId, `
+    const done = arguments[arguments.length - 1];
+    const options = arguments[0];
+    function errorText(error) {
+      if (error && typeof error === "object") {
+        return (error.name ? error.name + ": " : "") + (error.message || String(error));
+      }
+      return String(error);
+    }
+    Promise.resolve(
+      window.picoquicWebTransportBaton.runDatagramWritableTests(options)
+    ).then(
+      (value) => done({ ok: true, value }),
+      (error) => done({ ok: false, error: errorText(error) })
+    );
+  `, [{
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL,
+    requireDatagram: REQUIRE_DATAGRAM
+  }]);
+
+  if (!wrapped || wrapped.ok !== true) {
+    throw new Error((wrapped && wrapped.error) ||
+      "browser datagram writable tests failed");
+  }
+  return wrapped.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
@@ -548,6 +578,12 @@ function assertUrlConstructorResult(result) {
 function assertOptionsConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser options constructor tests failed: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertDatagramWritableResult(result) {
+  if (!result || result.ok !== true) {
+    throw new Error(`browser datagram writable tests failed: ${JSON.stringify(result)}`);
   }
 }
 
@@ -656,6 +692,9 @@ async function main() {
       if (REQUIRE_OPTIONS_CONSTRUCTOR) {
         assertOptionsConstructorResult(result.optionsConstructor);
       }
+      result.datagramWritable = await readDatagramWritableResult(endpoint,
+        sessionId, certConfig.hash);
+      assertDatagramWritableResult(result.datagramWritable);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
