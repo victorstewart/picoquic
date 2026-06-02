@@ -1,0 +1,6 @@
+{
+  "browser": "firefox",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": []
+}

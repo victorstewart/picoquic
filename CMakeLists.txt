@@ -803,7 +803,7 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          list)
         set_tests_properties(picohttp_wt_wpt_discovery
                              PROPERTIES LABELS wt_wpt)
-        foreach(PICOQUIC_WT_WPT_EXPECTED chrome-stable edge-stable safari-stable)
+        foreach(PICOQUIC_WT_WPT_EXPECTED chrome-stable edge-stable firefox-stable safari-stable)
             string(REPLACE "-" "_" PICOQUIC_WT_WPT_EXPECTED_TEST ${PICOQUIC_WT_WPT_EXPECTED})
             add_test(NAME picohttp_wt_wpt_expected_${PICOQUIC_WT_WPT_EXPECTED_TEST}
                      COMMAND ${NODE_EXECUTABLE}

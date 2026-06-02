@@ -56,5 +56,6 @@ WPT-compatible picoquic server/handler shim so the same target subset can be
 run against picoquic directly.
 
 Expected-result manifests live under
-`tests/webtransport/wpt/expected/`; keep entries tied to tests in the listed WPT
+`tests/webtransport/wpt/expected/`; Chrome, Edge, Firefox, and Safari stable
+manifests are validated by CTest. Keep entries tied to tests in the listed WPT
 target subset so stale browser caveats fail fast.
