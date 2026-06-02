@@ -2638,6 +2638,46 @@ static uint8_t* h3zero_settings_fragment_malformed_stream(uint8_t* bytes,
     return bytes;
 }
 
+static uint8_t* h3zero_settings_fragment_component_encode(uint8_t* bytes,
+    const uint8_t* bytes_max, uint64_t setting_key, uint64_t setting_value)
+{
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max, setting_key)) != NULL) {
+        bytes = picoquic_frames_varint_encode(bytes, bytes_max, setting_value);
+    }
+    return bytes;
+}
+
+static uint8_t* h3zero_settings_fragment_malformed_component_stream(uint8_t* bytes,
+    const uint8_t* bytes_max, uint64_t setting_key, uint64_t setting_value,
+    int is_duplicate)
+{
+    uint8_t* length_byte = NULL;
+    uint8_t* body_start = NULL;
+
+    if ((bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+        h3zero_stream_type_control)) != NULL &&
+        (bytes = picoquic_frames_varint_encode(bytes, bytes_max,
+            h3zero_frame_settings)) != NULL &&
+        bytes < bytes_max) {
+        length_byte = bytes++;
+        body_start = bytes;
+        bytes = h3zero_settings_fragment_component_encode(bytes, bytes_max,
+            setting_key, setting_value);
+        if (is_duplicate && bytes != NULL) {
+            bytes = h3zero_settings_fragment_component_encode(bytes, bytes_max,
+                setting_key, setting_value);
+        }
+    }
+    if (body_start == NULL || bytes == NULL || bytes - body_start >= 64) {
+        bytes = NULL;
+    }
+    else {
+        *length_byte = (uint8_t)(bytes - body_start);
+    }
+
+    return bytes;
+}
+
 static int h3zero_settings_fragment_submit(const uint8_t* bytes, size_t length,
     size_t boundary, int expect_success)
 {
@@ -2718,6 +2758,24 @@ static int h3zero_settings_fragment_all_boundaries(const uint8_t* bytes,
 
 int h3zero_settings_fragment_test(void)
 {
+    static const uint64_t boolean_settings[] = {
+        h3zero_settings_enable_connect_protocol,
+        h3zero_setting_h3_datagram,
+        h3zero_settings_wt_enabled
+    };
+    static const uint64_t duplicate_settings[] = {
+        h3zero_setting_header_table_size,
+        h3zero_qpack_blocked_streams,
+        h3zero_settings_enable_connect_protocol,
+        h3zero_setting_h3_datagram,
+        h3zero_settings_wt_enabled,
+        h3zero_settings_wt_initial_max_data,
+        h3zero_settings_wt_initial_max_streams_uni,
+        h3zero_settings_wt_initial_max_streams_bidi,
+        h3zero_settings_webtransport_max_sessions,
+        h3zero_settings_webtransport_max_sessions_old,
+        h3zero_settings_enable_webtransport
+    };
     uint8_t buffer[256];
     uint8_t* bytes = h3zero_settings_fragment_valid_stream(buffer,
         buffer + sizeof(buffer));
@@ -2733,6 +2791,20 @@ int h3zero_settings_fragment_test(void)
     if (ret == 0) {
         bytes = h3zero_settings_fragment_malformed_stream(buffer,
             buffer + sizeof(buffer), 1);
+        ret = (bytes == NULL) ? -1 : h3zero_settings_fragment_all_boundaries(
+            buffer, bytes - buffer, 0);
+    }
+    for (size_t i = 0; ret == 0 &&
+        i < sizeof(boolean_settings) / sizeof(boolean_settings[0]); i++) {
+        bytes = h3zero_settings_fragment_malformed_component_stream(buffer,
+            buffer + sizeof(buffer), boolean_settings[i], 2, 0);
+        ret = (bytes == NULL) ? -1 : h3zero_settings_fragment_all_boundaries(
+            buffer, bytes - buffer, 0);
+    }
+    for (size_t i = 0; ret == 0 &&
+        i < sizeof(duplicate_settings) / sizeof(duplicate_settings[0]); i++) {
+        bytes = h3zero_settings_fragment_malformed_component_stream(buffer,
+            buffer + sizeof(buffer), duplicate_settings[i], 1, 1);
         ret = (bytes == NULL) ? -1 : h3zero_settings_fragment_all_boundaries(
             buffer, bytes - buffer, 0);
     }
