@@ -393,6 +393,13 @@ function assertScenarioResult(id, result, expect) {
       throw new Error(`${id}: missing server summary`);
     }
     for (const [name, minimum] of Object.entries(expect.server)) {
+      if (minimum === null) {
+        /* Expected-result manifests use null to omit one inherited
+         * server-summary assertion when browser-version evidence shows the
+         * field is not stable enough to claim.
+         */
+        continue;
+      }
       if (name.endsWith("Min")) {
         const actualName = name.slice(0, -3);
         const actual = result.server[actualName];
