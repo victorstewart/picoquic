@@ -346,6 +346,29 @@ async function newSafariSession(endpoint) {
   }
 }
 
+async function newSafariSessionWithRetry(endpoint) {
+  const attempts = Number(process.env.PICOQUIC_WT_SAFARI_SESSION_ATTEMPTS || 2);
+  let lastError = null;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await newSafariSession(endpoint);
+    } catch (error) {
+      lastError = error;
+      if (!/session timed out|RWIApplication|launching a compatible local Safari/i.test(error.message) ||
+        attempt + 1 >= attempts) {
+        break;
+      }
+      /* Safari 26.4 on the macos-26 GitHub image timed out while launching
+       * Safari before any WebTransport traffic; see run 26802093974. Retry
+       * session creation once so transient WebDriver startup does not mask the
+       * picoquic WebTransport smoke signal.
+       */
+      await sleep(1500);
+    }
+  }
+  throw lastError;
+}
+
 async function executeScript(endpoint, sessionId, script, args = []) {
   return webdriver(endpoint, "POST", `/session/${sessionId}/execute/sync`, {
     script,
@@ -673,7 +696,7 @@ async function main() {
   try {
     await waitForServer(server);
     await waitForDriver(endpoint, () => driverOutput.trim());
-    const session = await newSafariSession(endpoint);
+    const session = await newSafariSessionWithRetry(endpoint);
     sessionId = session.sessionId;
     browserCapabilities = summarizeCapabilities(session.capabilities);
     await webdriver(endpoint, "POST", `/session/${sessionId}/timeouts`, {
