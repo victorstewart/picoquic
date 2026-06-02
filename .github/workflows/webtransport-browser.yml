@@ -1,0 +1,79 @@
+---
+name: "WebTransportBrowser"
+
+on:
+  push:
+    branches:
+      - master
+      - webtransport_refresh
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chrome:
+    name: Chrome WebTransport smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+          if ! command -v google-chrome >/dev/null 2>&1; then
+            sudo apt-get install -y wget gnupg
+            wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | \
+              sudo gpg --dearmor -o /usr/share/keyrings/google-linux.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | \
+              sudo tee /etc/apt/sources.list.d/google-chrome.list
+            sudo apt-get update
+            sudo apt-get install -y google-chrome-stable
+          fi
+
+      - name: Build pico_baton
+        run: |
+          cmake -S . -B build -DPICOQUIC_FETCH_PTLS:BOOL=ON
+          cmake --build build -j$(nproc) --target pico_baton
+
+      - name: Run Chrome WebTransport baton smoke
+        env:
+          CHROME_BIN: google-chrome
+        run: |
+          npx -y node@22 tests/webtransport/browser/run-chrome.mjs
+
+  safari:
+    name: Safari WebTransport smoke
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        run: |
+          brew install openssl
+
+      - name: Enable Safari WebDriver
+        run: |
+          sudo safaridriver --enable
+
+      - name: Build pico_baton
+        run: |
+          export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig"
+          cmake -S . -B build -DPICOQUIC_FETCH_PTLS:BOOL=ON
+          cmake --build build -j$(sysctl -n hw.ncpu) --target pico_baton
+
+      - name: Run Safari WebTransport baton smoke
+        run: |
+          npx -y node@22 tests/webtransport/browser/run-safari.mjs
