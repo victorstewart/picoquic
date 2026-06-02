@@ -3812,6 +3812,11 @@ int picowt_exporter_test(void)
         5, 'b', 'a', 't', 'o', 'n',
         0
     };
+    const uint8_t serialized_empty_label[] = {
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0,
+        4, 1, 2, 3, 4
+    };
     const size_t export_key_len = 16;
     uint8_t client_export_key[16] = { 0 };
     uint8_t server_export_key[16] = { 0 };
@@ -3915,10 +3920,32 @@ int picowt_exporter_test(void)
         ret = -1;
     }
     if (ret == 0) {
+        ret = picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            NULL, 0,
+            exporter_context, sizeof(exporter_context), other_session_key, export_key_len);
+    }
+    if (ret == 0) {
+        ret = picoquic_export_secret_with_context(test_ctx->cnx_client,
+            "EXPORTER-WebTransport", serialized_empty_label, sizeof(serialized_empty_label),
+            direct_export_key, export_key_len);
+    }
+    if (ret == 0 && memcmp(other_session_key, direct_export_key, export_key_len) != 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
         uint8_t max_label[UINT8_MAX];
         memset(max_label, 'x', sizeof(max_label));
         if (picowt_export_secret(test_ctx->cnx_client, &session_ctx,
             max_label, sizeof(max_label), NULL, 0, other_session_key, export_key_len) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        uint8_t max_context[UINT8_MAX];
+        memset(max_context, 'y', sizeof(max_context));
+        if (picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            max_context, sizeof(max_context), other_session_key, export_key_len) != 0) {
             ret = -1;
         }
     }
