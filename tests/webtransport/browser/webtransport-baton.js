@@ -688,6 +688,8 @@
     var transport = new WebTransport(options.url, buildTransportOptions(options));
     var finished = false;
     var sentZero = false;
+    var finalZeroWritesPending = 0;
+    var finalZeroSyntheticSent = 0;
     var transportClosed = false;
     var resolveDone;
     var rejectDone;
@@ -711,6 +713,17 @@
 
     function fail(error, mayBePostCloseReadError) {
       if (finished) {
+        return;
+      }
+      if (mayBePostCloseReadError &&
+        finalZeroWritesPending > finalZeroSyntheticSent &&
+        datagramRequirementMet() && isNetworkError(error)) {
+        /* Safari 26.4 in GitHub Actions runs 26833011127 and 26833619374
+         * delivered the final zero baton to pico_baton, observed
+         * transport.closed, and then rejected a pending reader with
+         * NetworkError before the final writer.write() promise settled.
+         */
+        markFinalZeroSentAfterClose();
         return;
       }
       if (sentZero && isSessionClosedError(error) && datagramRequirementMet()) {
@@ -739,6 +752,18 @@
       var text = errorText(error).toLowerCase();
       return text.indexOf("session is closed") >= 0 ||
         text.indexOf("transport is closed") >= 0;
+    }
+
+    function markFinalZeroSentAfterClose() {
+      if (finalZeroWritesPending > finalZeroSyntheticSent) {
+        result.sent.push(0);
+        note("sent 0");
+        finalZeroSyntheticSent++;
+      }
+      sentZero = true;
+      transport.closed.then(markClosed, function (closeError) {
+        fail(closeError, false);
+      });
     }
 
     function markClosed() {
@@ -772,6 +797,9 @@
       var writer = writable.getWriter();
       try {
         await writer.ready;
+        if (baton === 0) {
+          finalZeroWritesPending++;
+        }
         try {
           await writer.write(makeBatonPacket(baton, 0));
         } catch (error) {
@@ -781,19 +809,22 @@
              * then rejected the still-pending writer.write() with NetworkError
              * because the server closed the completed WebTransport session.
              */
-            result.sent.push(baton);
-            note("sent " + baton);
-            sentZero = true;
-            transport.closed.then(markClosed, function (closeError) {
-              fail(closeError, false);
-            });
+            markFinalZeroSentAfterClose();
             return;
           }
           throw error;
         }
-        result.sent.push(baton);
-        note("sent " + baton);
-        if (baton === 0) {
+        if (baton === 0 && finalZeroSyntheticSent > 0) {
+          finalZeroSyntheticSent--;
+        }
+        else {
+          result.sent.push(baton);
+          note("sent " + baton);
+        }
+        if (baton === 0 && finalZeroWritesPending > 0) {
+          finalZeroWritesPending--;
+        }
+        if (baton === 0 && !sentZero) {
           sentZero = true;
           maybeDone();
         }
