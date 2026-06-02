@@ -24,6 +24,12 @@ const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !=
 const REQUIRE_PROTOCOL_CONSTRUCTOR =
   process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR_REQUIRED !== "0";
 const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED === "1";
+/* Firefox 151.0.2 in GitHub Actions can reject the bidirectional writable
+ * bad-chunk diagnostic setup with InvalidStateError after multiple sequential
+ * WebTransport sessions; see run 26802934161. Keep recording the diagnostic,
+ * but let the expected-results manifest classify the Firefox core E2E gap.
+ */
+const REQUIRE_STREAM_WRITABLE = process.env.PICOQUIC_WT_STREAM_WRITABLE_REQUIRED !== "0";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
@@ -640,7 +646,9 @@ async function main() {
       result.datagramWritable = writableBadChunk.datagramWritable;
       assertDiagnosticResult("datagramWritable", result.datagramWritable);
       result.streamWritable = writableBadChunk.streamWritable;
-      assertDiagnosticResult("streamWritable", result.streamWritable);
+      if (REQUIRE_STREAM_WRITABLE) {
+        assertDiagnosticResult("streamWritable", result.streamWritable);
+      }
     }
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);

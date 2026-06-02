@@ -142,6 +142,7 @@ jobs:
           PICOQUIC_WT_FIREFOX_ACCEPT_INSECURE_CERTS: "1"
           PICOQUIC_WT_FIREFOX_PROTOCOL_OPTIONAL: "1"
           PICOQUIC_WT_PROTOCOL_CONSTRUCTOR_REQUIRED: "0"
+          PICOQUIC_WT_STREAM_WRITABLE_REQUIRED: "0"
           PICOQUIC_WT_SERVER_LOG: "1"
         run: |
           npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser firefox

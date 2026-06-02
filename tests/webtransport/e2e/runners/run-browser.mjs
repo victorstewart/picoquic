@@ -298,12 +298,16 @@ function assertDiagnosticTestsInclude(id, name, diagnostic, expectedNames) {
   }
 }
 
+function hasExpectedValue(expect, name) {
+  return Object.prototype.hasOwnProperty.call(expect, name) && expect[name] !== null;
+}
+
 function assertScenarioResult(id, result, expect) {
   if (result.ok !== expect.ok) {
     throw new Error(`${id}: expected ok=${expect.ok}, got ${result.ok}`);
   }
   for (const name of ["url", "protocol", "requireDatagram", "constructorRequireUnreliable", "useByob", "readyMs", "closedMs", "datagramsSent"]) {
-    if (Object.prototype.hasOwnProperty.call(expect, name) && result[name] !== expect[name]) {
+    if (hasExpectedValue(expect, name) && result[name] !== expect[name]) {
       throw new Error(`${id}: expected ${name}=${JSON.stringify(expect[name])}, got ${JSON.stringify(result[name])}`);
     }
   }
@@ -343,7 +347,7 @@ function assertScenarioResult(id, result, expect) {
     (!result.error || !result.error.includes(expect.errorIncludes))) {
     throw new Error(`${id}: expected error containing ${JSON.stringify(expect.errorIncludes)}, got ${JSON.stringify(result.error)}`);
   }
-  if (expect.protocolConstructorOk !== undefined &&
+  if (hasExpectedValue(expect, "protocolConstructorOk") &&
     (!result.protocolConstructor ||
       result.protocolConstructor.ok !== expect.protocolConstructorOk)) {
     throw new Error(`${id}: protocol constructor check failed`);
@@ -352,7 +356,7 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "protocolConstructor", result.protocolConstructor,
       expect.protocolConstructorTestsInclude);
   }
-  if (expect.urlConstructorOk !== undefined &&
+  if (hasExpectedValue(expect, "urlConstructorOk") &&
     (!result.urlConstructor ||
       result.urlConstructor.ok !== expect.urlConstructorOk)) {
     throw new Error(`${id}: URL constructor check failed`);
@@ -361,7 +365,7 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "urlConstructor", result.urlConstructor,
       expect.urlConstructorTestsInclude);
   }
-  if (expect.optionsConstructorOk !== undefined &&
+  if (hasExpectedValue(expect, "optionsConstructorOk") &&
     (!result.optionsConstructor ||
       result.optionsConstructor.ok !== expect.optionsConstructorOk)) {
     throw new Error(`${id}: options constructor check failed`);
@@ -370,7 +374,7 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "optionsConstructor", result.optionsConstructor,
       expect.optionsConstructorTestsInclude);
   }
-  if (expect.datagramWritableOk !== undefined &&
+  if (hasExpectedValue(expect, "datagramWritableOk") &&
     (!result.datagramWritable ||
       result.datagramWritable.ok !== expect.datagramWritableOk)) {
     throw new Error(`${id}: datagram writable check failed`);
@@ -379,7 +383,7 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "datagramWritable", result.datagramWritable,
       expect.datagramWritableTestsInclude);
   }
-  if (expect.streamWritableOk !== undefined &&
+  if (hasExpectedValue(expect, "streamWritableOk") &&
     (!result.streamWritable ||
       result.streamWritable.ok !== expect.streamWritableOk)) {
     throw new Error(`${id}: stream writable check failed`);

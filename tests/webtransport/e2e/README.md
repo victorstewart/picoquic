@@ -83,8 +83,8 @@ loaded automatically by browser name when present. `status: "skip"` entries
 skip a whole scenario; `status: "pass"` entries merge browser-specific
 assertion overrides into a normally running scenario. Every expected-result
 entry must include browser/version, platform, category, reason, and evidence.
-Within a `pass` override, a `server` assertion value of `null` omits only that
-inherited server-summary field for the documented browser/version.
+Within a `pass` override, an inherited assertion value of `null` omits only
+that exact assertion for the documented browser/version.
 Expected-result files are validated against the manifest with `list --expected`:
 stale scenario IDs, duplicate entries, unsupported statuses, and malformed
 pass/skip entries are test failures.

@@ -27,12 +27,14 @@
       "category": "browser-missing",
       "browserVersion": "151.0.2",
       "platform": "linux",
-      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure. The same browser accepted invalid WebTransport protocols constructor inputs instead of throwing, did not send a WT_CLOSE_SESSION capsule after the positive baton exchange, and showed nondeterministic server visibility for the writable bad-chunk diagnostic close-reason marker, so those are recorded as browser API/protocol gaps.",
-      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected. Run 26801732536, Firefox job 79009682544, completed the baton exchange but recorded protocolConstructor.ok=false because duplicate, empty, overlong, and non-isomorphic protocols did not throw. Run 26802216963, Firefox job 79011192245, completed Firefox baton smoke and core data exchange but recorded server.closeSessionReceived=0. Run 26802432230, Firefox job 79011866106, recorded server.writableBadChunkCloseReceived=false; run 26802593484, Firefox job 79012384032, recorded the same field true.",
+      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure. The same browser accepted invalid WebTransport protocols constructor inputs instead of throwing, did not send a WT_CLOSE_SESSION capsule after the positive baton exchange, showed nondeterministic server visibility for the writable bad-chunk diagnostic close-reason marker, and can fail bidirectional writable bad-chunk diagnostic setup with InvalidStateError after sequential sessions, so those are recorded as browser API/protocol gaps.",
+      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected. Run 26801732536, Firefox job 79009682544, completed the baton exchange but recorded protocolConstructor.ok=false because duplicate, empty, overlong, and non-isomorphic protocols did not throw. Run 26802216963, Firefox job 79011192245, completed Firefox baton smoke and core data exchange but recorded server.closeSessionReceived=0. Run 26802432230, Firefox job 79011866106, recorded server.writableBadChunkCloseReceived=false; run 26802593484, Firefox job 79012384032, recorded the same field true. Run 26802934161, Firefox job 79013469332, failed the compact core scenario because streamWritable reported InvalidStateError on bidirectional-setup.",
       "expect": {
         "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&protocol=optional",
         "protocol": "",
         "protocolConstructorOk": false,
+        "streamWritableOk": null,
+        "streamWritableTestsInclude": ["unidirectional-string-chunk"],
         "server": {
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": null
@@ -45,12 +47,14 @@
       "category": "browser-missing",
       "browserVersion": "151.0.2",
       "platform": "linux",
-      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure. The same browser accepted invalid WebTransport protocols constructor inputs instead of throwing, did not send a WT_CLOSE_SESSION capsule after the positive baton exchange, and showed nondeterministic server visibility for the writable bad-chunk diagnostic close-reason marker, so those are recorded as browser API/protocol gaps.",
-      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected. Run 26801732536, Firefox job 79009682544, completed the baton exchange but recorded protocolConstructor.ok=false because duplicate, empty, overlong, and non-isomorphic protocols did not throw. Run 26802216963, Firefox job 79011192245, completed Firefox baton smoke and core data exchange but recorded server.closeSessionReceived=0. Run 26802432230, Firefox job 79011866106, recorded server.writableBadChunkCloseReceived=false; run 26802593484, Firefox job 79012384032, recorded the same field true.",
+      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure. The same browser accepted invalid WebTransport protocols constructor inputs instead of throwing, did not send a WT_CLOSE_SESSION capsule after the positive baton exchange, showed nondeterministic server visibility for the writable bad-chunk diagnostic close-reason marker, and can fail bidirectional writable bad-chunk diagnostic setup with InvalidStateError after sequential sessions, so those are recorded as browser API/protocol gaps.",
+      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected. Run 26801732536, Firefox job 79009682544, completed the baton exchange but recorded protocolConstructor.ok=false because duplicate, empty, overlong, and non-isomorphic protocols did not throw. Run 26802216963, Firefox job 79011192245, completed Firefox baton smoke and core data exchange but recorded server.closeSessionReceived=0. Run 26802432230, Firefox job 79011866106, recorded server.writableBadChunkCloseReceived=false; run 26802593484, Firefox job 79012384032, recorded the same field true. Run 26802934161, Firefox job 79013469332, failed the compact core scenario because streamWritable reported InvalidStateError on bidirectional-setup.",
       "expect": {
         "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&protocol=optional",
         "protocol": "",
         "protocolConstructorOk": false,
+        "streamWritableOk": null,
+        "streamWritableTestsInclude": ["unidirectional-string-chunk"],
         "server": {
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": null
