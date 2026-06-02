@@ -804,10 +804,14 @@
         errorText(error).toLowerCase().indexOf("network error") >= 0;
     }
 
-    function isEdgeCompletedPeerCloseError(error) {
+    function isBrowserCompletedPeerCloseError(error) {
       var userAgent = typeof navigator !== "undefined" && navigator.userAgent ?
         navigator.userAgent : "";
-      return userAgent.indexOf("Edg/") >= 0 &&
+      var isEdge = userAgent.indexOf("Edg/") >= 0;
+      var isChrome148 = !isEdge &&
+        (userAgent.indexOf("Chrome/148.") >= 0 ||
+          userAgent.indexOf("HeadlessChrome/148.") >= 0);
+      return (isEdge || isChrome148) &&
         errorText(error).toLowerCase().indexOf("connection lost") >= 0;
     }
 
@@ -831,11 +835,14 @@
         return;
       }
       if (sentZero && datagramRequirementMet() &&
-        isEdgeCompletedPeerCloseError(error)) {
+        isBrowserCompletedPeerCloseError(error)) {
         /* Edge 148.0.3967.83 in GitHub Actions run 26836728795 jobs
          * 79132510221 and 79133239109 completed the stream/datagram baton
          * exchange, then rejected transport.closed with WebTransportError:
          * Connection lost after pico_baton closed the completed session.
+         * Chrome 148.0.7778.178 old headless on Linux reproduced the same
+         * completed-close behavior in GitHub run 26846296519 jobs 79166649793
+         * and 79167387553.
          */
         markClosed();
         return;

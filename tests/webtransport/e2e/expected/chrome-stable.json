@@ -21,8 +21,8 @@
       "category": "browser-bug",
       "browserVersion": "148.0.7778.178",
       "platform": "linux",
-      "reason": "Chrome stable constructs when allowPooling is true and serverCertificateHashes is non-empty, even though the W3C WebTransport constructor requires NotSupportedError for that option combination.",
-      "evidence": "GitHub run 26796690452 on Chrome 148.0.7778.178 recorded optionsConstructor.ok=false with detail 'constructor did not throw' for baton.core.compact-default-reader. Local Chrome 148.0.7778.181 on macOS showed the same behavior.",
+      "reason": "Chrome stable constructs when allowPooling is true and serverCertificateHashes is non-empty, even though the W3C WebTransport constructor requires NotSupportedError for that option combination. Chrome 148 old headless can also reject transport.closed with WebTransportError: Connection lost after the full baton exchange has completed and pico_baton has received the final zero baton.",
+      "evidence": "GitHub run 26796690452 on Chrome 148.0.7778.178 recorded optionsConstructor.ok=false with detail 'constructor did not throw' for baton.core.compact-default-reader. Local Chrome 148.0.7778.181 on macOS showed the same behavior. GitHub WebTransportBrowser run 26846296519, Chrome 148.0.7778.178 jobs 79166649793 and 79167387553, completed received=[251,253,255], sent=[252,254,0], datagramsReceived=[252], and server.zeroBatonReceived=1, then rejected transport.closed with WebTransportError: Connection lost.",
       "expect": {
         "optionsConstructorOk": false
       }
