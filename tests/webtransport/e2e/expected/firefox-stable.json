@@ -47,6 +47,8 @@
         "streamWritableOk": null,
         "streamWritableTestsInclude": ["unidirectional-string-chunk"],
         "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": null,
           "browserCloseReceived": null
@@ -70,6 +72,8 @@
         "streamWritableOk": null,
         "streamWritableTestsInclude": ["unidirectional-string-chunk"],
         "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": null,
           "browserCloseReceived": null
@@ -86,7 +90,11 @@
       "evidence": "GitHub WebTransportBrowser run 26842019982, Firefox job 79151393630, reached datagrams.server-empty but failed before datagram assertions because the scenario URL expected no protocol=optional query parameter.",
       "expect": {
         "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&datagram=empty&protocol=optional",
-        "protocol": ""
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
       }
     },
     {
@@ -106,6 +114,8 @@
         "streamWritableOk": null,
         "streamWritableTestsInclude": ["unidirectional-string-chunk"],
         "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": null,
           "browserCloseReceived": null
@@ -122,7 +132,11 @@
       "evidence": "Same selected-protocol constraint as datagrams.optional-unreliable and datagrams.server-empty: GitHub WebTransportBrowser runs 26829426456 and 26842292496 showed Firefox completes the stream/datagram data path through protocol=optional but does not expose a selected WT-Protocol value in this lane.",
       "expect": {
         "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&client_datagram=empty&protocol=optional",
-        "protocol": ""
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
       }
     },
     {
@@ -142,6 +156,8 @@
         "streamWritableOk": null,
         "streamWritableTestsInclude": ["unidirectional-string-chunk"],
         "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": null,
           "browserCloseReceived": null

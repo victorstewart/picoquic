@@ -636,6 +636,8 @@ function summarizeServerOutput(output) {
     bytesCaptured: output.length,
     waitingForPackets: output.includes("Waiting for packets"),
     connectAccepted: countMatches(output, /Connect accepted on stream/g),
+    optionalProtocolAccepted: countMatches(output,
+      /Accepting optional-protocol WebTransport CONNECT/g),
     packetsReceived: countMatches(output, /Receiving packet type/g),
     packetsSent: countMatches(output, /Sending packet type/g),
     h3ControlFrames: countMatches(output, /H3 control frame/g),

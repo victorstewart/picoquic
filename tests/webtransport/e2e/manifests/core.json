@@ -39,6 +39,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -81,7 +82,8 @@
         ],
         "errorIncludes": "WebTransportError",
         "server": {
-          "connectAccepted": 0
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0
         }
       }
     },
@@ -123,6 +125,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejectedMin": 1,
           "packetsReceivedMin": 1,
@@ -169,6 +172,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -209,7 +213,8 @@
           "datagram sent"
         ],
         "server": {
-          "connectAccepted": 0
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0
         }
       }
     },
@@ -250,6 +255,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -293,6 +299,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -336,6 +343,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -379,6 +387,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -422,6 +431,7 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -522,6 +532,7 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
@@ -622,6 +633,7 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
@@ -691,6 +703,7 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
@@ -793,6 +806,7 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
@@ -862,6 +876,7 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
@@ -967,6 +982,7 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
@@ -1075,6 +1091,7 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
