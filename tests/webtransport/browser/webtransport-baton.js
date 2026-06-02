@@ -468,6 +468,64 @@
     return result;
   }
 
+  async function runStreamWritableTests(options) {
+    if (typeof WebTransport !== "function") {
+      throw new Error("WebTransport is unavailable");
+    }
+
+    var result = {
+      ok: false,
+      tests: []
+    };
+    var url = options.url || defaultTarget();
+    var transport = null;
+    var writer = null;
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    try {
+      transport = new WebTransport(url, buildTransportOptions(options));
+      try {
+        transport.closed.catch(function () {});
+      } catch (_) {}
+      await transport.ready;
+      var writable = await transport.createUnidirectionalStream();
+      writer = writable.getWriter();
+      await writer.ready;
+      try {
+        await writer.write("not a BufferSource");
+        record("string-chunk", false, "write resolved");
+      } catch (error) {
+        record("string-chunk", error && error.name === "TypeError",
+          errorText(error));
+      }
+    } catch (error) {
+      record("setup", false, errorText(error));
+    } finally {
+      if (writer) {
+        try {
+          writer.releaseLock();
+        } catch (_) {}
+      }
+      if (transport) {
+        try {
+          transport.close({ closeCode: 0, reason: "stream-writable-test" });
+        } catch (_) {}
+      }
+    }
+
+    result.ok = result.tests.length > 0 && result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   function withTimeout(promise, timeoutMs, onTimeout) {
     var timer = 0;
     var timeout = new Promise(function (_, reject) {
@@ -828,6 +886,7 @@
     runUrlConstructorTests: runUrlConstructorTests,
     runOptionsConstructorTests: runOptionsConstructorTests,
     runDatagramWritableTests: runDatagramWritableTests,
+    runStreamWritableTests: runStreamWritableTests,
     runBatonTest: runBatonTest
   };
 

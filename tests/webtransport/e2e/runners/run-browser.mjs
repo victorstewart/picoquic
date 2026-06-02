@@ -330,6 +330,11 @@ function assertScenarioResult(id, result, expect) {
       result.datagramWritable.ok !== expect.datagramWritableOk)) {
     throw new Error(`${id}: datagram writable check failed`);
   }
+  if (expect.streamWritableOk !== undefined &&
+    (!result.streamWritable ||
+      result.streamWritable.ok !== expect.streamWritableOk)) {
+    throw new Error(`${id}: stream writable check failed`);
+  }
   if (expect.server) {
     if (!result.server) {
       throw new Error(`${id}: missing server summary`);

@@ -497,6 +497,28 @@ async function readDatagramWritableResult(cdp, certificateHash) {
   return result.result.value;
 }
 
+async function readStreamWritableResult(cdp, certificateHash) {
+  const options = JSON.stringify({
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL,
+    requireDatagram: REQUIRE_DATAGRAM
+  });
+  const result = await cdp.send("Runtime.evaluate", {
+    expression: `window.picoquicWebTransportBaton.runStreamWritableTests(${options})`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+
+  if (result.exceptionDetails) {
+    const text = result.exceptionDetails.exception &&
+      result.exceptionDetails.exception.description;
+    throw new Error(text || result.exceptionDetails.text ||
+      "browser stream writable tests failed");
+  }
+  return result.result.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
@@ -518,6 +540,12 @@ function assertOptionsConstructorResult(result) {
 function assertDatagramWritableResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser datagram writable tests failed: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertStreamWritableResult(result) {
+  if (!result || result.ok !== true) {
+    throw new Error(`browser stream writable tests failed: ${JSON.stringify(result)}`);
   }
 }
 
@@ -631,6 +659,8 @@ async function main() {
       }
       result.datagramWritable = await readDatagramWritableResult(cdp, certConfig.hash);
       assertDatagramWritableResult(result.datagramWritable);
+      result.streamWritable = await readStreamWritableResult(cdp, certConfig.hash);
+      assertStreamWritableResult(result.streamWritable);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
