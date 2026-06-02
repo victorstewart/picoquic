@@ -78,6 +78,10 @@ path through `server.closeSessionReceivedMin` and
 override these server expectations only with browser/version evidence.
 The separate browser-close diagnostic asserts `server.browserCloseReceived`
 when the browser/version lane is expected to deliver `browser-close-test`.
+Use `server.batonDatagramsReceivedMin` and `server.zeroBatonReceivedMin` to
+prove pico_baton observed browser-to-server datagram and terminal stream-baton
+traffic, respectively; browser-side `sent`/`datagramsSent` values alone only
+prove the JavaScript API accepted those writes.
 
 Run the portable core scenario in Chrome:
 

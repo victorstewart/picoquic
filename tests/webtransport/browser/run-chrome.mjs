@@ -681,6 +681,7 @@ function summarizeServerOutput(output) {
       /Received empty WebTransport datagram on stream/g),
     batonDatagramsReceived: countMatches(output,
       /Received baton WebTransport datagram on stream/g),
+    zeroBatonReceived: countMatches(output, /All ZERO baton on stream/g),
     writableBadChunkCloseReceived:
       output.includes("error: 0 (writable-bad-chunk-test)"),
     browserCloseReceived: serverOutputHasBrowserClose(output)
