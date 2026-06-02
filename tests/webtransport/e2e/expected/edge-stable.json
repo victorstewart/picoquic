@@ -2,5 +2,15 @@
   "browser": "edge",
   "channel": "stable",
   "platform": "linux",
-  "expected": []
+  "expected": [
+    {
+      "scenario": "datagrams.server-empty",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "148.0.3967.83",
+      "platform": "linux",
+      "reason": "Edge stable acknowledges an HTTP Datagram containing only the Quarter Stream ID, but does not expose the resulting zero-length WebTransport datagram to the JavaScript readable stream.",
+      "evidence": "GitHub WebTransportBrowser run 26842019982, Edge job 79151393609, timed out in datagrams.server-empty with datagramLengths=[] after pico_baton logged `datagram, length: 1: 00`."
+    }
+  ]
 }

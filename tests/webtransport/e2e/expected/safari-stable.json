@@ -30,6 +30,15 @@
       }
     },
     {
+      "scenario": "datagrams.server-empty",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari stable acknowledges an HTTP Datagram containing only the Quarter Stream ID, but does not expose the resulting zero-length WebTransport datagram to the JavaScript readable stream.",
+      "evidence": "GitHub WebTransportBrowser run 26842019982, Safari job 79151393623, timed out in datagrams.server-empty with datagramLengths=[] after pico_baton logged `datagram, length: 1: 00`."
+    },
+    {
       "scenario": "baton.core.compact-default-reader",
       "status": "pass",
       "category": "browser-bug",
