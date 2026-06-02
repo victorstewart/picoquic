@@ -11,6 +11,7 @@ const DEFAULT_PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const WRONG_CERT_HASH = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const BROWSER_RUNNERS = {
   chrome: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
+  edge: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
   safari: join(ROOT, "tests", "webtransport", "browser", "run-safari.mjs")
 };
 const SCENARIO_ID_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
@@ -105,7 +106,7 @@ function usage() {
   console.error([
     "usage:",
     "  node tests/webtransport/e2e/runners/run-browser.mjs list [--manifest <path>] [--expected <path>] [--json]",
-    "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|safari> [--manifest <path>] [--expected <path>] [--no-expected] [--scenario <id>] [--json]"
+    "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|edge|safari> [--manifest <path>] [--expected <path>] [--no-expected] [--scenario <id>] [--json]"
   ].join("\n"));
 }
 

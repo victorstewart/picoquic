@@ -61,6 +61,14 @@ npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser chrome
 
 On Apple Silicon with an x64/Rosetta Node process, add
 `PICOQUIC_WT_CHROME_ARCH=arm64` so the runner starts native Chrome.
+Run the same Chromium-family adapter against Edge by selecting the `edge`
+browser lane and pointing `CHROME_BIN` at Microsoft Edge:
+
+```sh
+CHROME_BIN="/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+PICOQUIC_WT_CHROME_HEADLESS=old \
+npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser edge
+```
 
 Expected-result files live under `tests/webtransport/e2e/expected/`. They are
 loaded automatically by browser name when present. `status: "skip"` entries

@@ -816,6 +816,13 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/expected/chrome-stable.json)
         set_tests_properties(picohttp_wt_e2e_expected_chrome
                              PROPERTIES LABELS wt_browser)
+        add_test(NAME picohttp_wt_e2e_expected_edge
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/expected/edge-stable.json)
+        set_tests_properties(picohttp_wt_e2e_expected_edge
+                             PROPERTIES LABELS wt_browser)
         add_test(NAME picohttp_wt_e2e_expected_safari_file
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs

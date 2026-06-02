@@ -58,6 +58,48 @@ jobs:
         run: |
           npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser chrome
 
+  edge:
+    name: Edge WebTransport smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates gnupg libssl-dev wget
+          if ! command -v microsoft-edge >/dev/null 2>&1; then
+            wget -q -O - https://packages.microsoft.com/keys/microsoft.asc | \
+              sudo gpg --dearmor -o /usr/share/keyrings/microsoft-edge.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-edge.gpg] https://packages.microsoft.com/repos/edge stable main" | \
+              sudo tee /etc/apt/sources.list.d/microsoft-edge.list
+            sudo apt-get update
+            sudo apt-get install -y microsoft-edge-stable
+          fi
+
+      - name: Build pico_baton
+        run: |
+          cmake -S . -B build -DPICOQUIC_FETCH_PTLS:BOOL=ON
+          cmake --build build -j$(nproc) --target pico_baton
+
+      - name: Run Edge WebTransport baton smoke
+        env:
+          CHROME_BIN: microsoft-edge
+          PICOQUIC_WT_CHROME_HEADLESS: old
+        run: |
+          npx -y node@22 tests/webtransport/browser/run-chrome.mjs
+
+      - name: Run Edge WebTransport core E2E
+        env:
+          CHROME_BIN: microsoft-edge
+          PICOQUIC_WT_CHROME_HEADLESS: old
+        run: |
+          npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser edge
+
   safari:
     name: Safari WebTransport smoke
     runs-on: macos-26
