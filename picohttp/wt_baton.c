@@ -355,6 +355,21 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             }
             ret = picowt_apply_flow_control_capsule(stream_ctx,
                 &baton_ctx->capsule);
+            if (ret == 0 &&
+                baton_ctx->capsule.h3_capsule.is_stored &&
+                baton_ctx->capsule.h3_capsule.capsule_type ==
+                    picowt_capsule_close_webtransport_session) {
+                int is_client = baton_ctx->is_client;
+
+                stream_ctx->ps.stream_state.is_fin_received = 1;
+                baton_ctx->baton_state = wt_baton_state_closed;
+                h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx,
+                    stream_ctx->stream_id);
+                if (is_client) {
+                    ret = picoquic_close(cnx, 0);
+                }
+                return ret;
+            }
             if (is_fin) {
                 stream_ctx->ps.stream_state.is_fin_received = 1;
                 baton_ctx->baton_state = wt_baton_state_closed;
