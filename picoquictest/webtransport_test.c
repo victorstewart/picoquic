@@ -2664,13 +2664,14 @@ int picowt_session_gone_test(void)
     h3zero_callback_ctx_t* h3_ctx = NULL;
     h3zero_stream_ctx_t* control_stream_ctx = NULL;
     uint64_t simulated_time = 0;
+    uint64_t control_stream_id = UINT64_MAX;
     int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
 
     if (ret == 0 && (control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx)) == NULL) {
         ret = -1;
     }
     if (ret == 0) {
-        uint64_t control_stream_id = control_stream_ctx->stream_id;
+        control_stream_id = control_stream_ctx->stream_id;
         ret = picowt_session_gone_add_stream(cnx, h3_ctx, 4, control_stream_id);
         if (ret == 0) {
             ret = picowt_session_gone_add_stream(cnx, h3_ctx, 2, control_stream_id);
@@ -2711,6 +2712,10 @@ int picowt_session_gone_test(void)
             h3zero_find_stream(h3_ctx, 3) != NULL) {
             ret = -1;
         }
+    }
+    if (ret == 0 &&
+        picowt_create_local_stream(cnx, 1, h3_ctx, control_stream_id) != NULL) {
+        ret = -1;
     }
 
     picoquic_set_callback(cnx, NULL, NULL);

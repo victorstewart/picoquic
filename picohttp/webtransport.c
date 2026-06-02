@@ -231,8 +231,13 @@ h3zero_stream_ctx_t* picowt_create_local_stream(picoquic_cnx_t* cnx, int is_bidi
     uint64_t control_stream_id)
 {
     h3zero_stream_ctx_t* stream_ctx = NULL;
+    h3zero_stream_ctx_t* control_stream_ctx =
+        h3zero_find_stream(h3_ctx, control_stream_id);
 
-    if (!picowt_local_stream_credit_available(cnx, h3_ctx, control_stream_id,
+    if (control_stream_ctx == NULL ||
+        control_stream_ctx->ps.stream_state.is_fin_sent ||
+        control_stream_ctx->ps.stream_state.is_fin_received ||
+        !picowt_local_stream_credit_available(cnx, h3_ctx, control_stream_id,
         is_bidir)) {
         return NULL;
     }
