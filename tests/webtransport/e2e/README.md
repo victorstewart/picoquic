@@ -30,7 +30,8 @@ portable core manifest records the diagnostic but does not gate picoquic server
 interop on it yet.
 Use `datagramWritableOk` on positive scenarios that must prove
 `datagrams.writable` rejects a non-`BufferSource` chunk with `TypeError` while
-the main scenario still successfully sends the expected baton datagram.
+the main scenario still successfully sends and receives the exact expected
+baton datagram payload, such as `datagramsReceived: [252]`.
 Use `streamWritableOk` the same way for outgoing unidirectional and
 bidirectional stream writers.
 Positive scenarios also assert server-side close-session evidence from the
@@ -47,6 +48,9 @@ CHROME_BIN="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
 PICOQUIC_WT_CHROME_HEADLESS=old \
 npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser chrome
 ```
+
+On Apple Silicon with an x64/Rosetta Node process, add
+`PICOQUIC_WT_CHROME_ARCH=arm64` so the runner starts native Chrome.
 
 Expected-result files live under `tests/webtransport/e2e/expected/`. They are
 loaded automatically by browser name when present. `status: "skip"` entries

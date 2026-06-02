@@ -301,6 +301,9 @@ function assertScenarioResult(id, result, expect) {
   if (expect.sent) {
     assertArrayEquals(id, "sent", result.sent, expect.sent);
   }
+  if (expect.datagramsReceived) {
+    assertArrayEquals(id, "datagramsReceived", result.datagramsReceived, expect.datagramsReceived);
+  }
   if (expect.datagramsReceivedMin !== undefined &&
     (!Array.isArray(result.datagramsReceived) ||
       result.datagramsReceived.length < expect.datagramsReceivedMin)) {

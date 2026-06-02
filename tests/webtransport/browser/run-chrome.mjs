@@ -32,6 +32,8 @@ const CDP_TIMEOUT_MS = Number(process.env.PICOQUIC_WT_CDP_TIMEOUT_MS || 30000);
  * behavior is encountered.
  */
 const CHROME_HEADLESS = process.env.PICOQUIC_WT_CHROME_HEADLESS || "new";
+const CHROME_ARCH = process.env.PICOQUIC_WT_CHROME_ARCH || "";
+const CHROME_ARCHES = new Set(["arm64", "x86_64"]);
 const CHROME_IGNORE_CERT_ERRORS = process.env.PICOQUIC_WT_IGNORE_CERT_ERRORS !== "0";
 const WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
@@ -605,7 +607,12 @@ async function main() {
         `--log-net-log=${process.env.PICOQUIC_WT_NETLOG}`,
         "--net-log-capture-mode=Everything");
     }
-    chromeProcess = spawn(chrome, chromeArgs, { stdio: ["ignore", "ignore", "pipe"] });
+    if (CHROME_ARCH && !CHROME_ARCHES.has(CHROME_ARCH)) {
+      throw new Error(`Unsupported PICOQUIC_WT_CHROME_ARCH=${JSON.stringify(CHROME_ARCH)}`);
+    }
+    const chromeCommand = CHROME_ARCH ? "/usr/bin/arch" : chrome;
+    const chromeCommandArgs = CHROME_ARCH ? [`-${CHROME_ARCH}`, chrome, ...chromeArgs] : chromeArgs;
+    chromeProcess = spawn(chromeCommand, chromeCommandArgs, { stdio: ["ignore", "ignore", "pipe"] });
     let chromeStderr = "";
     chromeProcess.stderr.on("data", (data) => {
       chromeStderr = (chromeStderr + data.toString()).slice(-4096);
