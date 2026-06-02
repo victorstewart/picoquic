@@ -253,6 +253,8 @@
       "coverage": [
         "constructor",
         "URL-constructor",
+        "constructor-options-observed",
+        "allowPooling-serverCertificateHashes-observed",
         "ready",
         "closed",
         "WT-Protocol",
@@ -297,6 +299,8 @@
       "coverage": [
         "constructor",
         "URL-constructor",
+        "constructor-options-observed",
+        "allowPooling-serverCertificateHashes-observed",
         "ready",
         "closed",
         "WT-Protocol",

@@ -16,6 +16,11 @@ const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
+/* W3C WebTransport requires allowPooling+serverCertificateHashes to throw, but
+ * Chrome 148.0.7778.181 constructed instead during local validation. Record the
+ * diagnostic by default and let browser/version-specific lanes opt into gating.
+ */
+const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED === "1";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
@@ -449,6 +454,27 @@ async function readUrlConstructorResult(cdp, certificateHash) {
   return result.result.value;
 }
 
+async function readOptionsConstructorResult(cdp, certificateHash) {
+  const options = JSON.stringify({
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL
+  });
+  const result = await cdp.send("Runtime.evaluate", {
+    expression: `window.picoquicWebTransportBaton.runOptionsConstructorTests(${options})`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+
+  if (result.exceptionDetails) {
+    const text = result.exceptionDetails.exception &&
+      result.exceptionDetails.exception.description;
+    throw new Error(text || result.exceptionDetails.text ||
+      "browser options constructor tests failed");
+  }
+  return result.result.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
@@ -458,6 +484,12 @@ function assertProtocolConstructorResult(result) {
 function assertUrlConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser URL constructor tests failed: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertOptionsConstructorResult(result) {
+  if (!result || result.ok !== true) {
+    throw new Error(`browser options constructor tests failed: ${JSON.stringify(result)}`);
   }
 }
 
@@ -565,6 +597,10 @@ async function main() {
       assertProtocolConstructorResult(result.protocolConstructor);
       result.urlConstructor = await readUrlConstructorResult(cdp, certConfig.hash);
       assertUrlConstructorResult(result.urlConstructor);
+      result.optionsConstructor = await readOptionsConstructorResult(cdp, certConfig.hash);
+      if (REQUIRE_OPTIONS_CONSTRUCTOR) {
+        assertOptionsConstructorResult(result.optionsConstructor);
+      }
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

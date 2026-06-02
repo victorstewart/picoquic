@@ -19,6 +19,15 @@ Set `certificateHashMode` to `wrong` for negative certificate-hash scenarios;
 the default uses the generated server certificate hash. Wrong-hash scenarios
 also disable Chrome's certificate-error bypass so the browser actually enforces
 `serverCertificateHashes`.
+Positive baton scenarios may also require browser-side constructor subtests with
+`protocolConstructorOk` and `urlConstructorOk`. The runners also record an
+`optionsConstructor` diagnostic for `allowPooling: true` combined with
+`serverCertificateHashes`; set `optionsConstructorOk` in a scenario expectation
+and `PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED=1` only for browser/version lanes
+where that API requirement is known to be implemented. Chrome `148.0.7778.181`
+on macOS was observed to construct instead of throwing for that case, so the
+portable core manifest records the diagnostic but does not gate picoquic server
+interop on it yet.
 
 Run the portable core scenario in Chrome:
 

@@ -282,6 +282,11 @@ function assertScenarioResult(id, result, expect) {
       result.urlConstructor.ok !== expect.urlConstructorOk)) {
     throw new Error(`${id}: URL constructor check failed`);
   }
+  if (expect.optionsConstructorOk !== undefined &&
+    (!result.optionsConstructor ||
+      result.optionsConstructor.ok !== expect.optionsConstructorOk)) {
+    throw new Error(`${id}: options constructor check failed`);
+  }
   if (expect.server) {
     if (!result.server) {
       throw new Error(`${id}: missing server summary`);

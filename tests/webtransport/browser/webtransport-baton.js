@@ -365,6 +365,47 @@
     return result;
   }
 
+  function runOptionsConstructorTests(options) {
+    if (typeof WebTransport !== "function") {
+      throw new Error("WebTransport is unavailable");
+    }
+
+    var result = {
+      ok: false,
+      tests: []
+    };
+    var url = options.url || defaultTarget();
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    function expectThrows(name, configure, expectedName) {
+      try {
+        var transportOptions = buildUrlConstructorOptions(options);
+        configure(transportOptions);
+        var transport = new WebTransport(url, transportOptions);
+        closeConstructedTransport(transport);
+        record(name, false, "constructor did not throw");
+      } catch (error) {
+        record(name, error && error.name === expectedName, errorText(error));
+      }
+    }
+
+    expectThrows("allow-pooling-with-certificate-hash", function (transportOptions) {
+      transportOptions.allowPooling = true;
+    }, "NotSupportedError");
+
+    result.ok = result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   function withTimeout(promise, timeoutMs, onTimeout) {
     var timer = 0;
     var timeout = new Promise(function (_, reject) {
@@ -723,6 +764,7 @@
     makeBatonPacket: makeBatonPacket,
     runProtocolConstructorTests: runProtocolConstructorTests,
     runUrlConstructorTests: runUrlConstructorTests,
+    runOptionsConstructorTests: runOptionsConstructorTests,
     runBatonTest: runBatonTest
   };
 

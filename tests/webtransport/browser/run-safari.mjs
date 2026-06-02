@@ -17,6 +17,11 @@ const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
+/* W3C WebTransport requires allowPooling+serverCertificateHashes to throw.
+ * Keep this diagnostic non-gating until each browser/version lane has known
+ * behavior, then opt in with PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED=1.
+ */
+const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED === "1";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
@@ -499,6 +504,35 @@ async function readUrlConstructorResult(endpoint, sessionId, certificateHash) {
   return wrapped.value;
 }
 
+async function readOptionsConstructorResult(endpoint, sessionId, certificateHash) {
+  const wrapped = await executeAsyncScript(endpoint, sessionId, `
+    const done = arguments[arguments.length - 1];
+    const options = arguments[0];
+    function errorText(error) {
+      if (error && typeof error === "object") {
+        return (error.name ? error.name + ": " : "") + (error.message || String(error));
+      }
+      return String(error);
+    }
+    Promise.resolve(
+      window.picoquicWebTransportBaton.runOptionsConstructorTests(options)
+    ).then(
+      (value) => done({ ok: true, value }),
+      (error) => done({ ok: false, error: errorText(error) })
+    );
+  `, [{
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL
+  }]);
+
+  if (!wrapped || wrapped.ok !== true) {
+    throw new Error((wrapped && wrapped.error) ||
+      "browser options constructor tests failed");
+  }
+  return wrapped.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
@@ -508,6 +542,12 @@ function assertProtocolConstructorResult(result) {
 function assertUrlConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser URL constructor tests failed: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertOptionsConstructorResult(result) {
+  if (!result || result.ok !== true) {
+    throw new Error(`browser options constructor tests failed: ${JSON.stringify(result)}`);
   }
 }
 
@@ -611,6 +651,11 @@ async function main() {
       result.urlConstructor = await readUrlConstructorResult(endpoint,
         sessionId, certConfig.hash);
       assertUrlConstructorResult(result.urlConstructor);
+      result.optionsConstructor = await readOptionsConstructorResult(endpoint,
+        sessionId, certConfig.hash);
+      if (REQUIRE_OPTIONS_CONSTRUCTOR) {
+        assertOptionsConstructorResult(result.optionsConstructor);
+      }
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
