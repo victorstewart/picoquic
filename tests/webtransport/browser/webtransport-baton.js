@@ -800,6 +800,13 @@
         errorText(error).toLowerCase().indexOf("network error") >= 0;
     }
 
+    function isEdgeCompletedPeerCloseError(error) {
+      var userAgent = typeof navigator !== "undefined" && navigator.userAgent ?
+        navigator.userAgent : "";
+      return userAgent.indexOf("Edg/") >= 0 &&
+        errorText(error).toLowerCase().indexOf("connection lost") >= 0;
+    }
+
     function fail(error, mayBePostCloseReadError) {
       if (finished) {
         return;
@@ -816,6 +823,16 @@
         return;
       }
       if (sentZero && isSessionClosedError(error) && datagramRequirementMet()) {
+        markClosed();
+        return;
+      }
+      if (sentZero && datagramRequirementMet() &&
+        isEdgeCompletedPeerCloseError(error)) {
+        /* Edge 148.0.3967.83 in GitHub Actions run 26836728795 jobs
+         * 79132510221 and 79133239109 completed the stream/datagram baton
+         * exchange, then rejected transport.closed with WebTransportError:
+         * Connection lost after pico_baton closed the completed session.
+         */
         markClosed();
         return;
       }
