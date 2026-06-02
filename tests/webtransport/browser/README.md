@@ -92,4 +92,17 @@ Run the same URL in Safari after trusting the `pico_baton` certificate:
 https://localhost:4433/index.html?autorun=1
 ```
 
+For automated Safari stable coverage, enable Safari WebDriver remote automation
+first:
+
+```sh
+sudo safaridriver --enable
+```
+
+or enable **Allow Remote Automation** in Safari Settings > Developer. Then run:
+
+```sh
+node tests/webtransport/browser/run-safari.mjs
+```
+
 Pass criteria are the same as Chrome.
