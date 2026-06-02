@@ -2877,6 +2877,43 @@ int picowt_close_message_test(void)
             stream == NULL || !stream->fin_requested) {
             ret = -1;
         }
+        else {
+            picoquic_stream_queue_node_t* queued = stream->send_queue;
+            const uint8_t* bytes = (queued == NULL) ? NULL : queued->bytes;
+            const uint8_t* bytes_max = (queued == NULL) ? NULL : queued->bytes + queued->length;
+            const uint8_t* data_max = NULL;
+            uint64_t frame_type = UINT64_MAX;
+            uint64_t frame_length = UINT64_MAX;
+            uint64_t capsule_type = UINT64_MAX;
+            uint64_t capsule_length = UINT64_MAX;
+            uint32_t close_code = 0;
+
+            if (bytes == NULL ||
+                (bytes = picoquic_frames_varint_decode(bytes, bytes_max,
+                    &frame_type)) == NULL ||
+                (bytes = picoquic_frames_varint_decode(bytes, bytes_max,
+                    &frame_length)) == NULL ||
+                frame_type != h3zero_frame_data ||
+                frame_length != (uint64_t)(bytes_max - bytes)) {
+                ret = -1;
+            }
+            else {
+                data_max = bytes + frame_length;
+                if ((bytes = picoquic_frames_varint_decode(bytes, data_max,
+                    &capsule_type)) == NULL ||
+                    (bytes = picoquic_frames_varint_decode(bytes, data_max,
+                        &capsule_length)) == NULL ||
+                    capsule_type != picowt_capsule_close_webtransport_session ||
+                    capsule_length != (uint64_t)(4 + picowt_close_message_max) ||
+                    (bytes = picoquic_frames_uint32_decode(bytes, data_max,
+                        &close_code)) == NULL ||
+                    close_code != 0x12345678 ||
+                    (size_t)(data_max - bytes) != picowt_close_message_max ||
+                    memcmp(bytes, close_msg, picowt_close_message_max) != 0) {
+                    ret = -1;
+                }
+            }
+        }
     }
     if (ret == 0) {
         size_t capsule_length = picowt_format_close_test_capsule(capsule_buffer, sizeof(capsule_buffer),
