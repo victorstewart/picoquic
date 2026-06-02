@@ -42,3 +42,39 @@ jobs:
       - name: Run WebTransport native wire/strict tests
         run: |
           ctest --test-dir build -L 'wt_wire|wt_strict' --output-on-failure -j$(nproc)
+
+  native-wire-strict-sanitizers:
+    name: Native WebTransport wire/strict ASAN/UBSAN
+    runs-on: ubuntu-latest
+
+    env:
+      ASAN_OPTIONS: "detect_leaks=1:halt_on_error=1"
+      UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+
+      - name: Build sanitizer picohttp_ct
+        run: |
+          cmake -S . -B build-sanitize \
+            -DPICOQUIC_FETCH_PTLS:BOOL=ON \
+            -DENABLE_ASAN=ON \
+            -DENABLE_UBSAN=ON \
+            -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build-sanitize -j$(nproc) --target picohttp_ct
+
+      - name: Run sanitizer SETTINGS error regression
+        run: |
+          ./build-sanitize/picohttp_ct -S . -n -r h3zero_setting_error
+
+      - name: Run sanitizer WebTransport native wire/strict tests
+        run: |
+          ctest --test-dir build-sanitize -L 'wt_wire|wt_strict' --output-on-failure -j$(nproc)
