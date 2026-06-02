@@ -300,7 +300,7 @@ function assertScenarioResult(id, result, expect) {
   if (result.ok !== expect.ok) {
     throw new Error(`${id}: expected ok=${expect.ok}, got ${result.ok}`);
   }
-  for (const name of ["url", "protocol", "requireDatagram", "constructorRequireUnreliable", "useByob", "datagramsSent"]) {
+  for (const name of ["url", "protocol", "requireDatagram", "constructorRequireUnreliable", "useByob", "readyMs", "closedMs", "datagramsSent"]) {
     if (Object.prototype.hasOwnProperty.call(expect, name) && result[name] !== expect[name]) {
       throw new Error(`${id}: expected ${name}=${JSON.stringify(expect[name])}, got ${JSON.stringify(result[name])}`);
     }
@@ -320,6 +320,15 @@ function assertScenarioResult(id, result, expect) {
     for (const event of expect.eventsInclude) {
       if (!events.includes(event)) {
         throw new Error(`${id}: expected event ${JSON.stringify(event)}, got ${JSON.stringify(events)}`);
+      }
+    }
+  }
+  if (expect.eventsExclude) {
+    const events = Array.isArray(result.events) ?
+      result.events.map((entry) => entry && entry.event) : [];
+    for (const event of expect.eventsExclude) {
+      if (events.includes(event)) {
+        throw new Error(`${id}: excluded event ${JSON.stringify(event)} was present in ${JSON.stringify(events)}`);
       }
     }
   }

@@ -38,6 +38,10 @@ Use `protocolConstructorTestsInclude`, `urlConstructorTestsInclude`, and
 `optionsConstructorTestsInclude` the same way for constructor diagnostics.
 Use `eventsInclude` for required browser-observable state-machine events such
 as `ready`, stream receive/send labels, datagram labels, and `closed`.
+Use `eventsExclude` for negative scenarios that must prove a failed handshake
+never reached `ready`, clean `closed`, or app-data send states. Failed
+handshake scenarios should also assert zero `readyMs`/`closedMs`, an empty
+selected protocol, empty payload arrays, and `datagramsSent: 0`.
 Use `streamWritableOk` the same way for outgoing unidirectional and
 bidirectional stream writers.
 Positive scenarios also assert server-side close-session evidence from the
