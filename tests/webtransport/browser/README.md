@@ -89,6 +89,21 @@ Pass criteria: the page state is `pass`, selected protocol is
 `[252,254,0]`, at least one received datagram is recorded, and the Chrome
 runner's `protocolConstructor` and `urlConstructor` checks all pass.
 
+## Firefox
+
+Use a Firefox build with WebTransport support and install `geckodriver` on
+`PATH`, or set `GECKO_DRIVER_BIN=/path/to/geckodriver`. The dependency-free
+runner starts `pico_baton`, starts geckodriver, launches Firefox with WebDriver,
+and validates the result:
+
+```sh
+node tests/webtransport/browser/run-firefox.mjs
+```
+
+Set `FIREFOX_BIN=/path/to/firefox` if the browser is not discoverable by
+geckodriver. The runner uses headless Firefox by default; set
+`PICOQUIC_WT_FIREFOX_HEADLESS=0` for visible local debugging.
+
 ## Safari
 
 Run the same URL in Safari after trusting the `pico_baton` certificate:

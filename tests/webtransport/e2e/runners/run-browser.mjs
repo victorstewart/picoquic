@@ -12,6 +12,7 @@ const WRONG_CERT_HASH = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const BROWSER_RUNNERS = {
   chrome: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
   edge: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
+  firefox: join(ROOT, "tests", "webtransport", "browser", "run-firefox.mjs"),
   safari: join(ROOT, "tests", "webtransport", "browser", "run-safari.mjs")
 };
 const SCENARIO_ID_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;

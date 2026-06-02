@@ -100,6 +100,40 @@ jobs:
         run: |
           npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser edge
 
+  firefox:
+    name: Firefox WebTransport smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Set up Firefox
+        uses: browser-actions/setup-firefox@v1
+
+      - name: Set up geckodriver
+        uses: browser-actions/setup-geckodriver@latest
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+
+      - name: Build pico_baton
+        run: |
+          cmake -S . -B build -DPICOQUIC_FETCH_PTLS:BOOL=ON
+          cmake --build build -j$(nproc) --target pico_baton
+
+      - name: Run Firefox WebTransport baton smoke
+        run: |
+          npx -y node@22 tests/webtransport/browser/run-firefox.mjs
+
+      - name: Run Firefox WebTransport core E2E
+        run: |
+          npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser firefox
+
   safari:
     name: Safari WebTransport smoke
     runs-on: macos-26

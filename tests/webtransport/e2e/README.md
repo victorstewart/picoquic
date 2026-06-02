@@ -70,6 +70,14 @@ PICOQUIC_WT_CHROME_HEADLESS=old \
 npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser edge
 ```
 
+Run Firefox stable through geckodriver:
+
+```sh
+GECKO_DRIVER_BIN=/path/to/geckodriver \
+FIREFOX_BIN=/path/to/firefox \
+npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser firefox
+```
+
 Expected-result files live under `tests/webtransport/e2e/expected/`. They are
 loaded automatically by browser name when present. `status: "skip"` entries
 skip a whole scenario; `status: "pass"` entries merge browser-specific
