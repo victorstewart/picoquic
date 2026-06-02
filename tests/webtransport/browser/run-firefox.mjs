@@ -14,6 +14,7 @@ const WEB_ROOT = process.env.PICOQUIC_WT_WEB_ROOT ||
 const PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
+const DATAGRAM_RECEIVE_MODE = process.env.PICOQUIC_WT_DATAGRAM_RECEIVE_MODE || "baton";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
 const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
@@ -21,6 +22,8 @@ const EXPECT_RECEIVED = parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_RECEIVED", [251
 const EXPECT_SENT = parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_SENT", [252, 254, 0]);
 const EXPECT_DATAGRAMS_RECEIVED =
   parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_DATAGRAMS_RECEIVED", null);
+const EXPECT_DATAGRAM_LENGTHS =
+  parseNonNegativeIntegerArrayEnv("PICOQUIC_WT_EXPECT_DATAGRAM_LENGTHS", null);
 const EXPECT_DATAGRAMS_SENT = parseOptionalIntegerEnv("PICOQUIC_WT_EXPECT_DATAGRAMS_SENT");
 const EXPECT_ORDERED = process.env.PICOQUIC_WT_EXPECT_ORDERED !== "0";
 /* Firefox 151.0.2 in GitHub Actions accepted invalid protocols constructor
@@ -85,6 +88,19 @@ function parseIntegerArrayEnv(name, fallback) {
   if (!Array.isArray(parsed) || !parsed.every((entry) =>
     Number.isInteger(entry) && entry >= 0 && entry <= 255)) {
     throw new Error(`${name} must be a JSON array of baton byte values`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeIntegerArrayEnv(name, fallback) {
+  const value = process.env[name];
+  if (!value) {
+    return fallback;
+  }
+  const parsed = JSON.parse(value);
+  if (!Array.isArray(parsed) || !parsed.every((entry) =>
+    Number.isInteger(entry) && entry >= 0)) {
+    throw new Error(`${name} must be a JSON array of non-negative integers`);
   }
   return parsed;
 }
@@ -268,6 +284,9 @@ function buildPageUrl(pageUrl, certificateHash) {
   }
   if (!USE_BYOB) {
     url.searchParams.set("useByob", "0");
+  }
+  if (DATAGRAM_RECEIVE_MODE !== "baton") {
+    url.searchParams.set("datagramReceiveMode", DATAGRAM_RECEIVE_MODE);
   }
   return url.href;
 }
@@ -518,6 +537,12 @@ function assertHarnessResult(result) {
       expected: USE_BYOB
     })}`);
   }
+  if (result.datagramReceiveMode !== DATAGRAM_RECEIVE_MODE) {
+    throw new Error(`unexpected datagram receive mode: ${JSON.stringify({
+      datagramReceiveMode: result.datagramReceiveMode,
+      expected: DATAGRAM_RECEIVE_MODE
+    })}`);
+  }
   if (!equalExpectedBatonArray(result.received, EXPECT_RECEIVED)) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
   }
@@ -528,11 +553,16 @@ function assertHarnessResult(result) {
     !equalArray(result.datagramsReceived, EXPECT_DATAGRAMS_RECEIVED)) {
     throw new Error(`unexpected received datagram sequence: ${JSON.stringify(result.datagramsReceived)}`);
   }
+  if (EXPECT_DATAGRAM_LENGTHS &&
+    !equalArray(result.datagramLengths, EXPECT_DATAGRAM_LENGTHS)) {
+    throw new Error(`unexpected datagram lengths: ${JSON.stringify(result.datagramLengths)}`);
+  }
   if (EXPECT_DATAGRAMS_SENT !== null && result.datagramsSent !== EXPECT_DATAGRAMS_SENT) {
     throw new Error(`unexpected datagram sent count: ${JSON.stringify(result.datagramsSent)}`);
   }
-  if (REQUIRE_DATAGRAM && (!Array.isArray(result.datagramsReceived) ||
-    result.datagramsReceived.length === 0)) {
+  if (REQUIRE_DATAGRAM &&
+    (!Array.isArray(result.datagramsReceived) || result.datagramsReceived.length === 0) &&
+    (!Array.isArray(result.datagramLengths) || result.datagramLengths.length === 0)) {
     throw new Error("no WebTransport datagram received");
   }
 }

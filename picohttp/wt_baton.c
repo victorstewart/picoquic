@@ -637,8 +637,11 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         size_t query_offset = h3zero_query_offset(path, path_length);
         uint8_t protocol_mode[16];
         size_t protocol_mode_length = 0;
+        uint8_t datagram_mode[16];
+        size_t datagram_mode_length = 0;
         baton_ctx->max_padding = WT_BATON_DEFAULT_PADDING;
         baton_ctx->wt_protocol_optional = 0;
+        baton_ctx->send_empty_datagram = 0;
         if (query_offset < path_length) {
             const uint8_t* queries = path + query_offset;
             size_t queries_length = path_length - query_offset;
@@ -649,7 +652,9 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 h3zero_query_parameter_number(queries, queries_length, "inject", 6, &baton_ctx->inject_error, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "padding", 7, &baton_ctx->max_padding, WT_BATON_DEFAULT_PADDING) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "protocol", 8,
-                    protocol_mode, sizeof(protocol_mode), &protocol_mode_length) != 0) {
+                    protocol_mode, sizeof(protocol_mode), &protocol_mode_length) != 0 ||
+                h3zero_query_parameter_string(queries, queries_length, "datagram", 8,
+                    datagram_mode, sizeof(datagram_mode), &datagram_mode_length) != 0) {
                 ret = -1;
             }
             else if (baton_ctx->version != WT_BATON_VERSION ||
@@ -668,12 +673,22 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     ret = -1;
                 }
             }
+            if (ret == 0 && datagram_mode_length > 0) {
+                if (datagram_mode_length == sizeof("empty") - 1 &&
+                    memcmp(datagram_mode, "empty", sizeof("empty") - 1) == 0) {
+                    baton_ctx->send_empty_datagram = 1;
+                }
+                else {
+                    ret = -1;
+                }
+            }
         }
         else {
             /* Set parameters to default values */
             baton_ctx->initial_baton = 240;
             baton_ctx->nb_lanes = 1;
             baton_ctx->max_padding = WT_BATON_DEFAULT_PADDING;
+            baton_ctx->send_empty_datagram = 0;
         }
 
         return ret;
@@ -831,13 +846,24 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         wt_baton_ctx_t* baton_ctx = (wt_baton_ctx_t*)path_app_ctx;
 
         if (baton_ctx->is_datagram_ready) {
-            if (space > 1536) {
+            if (baton_ctx->send_empty_datagram) {
+                uint8_t* buffer = h3zero_provide_datagram_buffer(context, 0, 0);
+                if (buffer == NULL) {
+                    ret = -1;
+                }
+                else {
+                    baton_ctx->is_datagram_ready = 0;
+                    baton_ctx->baton_datagram_send_next = 0;
+                    baton_ctx->nb_datagrams_sent += 1;
+                }
+            }
+            else if (space > 1536) {
                 space = 1536;
             }
-            if (space < 3) {
+            if (!baton_ctx->send_empty_datagram && space < 3) {
                 /* Not enough space to send anything */
             }
-            else {
+            else if (!baton_ctx->send_empty_datagram) {
                 uint8_t* buffer = h3zero_provide_datagram_buffer(context, space, 0);
                 if (buffer == NULL) {
                     ret = -1;

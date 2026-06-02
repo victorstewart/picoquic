@@ -26,6 +26,15 @@
       "expect": {
         "optionsConstructorOk": false
       }
+    },
+    {
+      "scenario": "datagrams.server-empty",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "148.0.7778.216",
+      "platform": "macOS",
+      "reason": "Chrome stable acknowledges an HTTP Datagram containing only the Quarter Stream ID, but does not expose the resulting zero-length WebTransport datagram to the JavaScript readable stream.",
+      "evidence": "Local macOS Chrome 148.0.7778.216 run of datagrams.server-empty on 2026-06-02 timed out with datagramLengths=[] after pico_baton logged and Chrome ACKed `datagram, length: 1: 00`."
     }
   ]
 }

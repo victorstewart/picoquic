@@ -760,12 +760,14 @@
       requireDatagram: requireDatagram,
       constructorRequireUnreliable: requireDatagram,
       useByob: options.useByob !== false,
+      datagramReceiveMode: options.datagramReceiveMode || "baton",
       startedMs: nowMs(),
       readyMs: 0,
       closedMs: 0,
       received: [],
       sent: [],
       datagramsReceived: [],
+      datagramLengths: [],
       datagramsSent: 0,
       protocol: "",
       postClose: null,
@@ -780,6 +782,7 @@
     var finalZeroSyntheticSent = 0;
     var transportClosed = false;
     var postCloseStarted = false;
+    var datagramWaiters = [];
     var resolveDone;
     var rejectDone;
     var done = new Promise(function (resolve, reject) {
@@ -881,7 +884,26 @@
     }
 
     function datagramRequirementMet() {
-      return !requireDatagram || result.datagramsReceived.length > 0;
+      return !requireDatagram ||
+        result.datagramsReceived.length > 0 ||
+        result.datagramLengths.length > 0;
+    }
+
+    function notifyDatagramReceived() {
+      var waiters = datagramWaiters;
+      datagramWaiters = [];
+      for (var i = 0; i < waiters.length; i++) {
+        waiters[i]();
+      }
+    }
+
+    function waitForRequiredDatagram() {
+      if (datagramRequirementMet()) {
+        return Promise.resolve();
+      }
+      return new Promise(function (resolve) {
+        datagramWaiters.push(resolve);
+      });
     }
 
     function maybeDone() {
@@ -923,6 +945,8 @@
       try {
         await writer.ready;
         if (baton === 0) {
+          await withTimeout(waitForRequiredDatagram(),
+            Math.min(timeoutMs, 3000));
           finalZeroWritesPending++;
         }
         try {
@@ -1044,11 +1068,21 @@
           reader.releaseLock();
           return;
         }
-        var decoder = new BatonDecoder(MAX_PACKET_BYTES);
-        decoder.push(read.value);
-        var baton = decoder.finish();
-        result.datagramsReceived.push(baton);
-        note("datagram " + baton);
+        result.datagramLengths.push(read.value.byteLength);
+        if (options.datagramReceiveMode === "empty") {
+          if (read.value.byteLength !== 0) {
+            throw new Error("unexpected non-empty datagram length " +
+              read.value.byteLength);
+          }
+          note("datagram length 0");
+        } else {
+          var decoder = new BatonDecoder(MAX_PACKET_BYTES);
+          decoder.push(read.value);
+          var baton = decoder.finish();
+          result.datagramsReceived.push(baton);
+          note("datagram " + baton);
+        }
+        notifyDatagramReceived();
         maybeDone();
       }
     }
@@ -1123,6 +1157,7 @@
       protocol: search.get("protocol") || DEFAULT_PROTOCOL,
       requireProtocol: search.get("requireProtocol") !== "0",
       requireDatagram: search.get("requireDatagram") !== "0",
+      datagramReceiveMode: search.get("datagramReceiveMode") || "baton",
       useByob: search.get("useByob") !== "0",
       onProgress: render
     };
@@ -1150,9 +1185,11 @@
         requireDatagram: options.requireDatagram !== false,
         constructorRequireUnreliable: options.requireDatagram !== false,
         useByob: options.useByob !== false,
+        datagramReceiveMode: options.datagramReceiveMode || "baton",
         received: [],
         sent: [],
         datagramsReceived: [],
+        datagramLengths: [],
         protocol: "",
         error: errorText(error)
       };

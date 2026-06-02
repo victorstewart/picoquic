@@ -27,6 +27,7 @@ const SCENARIO_FIELDS = new Set([
   "protocol",
   "requireDatagram",
   "useByob",
+  "datagramReceiveMode",
   "timeoutMs",
   "certificateHashMode",
   "certificateHashAlgorithm",
@@ -86,6 +87,10 @@ function validateScenario(scenario, path) {
     if (Object.prototype.hasOwnProperty.call(scenario, field)) {
       requireBoolean(scenario[field], `${scenario.id}.${field}`);
     }
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "datagramReceiveMode") &&
+    !["baton", "empty"].includes(scenario.datagramReceiveMode)) {
+    throw new Error(`invalid manifest field ${scenario.id}.datagramReceiveMode: unsupported mode ${scenario.datagramReceiveMode}`);
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "timeoutMs")) {
     requirePositiveInteger(scenario.timeoutMs, `${scenario.id}.timeoutMs`);
@@ -323,6 +328,10 @@ function assertScenarioResult(id, result, expect) {
       throw new Error(`${id}: expected ${name}=${JSON.stringify(expect[name])}, got ${JSON.stringify(result[name])}`);
     }
   }
+  if (hasExpectedValue(expect, "datagramReceiveMode") &&
+    result.datagramReceiveMode !== expect.datagramReceiveMode) {
+    throw new Error(`${id}: expected datagramReceiveMode=${JSON.stringify(expect.datagramReceiveMode)}, got ${JSON.stringify(result.datagramReceiveMode)}`);
+  }
   if (expect.received) {
     assertArrayEquals(id, "received", result.received, expect.received,
       sequenceOrderMatters);
@@ -333,6 +342,10 @@ function assertScenarioResult(id, result, expect) {
   }
   if (expect.datagramsReceived) {
     assertArrayEquals(id, "datagramsReceived", result.datagramsReceived, expect.datagramsReceived);
+  }
+  if (expect.datagramLengths) {
+    assertArrayEquals(id, "datagramLengths", result.datagramLengths,
+      expect.datagramLengths);
   }
   if (expect.eventsInclude) {
     const events = Array.isArray(result.events) ?
@@ -535,6 +548,7 @@ async function runScenario(browser, scenario, vars) {
     PICOQUIC_WT_PROTOCOL: rendered.protocol || "devious-baton-00",
     PICOQUIC_WT_REQUIRE_DATAGRAM: rendered.requireDatagram === false ? "0" : "1",
     PICOQUIC_WT_USE_BYOB: rendered.useByob === false ? "0" : "1",
+    PICOQUIC_WT_DATAGRAM_RECEIVE_MODE: rendered.datagramReceiveMode || "baton",
     PICOQUIC_WT_EXPECT_OK: scenarioExpect.ok === false ? "0" : "1",
     PICOQUIC_WT_PROTOCOL_CONSTRUCTOR: scenarioExpect.ok === false ? "0" : "1",
     PICOQUIC_WT_INCLUDE_SERVER_SUMMARY: "1",
@@ -553,6 +567,10 @@ async function runScenario(browser, scenario, vars) {
   if (Array.isArray(scenarioExpect.datagramsReceived)) {
     env.PICOQUIC_WT_EXPECT_DATAGRAMS_RECEIVED =
       JSON.stringify(scenarioExpect.datagramsReceived);
+  }
+  if (Array.isArray(scenarioExpect.datagramLengths)) {
+    env.PICOQUIC_WT_EXPECT_DATAGRAM_LENGTHS =
+      JSON.stringify(scenarioExpect.datagramLengths);
   }
   if (Number.isInteger(scenarioExpect.datagramsSent)) {
     env.PICOQUIC_WT_EXPECT_DATAGRAMS_SENT = String(scenarioExpect.datagramsSent);
