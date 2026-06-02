@@ -124,8 +124,42 @@ static int picowt_session_flow_control_is_enabled(h3zero_callback_ctx_t* h3_ctx)
         picowt_settings_enable_flow_control(&h3_ctx->settings));
 }
 
-static int picowt_local_stream_credit_available(h3zero_callback_ctx_t* h3_ctx,
-    uint64_t control_stream_id, int is_bidir)
+static void picowt_signal_local_stream_blocked(picoquic_cnx_t* cnx,
+    h3zero_stream_ctx_t* control_stream_ctx, int is_bidir)
+{
+    uint64_t capsule_type = is_bidir ?
+        picowt_capsule_wt_streams_blocked_bidi :
+        picowt_capsule_wt_streams_blocked_uni;
+    uint64_t blocked_value = is_bidir ?
+        control_stream_ctx->wt_max_streams_bidi_remote :
+        control_stream_ctx->wt_max_streams_uni_remote;
+
+    if (is_bidir &&
+        (!control_stream_ctx->wt_streams_bidi_blocked_sent ||
+            control_stream_ctx->wt_streams_bidi_blocked_sent_at !=
+                blocked_value)) {
+        if (picowt_send_flow_control_capsule(cnx, control_stream_ctx,
+            capsule_type, blocked_value) == 0) {
+            control_stream_ctx->wt_streams_bidi_blocked_sent = 1;
+            control_stream_ctx->wt_streams_bidi_blocked_sent_at =
+                blocked_value;
+        }
+    }
+    else if (!is_bidir &&
+        (!control_stream_ctx->wt_streams_uni_blocked_sent ||
+            control_stream_ctx->wt_streams_uni_blocked_sent_at !=
+                blocked_value)) {
+        if (picowt_send_flow_control_capsule(cnx, control_stream_ctx,
+            capsule_type, blocked_value) == 0) {
+            control_stream_ctx->wt_streams_uni_blocked_sent = 1;
+            control_stream_ctx->wt_streams_uni_blocked_sent_at =
+                blocked_value;
+        }
+    }
+}
+
+static int picowt_local_stream_credit_available(picoquic_cnx_t* cnx,
+    h3zero_callback_ctx_t* h3_ctx, uint64_t control_stream_id, int is_bidir)
 {
     int ret = 1;
 
@@ -143,6 +177,10 @@ static int picowt_local_stream_credit_available(h3zero_callback_ctx_t* h3_ctx,
         else {
             ret = (control_stream_ctx->wt_streams_uni_sent <
                 control_stream_ctx->wt_max_streams_uni_remote);
+        }
+        if (!ret && control_stream_ctx != NULL) {
+            picowt_signal_local_stream_blocked(cnx, control_stream_ctx,
+                is_bidir);
         }
     }
 
@@ -194,7 +232,7 @@ h3zero_stream_ctx_t* picowt_create_local_stream(picoquic_cnx_t* cnx, int is_bidi
 {
     h3zero_stream_ctx_t* stream_ctx = NULL;
 
-    if (!picowt_local_stream_credit_available(h3_ctx, control_stream_id,
+    if (!picowt_local_stream_credit_available(cnx, h3_ctx, control_stream_id,
         is_bidir)) {
         return NULL;
     }

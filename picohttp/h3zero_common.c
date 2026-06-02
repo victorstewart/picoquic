@@ -1410,6 +1410,38 @@ static int h3zero_stream_is_webtransport_data(
 		stream_ctx->ps.stream_state.control_stream_id != stream_ctx->stream_id);
 }
 
+static int h3zero_signal_webtransport_data_blocked(picoquic_cnx_t* cnx,
+	h3zero_stream_ctx_t* control_stream_ctx)
+{
+	uint8_t buffer[8];
+	uint8_t* bytes;
+	int ret = 0;
+
+	if (control_stream_ctx == NULL ||
+		(control_stream_ctx->wt_data_blocked_sent &&
+			control_stream_ctx->wt_data_blocked_sent_at ==
+				control_stream_ctx->wt_max_data_remote)) {
+		return 0;
+	}
+	bytes = picoquic_frames_varint_encode(buffer, buffer + sizeof(buffer),
+		control_stream_ctx->wt_max_data_remote);
+	if (bytes == NULL) {
+		ret = -1;
+	}
+	else {
+		ret = h3zero_send_capsule(cnx, control_stream_ctx,
+			H3ZERO_CAPSULE_WT_DATA_BLOCKED, bytes - buffer,
+			buffer, 0);
+		if (ret == 0) {
+			control_stream_ctx->wt_data_blocked_sent = 1;
+			control_stream_ctx->wt_data_blocked_sent_at =
+				control_stream_ctx->wt_max_data_remote;
+		}
+	}
+
+	return ret;
+}
+
 static int h3zero_prepare_webtransport_send_data(picoquic_cnx_t* cnx,
 	void* context, size_t space, h3zero_stream_ctx_t* stream_ctx,
 	h3zero_callback_ctx_t* h3_ctx)
@@ -1464,6 +1496,11 @@ static int h3zero_prepare_webtransport_send_data(picoquic_cnx_t* cnx,
 		else {
 			control_stream_ctx->wt_data_sent += data_ctx->length;
 		}
+	}
+	if (ret == 0 && app_space == 0 && data_ctx->length == 0 &&
+		!data_ctx->is_fin && data_ctx->is_still_active) {
+		ret = h3zero_signal_webtransport_data_blocked(cnx,
+			control_stream_ctx);
 	}
 	data_ctx->allowed_space = previous_allowed_space;
 
