@@ -6,7 +6,7 @@
       "id": "baton.core.compact-default-reader",
       "title": "Baton stream/datagram/protocol exchange with compact packets",
       "runner": "browser-baton",
-      "wtUrl": "https://localhost:{port}/baton?version=0&baton=251&count=1&padding=0",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
       "protocol": "devious-baton-00",
       "requireDatagram": true,
       "useByob": false,
@@ -25,7 +25,7 @@
       ],
       "expect": {
         "ok": true,
-        "url": "https://localhost:{port}/baton?version=0&baton=251&count=1&padding=0",
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
         "protocol": "devious-baton-00",
         "requireDatagram": true,
         "constructorRequireUnreliable": true,

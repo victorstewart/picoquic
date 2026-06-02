@@ -86,6 +86,9 @@ jobs:
           # The same Safari 26.4 CI image also fails before delivering the
           # first heavily padded server-initiated WT stream. Use compact baton
           # packets for this smoke; native and Chrome jobs keep padded coverage.
-          PICOQUIC_WT_URL: "https://localhost:4433/baton?version=0&baton=251&count=1&padding=0"
+          # Pin the endpoint to IPv4 loopback because Safari 26.4 CI has also
+          # been observed opening competing IPv4/IPv6 QUIC attempts for
+          # localhost before reporting WebTransportError.
+          PICOQUIC_WT_URL: "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0"
         run: |
           npx -y node@22 tests/webtransport/browser/run-safari.mjs
