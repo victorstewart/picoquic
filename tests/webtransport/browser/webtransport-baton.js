@@ -936,7 +936,19 @@
           sentZero = true;
           maybeDone();
         }
-        await writer.close();
+        try {
+          await writer.close();
+        } catch (error) {
+          if (baton === 0 && datagramRequirementMet() &&
+            errorText(error).indexOf("writable stream that is closed or errored") >= 0) {
+            /* Safari 26.4 in GitHub Actions run 26836125845 completed the
+             * final zero baton and observed transport.closed, then rejected
+             * writer.close() because the peer had already closed the session.
+             */
+            return;
+          }
+          throw error;
+        }
       } finally {
         writer.releaseLock();
       }
