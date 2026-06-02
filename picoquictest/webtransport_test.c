@@ -4163,6 +4163,53 @@ int picowt_exporter_test(void)
             ret = -1;
         }
     }
+    if (ret == 0) {
+        session_ctx.stream_id = 1;
+        if (picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            exporter_context, sizeof(exporter_context),
+            other_session_key, export_key_len) == 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        session_ctx.stream_id = 2;
+        if (picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+            exporter_label, sizeof(exporter_label),
+            exporter_context, sizeof(exporter_context),
+            other_session_key, export_key_len) == 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        session_ctx.stream_id = 0;
+        if (picowt_export_secret(NULL, &session_ctx,
+                exporter_label, sizeof(exporter_label),
+                exporter_context, sizeof(exporter_context),
+                other_session_key, export_key_len) == 0 ||
+            picowt_export_secret(test_ctx->cnx_client, NULL,
+                exporter_label, sizeof(exporter_label),
+                exporter_context, sizeof(exporter_context),
+                other_session_key, export_key_len) == 0 ||
+            picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+                NULL, sizeof(exporter_label),
+                exporter_context, sizeof(exporter_context),
+                other_session_key, export_key_len) == 0 ||
+            picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+                exporter_label, sizeof(exporter_label),
+                NULL, sizeof(exporter_context),
+                other_session_key, export_key_len) == 0 ||
+            picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+                exporter_label, sizeof(exporter_label),
+                exporter_context, sizeof(exporter_context),
+                NULL, export_key_len) == 0 ||
+            picowt_export_secret(test_ctx->cnx_client, &session_ctx,
+                exporter_label, sizeof(exporter_label),
+                exporter_context, sizeof(exporter_context),
+                other_session_key, 0) == 0) {
+            ret = -1;
+        }
+    }
 
     if (test_ctx != NULL) {
         tls_api_delete_ctx(test_ctx);
