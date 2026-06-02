@@ -24,6 +24,15 @@ const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const GECKO_DRIVER_PORT = Number(process.env.PICOQUIC_WT_GECKO_DRIVER_PORT || 9445);
 const HARNESS_PORT = Number(process.env.PICOQUIC_WT_HARNESS_PORT || 8081);
 const FIREFOX_HEADLESS = process.env.PICOQUIC_WT_FIREFOX_HEADLESS !== "0";
+/* Firefox 151.0.2 in GitHub Actions rejected the local self-signed
+ * WebTransport endpoint before CONNECT when relying only on
+ * serverCertificateHashes; see run 26801130235. Keep this WebDriver-only
+ * certificate bypass opt-in isolated to Firefox lanes so the browser can still
+ * exercise picoquic's WebTransport data path. The Firefox expected-results
+ * manifest skips the wrong-hash scenario while this browser path is in use.
+ */
+const FIREFOX_ACCEPT_INSECURE_CERTS =
+  process.env.PICOQUIC_WT_FIREFOX_ACCEPT_INSECURE_CERTS === "1";
 const FIREFOX_BIN = process.env.FIREFOX_BIN || "";
 const WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
@@ -333,6 +342,7 @@ async function newFirefoxSession(endpoint) {
     capabilities: {
       alwaysMatch: {
         browserName: "firefox",
+        acceptInsecureCerts: FIREFOX_ACCEPT_INSECURE_CERTS,
         "moz:firefoxOptions": firefoxOptions
       }
     }

@@ -127,10 +127,16 @@ jobs:
           cmake --build build -j$(nproc) --target pico_baton
 
       - name: Run Firefox WebTransport baton smoke
+        env:
+          PICOQUIC_WT_FIREFOX_ACCEPT_INSECURE_CERTS: "1"
+          PICOQUIC_WT_SERVER_LOG: "1"
         run: |
           npx -y node@22 tests/webtransport/browser/run-firefox.mjs
 
       - name: Run Firefox WebTransport core E2E
+        env:
+          PICOQUIC_WT_FIREFOX_ACCEPT_INSECURE_CERTS: "1"
+          PICOQUIC_WT_SERVER_LOG: "1"
         run: |
           npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser firefox
 
