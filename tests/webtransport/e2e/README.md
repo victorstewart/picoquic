@@ -32,6 +32,8 @@ Use `datagramWritableOk` on positive scenarios that must prove
 `datagrams.writable` rejects a non-`BufferSource` chunk with `TypeError` while
 the main scenario still successfully sends and receives the exact expected
 baton datagram payload, such as `datagramsReceived: [252]`.
+Use `eventsInclude` for required browser-observable state-machine events such
+as `ready`, stream receive/send labels, datagram labels, and `closed`.
 Use `streamWritableOk` the same way for outgoing unidirectional and
 bidirectional stream writers.
 Positive scenarios also assert server-side close-session evidence from the

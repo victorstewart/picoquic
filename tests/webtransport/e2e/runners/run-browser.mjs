@@ -304,6 +304,15 @@ function assertScenarioResult(id, result, expect) {
   if (expect.datagramsReceived) {
     assertArrayEquals(id, "datagramsReceived", result.datagramsReceived, expect.datagramsReceived);
   }
+  if (expect.eventsInclude) {
+    const events = Array.isArray(result.events) ?
+      result.events.map((entry) => entry && entry.event) : [];
+    for (const event of expect.eventsInclude) {
+      if (!events.includes(event)) {
+        throw new Error(`${id}: expected event ${JSON.stringify(event)}, got ${JSON.stringify(events)}`);
+      }
+    }
+  }
   if (expect.datagramsReceivedMin !== undefined &&
     (!Array.isArray(result.datagramsReceived) ||
       result.datagramsReceived.length < expect.datagramsReceivedMin)) {
