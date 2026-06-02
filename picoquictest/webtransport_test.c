@@ -5278,6 +5278,16 @@ static int picowt_flow_control_disabled_receive_case(picoquic_cnx_t* cnx)
             ret = -1;
         }
     }
+    if (ret == 0) {
+        capsule_length = picowt_format_flow_control_test_capsule(buffer,
+            sizeof(buffer), picowt_capsule_wt_stream_data_blocked, 1);
+        if (capsule_length == 0 ||
+            picowt_receive_capsule_ex(cnx, buffer, buffer + capsule_length, 0,
+                &capsule) == 0 ||
+            capsule.h3_error_code != H3ZERO_GENERAL_PROTOCOL_ERROR) {
+            ret = -1;
+        }
+    }
 
     picowt_release_capsule(&capsule);
     return ret;
@@ -5745,7 +5755,8 @@ int picowt_prohibited_capsule_test(void)
 
         if (capsule_length == 0 ||
             picowt_receive_capsule(cnx, buffer,
-                buffer + capsule_length, &capsule) == 0) {
+                buffer + capsule_length, &capsule) == 0 ||
+            capsule.h3_error_code != H3ZERO_GENERAL_PROTOCOL_ERROR) {
             ret = -1;
         }
         picowt_release_capsule(&capsule);
@@ -5758,7 +5769,8 @@ int picowt_prohibited_capsule_test(void)
 
         if (capsule_length == 0 ||
             picowt_receive_capsule(cnx, buffer,
-                buffer + capsule_length, &capsule) == 0) {
+                buffer + capsule_length, &capsule) == 0 ||
+            capsule.h3_error_code != H3ZERO_GENERAL_PROTOCOL_ERROR) {
             ret = -1;
         }
         picowt_release_capsule(&capsule);
