@@ -172,6 +172,15 @@
       "platform": "linux",
       "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not claim selected WT-Protocol exposure. On the two-lane compact endpoint, Firefox completed one full stream/datagram baton lane but did not deliver the second concurrent server-opened lane before the harness timeout, so this lane does not currently claim concurrent two-lane browser E2E conformance for Firefox.",
       "evidence": "GitHub WebTransportBrowser run 26833011127, Firefox job 79119269606, logged url=https://127.0.0.1:4433/baton?version=0&baton=251&count=2&padding=0&protocol=optional with received=[251,253,255], sent=[252,254,0], datagramsReceived=[252], closeSessionReceived=1, and timeout after 30000 ms while pico_baton was still waiting for the second lane. Chrome and Edge passed the same two-lane scenario in that run."
+    },
+    {
+      "scenario": "baton.core.four-lane-compact-default-reader",
+      "status": "skip",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions does not currently claim concurrent multi-lane browser E2E conformance. The two-lane compact scenario is already skipped because Firefox completed only one full lane before timeout; keep the stricter four-lane scenario present for other browsers but skipped in the Firefox lane.",
+      "evidence": "GitHub WebTransportBrowser run 26833011127, Firefox job 79119269606, timed out on the two-lane compact endpoint after one complete lane. In run 26847131054, Firefox job 79169550196 reached baton.core.four-lane-compact-default-reader through the Firefox protocol=optional compatibility path and failed before concurrency assertions only because this expected-results entry did not yet exist. Chrome job 79169550213 and Edge job 79169550278 passed the four-lane scenario in that run."
     }
   ]
 }

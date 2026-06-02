@@ -99,6 +99,15 @@
           "writableBadChunkCloseReceived": false
         }
       }
+    },
+    {
+      "scenario": "baton.core.four-lane-compact-default-reader",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI passes the compact one-lane and two-lane browser data paths, but timed out on the stricter four-lane compact scenario before delivering all four concurrent lanes. Keep the scenario active for browsers that pass it, but do not claim four-lane Safari stable conformance yet.",
+      "evidence": "GitHub WebTransportBrowser run 26847131054, Safari job 79169550184, timed out after 30000 ms on baton.core.four-lane-compact-default-reader with URL https://127.0.0.1:4433/baton?version=0&baton=251&count=4&padding=0. The server trace showed partial multi-lane progress, including All ZERO baton on streams 1 and 5, but the page did not finish all four lanes before timeout. Chrome job 79169550213 and Edge job 79169550278 passed the same four-lane scenario in that run."
     }
   ]
 }
