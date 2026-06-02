@@ -105,4 +105,8 @@ or enable **Allow Remote Automation** in Safari Settings > Developer. Then run:
 node tests/webtransport/browser/run-safari.mjs
 ```
 
+The Safari runner serves this harness over `http://127.0.0.1:8080` by default
+because Safari WebDriver can reject `file://` main resources in its automation
+sandbox. Set `PICOQUIC_WT_PAGE_URL` to use a custom harness page origin.
+
 Pass criteria are the same as Chrome.

@@ -47,6 +47,7 @@ jobs:
       - name: Run Chrome WebTransport baton smoke
         env:
           CHROME_BIN: google-chrome
+          PICOQUIC_WT_CHROME_HEADLESS: old
         run: |
           npx -y node@22 tests/webtransport/browser/run-chrome.mjs
 

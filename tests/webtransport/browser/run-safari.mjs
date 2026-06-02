@@ -3,9 +3,9 @@
 import { spawn } from "node:child_process";
 import { createHash, X509Certificate } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { extname, join, resolve, sep } from "node:path";
 
 const ROOT = resolve(new URL("../../..", import.meta.url).pathname);
 const BATON = process.env.PICO_BATON_BIN || join(ROOT, "build", "pico_baton");
@@ -16,10 +16,10 @@ const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const SAFARI_DRIVER_PORT = Number(process.env.PICOQUIC_WT_SAFARI_DRIVER_PORT || 9444);
+const HARNESS_PORT = Number(process.env.PICOQUIC_WT_HARNESS_PORT || 8080);
 const WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
-const PAGE_URL = process.env.PICOQUIC_WT_PAGE_URL ||
-  pathToFileURL(join(WEB_ROOT, "index.html")).href;
+const PAGE_URL = process.env.PICOQUIC_WT_PAGE_URL || "";
 
 const safariDriverNames = [
   process.env.SAFARI_DRIVER_BIN,
@@ -121,8 +121,8 @@ function certHash(certPath) {
   return createHash("sha256").update(cert.raw).digest("base64url");
 }
 
-function buildPageUrl(certificateHash) {
-  const url = new URL(PAGE_URL);
+function buildPageUrl(pageUrl, certificateHash) {
+  const url = new URL(pageUrl);
   url.searchParams.set("autorun", "1");
   url.searchParams.set("timeoutMs", String(TIMEOUT_MS));
   url.searchParams.set("url", WT_URL);
@@ -132,6 +132,64 @@ function buildPageUrl(certificateHash) {
     url.searchParams.set("requireDatagram", "0");
   }
   return url.href;
+}
+
+function contentType(filePath) {
+  switch (extname(filePath)) {
+  case ".html":
+    return "text/html; charset=utf-8";
+  case ".js":
+    return "text/javascript; charset=utf-8";
+  case ".css":
+    return "text/css; charset=utf-8";
+  default:
+    return "application/octet-stream";
+  }
+}
+
+function startHarnessServer() {
+  const root = resolve(WEB_ROOT);
+  const server = createServer((request, response) => {
+    try {
+      const requestUrl = new URL(request.url || "/", "http://127.0.0.1");
+      let pathname = decodeURIComponent(requestUrl.pathname);
+      if (pathname === "/") {
+        pathname = "/index.html";
+      }
+      const filePath = resolve(root, `.${pathname}`);
+      if (filePath !== root && !filePath.startsWith(root + sep)) {
+        response.writeHead(403);
+        response.end("forbidden");
+        return;
+      }
+      if (!existsSync(filePath)) {
+        response.writeHead(404);
+        response.end("not found");
+        return;
+      }
+      response.writeHead(200, {
+        "content-type": contentType(filePath),
+        "cache-control": "no-store"
+      });
+      response.end(readFileSync(filePath));
+    } catch (error) {
+      response.writeHead(500);
+      response.end(error && error.message ? error.message : String(error));
+    }
+  });
+
+  return new Promise((resolveServer, rejectServer) => {
+    server.once("error", rejectServer);
+    server.listen(HARNESS_PORT, "127.0.0.1", () => {
+      server.off("error", rejectServer);
+      resolveServer({
+        close() {
+          server.close();
+        },
+        url: `http://127.0.0.1:${HARNESS_PORT}/index.html`
+      });
+    });
+  });
 }
 
 function waitForServer(child) {
@@ -366,7 +424,8 @@ async function main() {
 
   const workDir = mkdtempSync(join(tmpdir(), "picoquic-wt-safari-"));
   const certConfig = await getCertificateConfig(workDir);
-  const targetUrl = buildPageUrl(certConfig.hash);
+  const harness = PAGE_URL ? null : await startHarnessServer();
+  const targetUrl = buildPageUrl(PAGE_URL || harness.url, certConfig.hash);
   const serverArgs = [
     "-p", String(PORT),
     "-c", certConfig.cert,
@@ -434,6 +493,9 @@ async function main() {
     }
     driver.kill("SIGTERM");
     server.kill("SIGTERM");
+    if (harness) {
+      harness.close();
+    }
     rmSync(workDir, { recursive: true, force: true });
   }
 }
