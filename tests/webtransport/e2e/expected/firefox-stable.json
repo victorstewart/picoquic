@@ -27,10 +27,11 @@
       "category": "browser-missing",
       "browserVersion": "151.0.2",
       "platform": "linux",
-      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure.",
-      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected.",
+      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure. The same browser accepted invalid WebTransport protocols constructor inputs instead of throwing, so protocol constructor validation is recorded as a browser API gap.",
+      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected. Run 26801732536, Firefox job 79009682544, completed the baton exchange but recorded protocolConstructor.ok=false because duplicate, empty, overlong, and non-isomorphic protocols did not throw.",
       "expect": {
-        "protocol": ""
+        "protocol": "",
+        "protocolConstructorOk": false
       }
     },
     {
@@ -39,10 +40,11 @@
       "category": "browser-missing",
       "browserVersion": "151.0.2",
       "platform": "linux",
-      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure.",
-      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected.",
+      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure. The same browser accepted invalid WebTransport protocols constructor inputs instead of throwing, so protocol constructor validation is recorded as a browser API gap.",
+      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected. Run 26801732536, Firefox job 79009682544, completed the baton exchange but recorded protocolConstructor.ok=false because duplicate, empty, overlong, and non-isomorphic protocols did not throw.",
       "expect": {
-        "protocol": ""
+        "protocol": "",
+        "protocolConstructorOk": false
       }
     }
   ]

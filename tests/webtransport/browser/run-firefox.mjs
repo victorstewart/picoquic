@@ -16,6 +16,13 @@ const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
+/* Firefox 151.0.2 in GitHub Actions accepted invalid protocols constructor
+ * inputs instead of throwing; see run 26801732536. Keep recording the
+ * diagnostic, but let the Firefox expected-results manifest classify it as a
+ * browser API gap while the lane exercises picoquic's data path.
+ */
+const REQUIRE_PROTOCOL_CONSTRUCTOR =
+  process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR_REQUIRED !== "0";
 const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED === "1";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
@@ -615,7 +622,9 @@ async function main() {
     if (RUN_PROTOCOL_CONSTRUCTOR && EXPECT_OK) {
       result.protocolConstructor = await readDiagnostic(endpoint, sessionId,
         "runProtocolConstructorTests", certConfig.hash);
-      assertDiagnosticResult("protocolConstructor", result.protocolConstructor);
+      if (REQUIRE_PROTOCOL_CONSTRUCTOR) {
+        assertDiagnosticResult("protocolConstructor", result.protocolConstructor);
+      }
       result.urlConstructor = await readDiagnostic(endpoint, sessionId,
         "runUrlConstructorTests", certConfig.hash);
       assertDiagnosticResult("urlConstructor", result.urlConstructor);
