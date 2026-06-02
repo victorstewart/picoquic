@@ -542,6 +542,8 @@ function summarizeServerOutput(output) {
     packetsReceived: countMatches(output, /Receiving packet type/g),
     packetsSent: countMatches(output, /Sending packet type/g),
     h3ControlFrames: countMatches(output, /H3 control frame/g),
+    originMissing: countMatches(output, /Missing WebTransport CONNECT origin/g),
+    originRejected: countMatches(output, /WebTransport CONNECT origin rejected/g),
     closeSessionReceived: countMatches(output,
       /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
     writableBadChunkCloseReceived:

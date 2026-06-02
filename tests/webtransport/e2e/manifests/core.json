@@ -86,6 +86,51 @@
       }
     },
     {
+      "id": "origin.deny",
+      "title": "Denied WebTransport Origin rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton-origin-deny?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "Origin-header",
+        "origin-policy-deny",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton-origin-deny?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "originMissing": 0,
+          "originRejectedMin": 1,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
       "id": "handshake.reject_bad_certificate_hash",
       "title": "Wrong serverCertificateHashes value rejects ready",
       "runner": "browser-baton",
@@ -359,6 +404,8 @@
         "allowPooling-serverCertificateHashes-observed",
         "ready",
         "closed",
+        "Origin-header",
+        "origin-policy-allow",
         "WT-Protocol",
         "BYOB-reader",
         "default-padded-baton-packet",
@@ -422,6 +469,8 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "originMissing": 0,
+          "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
           "closeSessionReceivedMin": 1,
@@ -445,6 +494,8 @@
         "allowPooling-serverCertificateHashes-observed",
         "ready",
         "closed",
+        "Origin-header",
+        "origin-policy-allow",
         "WT-Protocol",
         "incoming-unidirectional-stream",
         "incoming-bidirectional-stream",
@@ -506,6 +557,8 @@
         ],
         "server": {
           "connectAcceptedMin": 1,
+          "originMissing": 0,
+          "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
           "closeSessionReceivedMin": 1,

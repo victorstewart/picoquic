@@ -427,11 +427,20 @@ int baton_client_loop_cb(picoquic_quic_t* UNUSED(quic), picoquic_packet_loop_cb_
 */
 char const* baton_ticket_store = "baton_ticket_store.bin";
 char const* baton_token_store = "baton_token_store.bin";
+static char const* wt_baton_origin_deny_path = "/baton-origin-deny";
+
+static int wt_baton_origin_validator_deny_all(
+    const uint8_t* UNUSED(origin), size_t UNUSED(origin_length),
+    const uint8_t* UNUSED(authority), size_t UNUSED(authority_length),
+    void* UNUSED(origin_validator_ctx))
+{
+    return -1;
+}
 
 int wt_baton_server(char const* path, picoquic_quic_config_t* config)
 {
     int ret = 0;
-    picohttp_server_path_item_t path_item_list[1] = { { 0 } };
+    picohttp_server_path_item_t path_item_list[2] = { { 0 } };
 
     /* Start: start the QUIC process with cert and key files */
     picoquic_quic_t* qserver = NULL;
@@ -458,8 +467,12 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
      * until the Chrome E2E artifact no longer requires it.
      */
     path_item_list[0].accept_legacy_webtransport = 1;
+    path_item_list[1] = path_item_list[0];
+    path_item_list[1].path = wt_baton_origin_deny_path;
+    path_item_list[1].path_length = strlen(wt_baton_origin_deny_path);
+    path_item_list[1].origin_validator = wt_baton_origin_validator_deny_all;
     picoquic_file_param.path_table = path_item_list;
-    picoquic_file_param.path_table_nb = 1;
+    picoquic_file_param.path_table_nb = 2;
 
     /* Setup the server context */
     if (ret == 0) {

@@ -42,6 +42,9 @@ Use `eventsExclude` for negative scenarios that must prove a failed handshake
 never reached `ready`, clean `closed`, or app-data send states. Failed
 handshake scenarios should also assert zero `readyMs`/`closedMs`, an empty
 selected protocol, empty payload arrays, and `datagramsSent: 0`.
+Origin-policy scenarios assert the browser-visible `ready` outcome and the
+server-side `originMissing`/`originRejected` counters parsed from `pico_baton`
+logs, so allow and deny routes are not inferred from client results alone.
 Use `streamWritableOk` the same way for outgoing unidirectional and
 bidirectional stream writers.
 Positive scenarios also assert server-side close-session evidence from the
