@@ -346,7 +346,10 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
      * processed directly at the web transport layer.
      */
     if (stream_ctx->stream_id == baton_ctx->control_stream_id) {
-            ret = picowt_receive_capsule(cnx, bytes, (bytes == NULL)?NULL:(bytes + length), &baton_ctx->capsule);
+            ret = picowt_receive_capsule_ex(cnx, bytes,
+                (bytes == NULL) ? NULL : (bytes + length),
+                picowt_session_flow_control_is_enabled(baton_ctx->h3_ctx),
+                &baton_ctx->capsule);
             if (ret != 0) {
                 uint64_t h3_error_code = (baton_ctx->capsule.h3_error_code == 0) ?
                     H3ZERO_GENERAL_PROTOCOL_ERROR : baton_ctx->capsule.h3_error_code;

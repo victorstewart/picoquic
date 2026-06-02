@@ -107,6 +107,10 @@ extern "C" {
         unsigned int wt_max_streams_uni_received;
     } picowt_capsule_t;
 
+    int picowt_session_flow_control_is_enabled(const h3zero_callback_ctx_t* h3_ctx);
+    int picowt_receive_capsule_ex(picoquic_cnx_t* cnx, const uint8_t* bytes,
+        const uint8_t* bytes_max, int is_flow_control_enabled,
+        picowt_capsule_t* capsule);
     int picowt_receive_capsule(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint8_t* bytes_max, picowt_capsule_t* capsule);
     void picowt_release_capsule(picowt_capsule_t* capsule);
     int picowt_apply_flow_control_capsule(h3zero_stream_ctx_t* control_stream_ctx,
