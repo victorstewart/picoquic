@@ -714,17 +714,23 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         int ret = 0;
         wt_baton_ctx_t* baton_ctx = (wt_baton_ctx_t*)path_app_ctx;
 
-        picoquic_log_app_message(cnx, "Received reset on stream %" PRIu64 ", closing the session", stream_ctx->stream_id);
-
         if (baton_ctx != NULL) {
-            ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_GAME_OVER, NULL);
-
-            /* Any reset results in the abandon of the context */
-            baton_ctx->baton_state = wt_baton_state_closed;
-            if (baton_ctx->is_client) {
-                (void)picoquic_close(cnx, 0);
+            if (baton_ctx->baton_state == wt_baton_state_closed ||
+                baton_ctx->lanes_completed >= baton_ctx->nb_lanes) {
+                picoquic_log_app_message(cnx, "Ignoring reset on stream %" PRIu64 " after baton close",
+                    stream_ctx->stream_id);
             }
-            h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx, baton_ctx->control_stream_id);
+            else {
+                picoquic_log_app_message(cnx, "Received reset on stream %" PRIu64 ", closing the session", stream_ctx->stream_id);
+                ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_GAME_OVER, NULL);
+
+                /* Any reset before baton completion results in the abandon of the context */
+                baton_ctx->baton_state = wt_baton_state_closed;
+                if (baton_ctx->is_client) {
+                    (void)picoquic_close(cnx, 0);
+                }
+                h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx, baton_ctx->control_stream_id);
+            }
         }
 
         return ret;
@@ -736,17 +742,23 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         int ret = 0;
         wt_baton_ctx_t* baton_ctx = (wt_baton_ctx_t*)path_app_ctx;
 
-        picoquic_log_app_message(cnx, "Received stop sending on stream %" PRIu64 ", closing the session", stream_ctx->stream_id);
-
         if (baton_ctx != NULL) {
-            ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_GAME_OVER, NULL);
-
-            /* Any reset results in the abandon of the context */
-            baton_ctx->baton_state = wt_baton_state_closed;
-            if (baton_ctx->is_client) {
-                (void)picoquic_close(cnx, 0);
+            if (baton_ctx->baton_state == wt_baton_state_closed ||
+                baton_ctx->lanes_completed >= baton_ctx->nb_lanes) {
+                picoquic_log_app_message(cnx, "Ignoring stop sending on stream %" PRIu64 " after baton close",
+                    stream_ctx->stream_id);
             }
-            h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx, baton_ctx->control_stream_id);
+            else {
+                picoquic_log_app_message(cnx, "Received stop sending on stream %" PRIu64 ", closing the session", stream_ctx->stream_id);
+                ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_GAME_OVER, NULL);
+
+                /* Any stop before baton completion results in the abandon of the context */
+                baton_ctx->baton_state = wt_baton_state_closed;
+                if (baton_ctx->is_client) {
+                    (void)picoquic_close(cnx, 0);
+                }
+                h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx, baton_ctx->control_stream_id);
+            }
         }
 
         return ret;
