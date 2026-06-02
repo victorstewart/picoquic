@@ -1,0 +1,31 @@
+{
+  "browser": "chrome",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": [
+    {
+      "scenario": "baton.core.padded-byob",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "148.0.7778.178",
+      "platform": "linux",
+      "reason": "Chrome stable constructs when allowPooling is true and serverCertificateHashes is non-empty, even though the W3C WebTransport constructor requires NotSupportedError for that option combination.",
+      "evidence": "GitHub run 26796690452 on Chrome 148.0.7778.178 recorded optionsConstructor.ok=false with detail 'constructor did not throw' for baton.core.padded-byob. Local Chrome 148.0.7778.181 on macOS showed the same behavior.",
+      "expect": {
+        "optionsConstructorOk": false
+      }
+    },
+    {
+      "scenario": "baton.core.compact-default-reader",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "148.0.7778.178",
+      "platform": "linux",
+      "reason": "Chrome stable constructs when allowPooling is true and serverCertificateHashes is non-empty, even though the W3C WebTransport constructor requires NotSupportedError for that option combination.",
+      "evidence": "GitHub run 26796690452 on Chrome 148.0.7778.178 recorded optionsConstructor.ok=false with detail 'constructor did not throw' for baton.core.compact-default-reader. Local Chrome 148.0.7778.181 on macOS showed the same behavior.",
+      "expect": {
+        "optionsConstructorOk": false
+      }
+    }
+  ]
+}

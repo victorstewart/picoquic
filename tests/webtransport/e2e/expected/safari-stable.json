@@ -11,6 +11,18 @@
       "platform": "macOS",
       "reason": "Safari 26.4 CI has failed the baton smoke on BYOB/default-padded incoming streams; keep this stricter scenario in the manifest but do not use it as Safari support evidence yet.",
       "evidence": "GitHub runs 26793459264 and 26793617221 failed after ready while reading the first incoming stream; run 26794108055 failed after the first compact packet when localhost raced IPv4/IPv6. Compact default-reader smoke passed in run 26794207475."
+    },
+    {
+      "scenario": "baton.core.compact-default-reader",
+      "status": "pass",
+      "category": "conformant",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari stable throws NotSupportedError when allowPooling is true and serverCertificateHashes is non-empty, matching the W3C WebTransport constructor requirement.",
+      "evidence": "GitHub run 26796690452 on Safari 26.4 macOS recorded optionsConstructor.ok=true with detail 'NotSupportedError: The operation is not supported.' for baton.core.compact-default-reader.",
+      "expect": {
+        "optionsConstructorOk": true
+      }
     }
   ]
 }

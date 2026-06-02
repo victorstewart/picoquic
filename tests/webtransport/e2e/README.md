@@ -39,10 +39,13 @@ npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser chrome
 ```
 
 Expected-result files live under `tests/webtransport/e2e/expected/`. They are
-loaded automatically by browser name when present, and every skipped scenario
-must include browser/version, platform, category, reason, and evidence.
-Expected-result files are validated against the manifest: stale scenario IDs
-and duplicate entries are test failures.
+loaded automatically by browser name when present. `status: "skip"` entries
+skip a whole scenario; `status: "pass"` entries merge browser-specific
+assertion overrides into a normally running scenario. Every expected-result
+entry must include browser/version, platform, category, reason, and evidence.
+Expected-result files are validated against the manifest with `list --expected`:
+stale scenario IDs, duplicate entries, unsupported statuses, and malformed
+pass/skip entries are test failures.
 Run output includes browser metadata so support tables can cite exact browser
 versions from CI artifacts.
 

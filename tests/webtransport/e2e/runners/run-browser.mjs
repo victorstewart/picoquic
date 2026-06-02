@@ -14,6 +14,7 @@ const BROWSER_RUNNERS = {
   safari: join(ROOT, "tests", "webtransport", "browser", "run-safari.mjs")
 };
 const SCENARIO_ID_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
+const EXPECTED_STATUSES = new Set(["skip", "pass"]);
 const SCENARIO_FIELDS = new Set([
   "id",
   "title",
@@ -103,7 +104,7 @@ function validateScenario(scenario, path) {
 function usage() {
   console.error([
     "usage:",
-    "  node tests/webtransport/e2e/runners/run-browser.mjs list [--manifest <path>] [--json]",
+    "  node tests/webtransport/e2e/runners/run-browser.mjs list [--manifest <path>] [--expected <path>] [--json]",
     "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|safari> [--manifest <path>] [--expected <path>] [--no-expected] [--scenario <id>] [--json]"
   ].join("\n"));
 }
@@ -157,6 +158,23 @@ function manifestScenarioIds(manifest) {
   return new Set(manifest.scenarios.map((scenario) => scenario.id));
 }
 
+function validateExpectedEntry(entry, path) {
+  if (!entry.scenario || !entry.status || !entry.category ||
+    !entry.reason || !entry.evidence) {
+    throw new Error(`invalid expected-result entry in ${path}`);
+  }
+  if (!EXPECTED_STATUSES.has(entry.status)) {
+    throw new Error(`invalid expected-result status in ${path}: ${entry.status}`);
+  }
+  if (entry.status === "pass") {
+    if (!isObject(entry.expect) || Object.keys(entry.expect).length === 0) {
+      throw new Error(`expected-result pass entry has no expect overrides in ${path}: ${entry.scenario}`);
+    }
+  } else if (Object.prototype.hasOwnProperty.call(entry, "expect")) {
+    throw new Error(`expected-result skip entry must not include expect in ${path}: ${entry.scenario}`);
+  }
+}
+
 function loadExpected(path, manifest) {
   if (!path || !existsSync(path)) {
     return { path: "", entries: new Map() };
@@ -169,10 +187,7 @@ function loadExpected(path, manifest) {
   const entries = new Map();
   const scenarioIds = manifestScenarioIds(manifest);
   for (const entry of expected.expected || []) {
-    if (!entry.scenario || !entry.status || !entry.category ||
-      !entry.reason || !entry.evidence) {
-      throw new Error(`invalid expected-result entry in ${path}`);
-    }
+    validateExpectedEntry(entry, path);
     if (!scenarioIds.has(entry.scenario)) {
       throw new Error(`expected-result entry references unknown scenario in ${path}: ${entry.scenario}`);
     }
@@ -182,6 +197,29 @@ function loadExpected(path, manifest) {
     entries.set(entry.scenario, entry);
   }
   return { path, entries };
+}
+
+function mergeExpect(base, override) {
+  const merged = { ...(base || {}), ...(override || {}) };
+  if ((base && base.server) || (override && override.server)) {
+    merged.server = { ...((base && base.server) || {}), ...((override && override.server) || {}) };
+  }
+  return merged;
+}
+
+function expectedMetadata(entry) {
+  const metadata = {
+    status: entry.status,
+    category: entry.category,
+    browserVersion: entry.browserVersion || "",
+    platform: entry.platform || "",
+    reason: entry.reason,
+    evidence: entry.evidence
+  };
+  if (entry.expect) {
+    metadata.expect = entry.expect;
+  }
+  return metadata;
 }
 
 function renderTemplate(value, vars) {
@@ -339,16 +377,10 @@ async function runScenario(browser, scenario, vars) {
       title: scenario.title || "",
       status: "skip",
       coverage: scenario.coverage || [],
-      expected: {
-        category: expectedEntry.category,
-        browserVersion: expectedEntry.browserVersion || "",
-        platform: expectedEntry.platform || "",
-        reason: expectedEntry.reason,
-        evidence: expectedEntry.evidence
-      }
+      expected: expectedMetadata(expectedEntry)
     };
   }
-  if (expectedEntry) {
+  if (expectedEntry && expectedEntry.status !== "pass") {
     throw new Error(`${scenario.id}: unsupported expected status ${expectedEntry.status}`);
   }
 
@@ -357,14 +389,17 @@ async function runScenario(browser, scenario, vars) {
     throw new Error(`unsupported browser: ${browser}`);
   }
   const rendered = renderTemplate(scenario, vars);
+  const expectedOverride = expectedEntry && expectedEntry.expect ?
+    renderTemplate(expectedEntry.expect, vars) : {};
+  const scenarioExpect = mergeExpect(rendered.expect || {}, expectedOverride);
   const env = {
     ...process.env,
     PICOQUIC_WT_URL: rendered.wtUrl,
     PICOQUIC_WT_PROTOCOL: rendered.protocol || "devious-baton-00",
     PICOQUIC_WT_REQUIRE_DATAGRAM: rendered.requireDatagram === false ? "0" : "1",
     PICOQUIC_WT_USE_BYOB: rendered.useByob === false ? "0" : "1",
-    PICOQUIC_WT_EXPECT_OK: rendered.expect && rendered.expect.ok === false ? "0" : "1",
-    PICOQUIC_WT_PROTOCOL_CONSTRUCTOR: rendered.expect && rendered.expect.ok === false ? "0" : "1",
+    PICOQUIC_WT_EXPECT_OK: scenarioExpect.ok === false ? "0" : "1",
+    PICOQUIC_WT_PROTOCOL_CONSTRUCTOR: scenarioExpect.ok === false ? "0" : "1",
     PICOQUIC_WT_INCLUDE_SERVER_SUMMARY: "1",
     PICOQUIC_WT_TIMEOUT_MS: String(rendered.timeoutMs || 30000),
     PICOQUIC_WT_PORT: String(vars.port)
@@ -375,26 +410,34 @@ async function runScenario(browser, scenario, vars) {
   }
   const run = await runChild(process.execPath, [runner], env);
   const result = parseJsonOutput(run.stdout);
-  assertScenarioResult(rendered.id, result, rendered.expect || {});
-  return {
+  assertScenarioResult(rendered.id, result, scenarioExpect);
+  const scenarioResult = {
     id: rendered.id,
     title: rendered.title || "",
     status: "pass",
     coverage: rendered.coverage || [],
     result
   };
+  if (expectedEntry) {
+    scenarioResult.expected = expectedMetadata(expectedEntry);
+  }
+  return scenarioResult;
 }
 
 function commandList(args) {
   const manifestPath = resolve(takeOption(args, "--manifest", DEFAULT_MANIFEST));
+  const expectedPath = takeOption(args, "--expected", "");
   const json = hasOption(args, "--json");
   if (args.length !== 0) {
     throw new Error(`unexpected list arguments: ${args.join(" ")}`);
   }
   const manifest = loadManifest(manifestPath);
+  const expected = expectedPath ?
+    loadExpected(resolve(expectedPath), manifest) : { path: "", entries: new Map() };
   const result = {
     suite: manifest.suite || "",
     description: manifest.description || "",
+    expected: expected.path,
     scenarios: manifest.scenarios.map((scenario) => ({
       id: scenario.id,
       title: scenario.title || "",
