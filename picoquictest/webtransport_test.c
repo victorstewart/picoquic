@@ -2389,7 +2389,8 @@ int picowt_server_capabilities_test(void)
     return ret;
 }
 
-static int picowt_reset_error_case(uint64_t app_error, uint64_t h3_error, int expect_success)
+static int picowt_reset_error_case(
+    uint64_t app_error, uint64_t h3_error, int expect_success, int is_bidir)
 {
     picoquic_quic_t* quic = NULL;
     picoquic_cnx_t* cnx = NULL;
@@ -2400,6 +2401,7 @@ static int picowt_reset_error_case(uint64_t app_error, uint64_t h3_error, int ex
     uint64_t simulated_time = 0;
     int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
     int reset_ret = 0;
+    uint64_t expected_reliable_size = 0;
 
     if (ret == 0) {
         cnx->is_reset_stream_at_enabled = 1;
@@ -2409,19 +2411,34 @@ static int picowt_reset_error_case(uint64_t app_error, uint64_t h3_error, int ex
         ret = -1;
     }
 
-    if (ret == 0 && (stream_ctx = picowt_create_local_stream(cnx, 1, h3_ctx, control_stream_ctx->stream_id)) == NULL) {
+    if (ret == 0 && (stream_ctx = picowt_create_local_stream(cnx, is_bidir,
+        h3_ctx, control_stream_ctx->stream_id)) == NULL) {
         ret = -1;
+    }
+
+    if (ret == 0) {
+        expected_reliable_size =
+            (uint64_t)picoquic_frames_varint_encode_length(
+                is_bidir ? h3zero_frame_webtransport_stream :
+                h3zero_stream_type_webtransport) +
+            (uint64_t)picoquic_frames_varint_encode_length(
+                control_stream_ctx->stream_id);
     }
 
     if (ret == 0) {
         reset_ret = picowt_reset_stream(cnx, stream_ctx, app_error);
         stream = picoquic_find_stream(cnx, stream_ctx->stream_id);
         if (expect_success) {
-            if (reset_ret != 0 || stream == NULL || !stream->reset_requested || stream->local_error != h3_error) {
+            if (reset_ret != 0 || stream == NULL || !stream->reset_requested ||
+                stream->local_error != h3_error ||
+                stream->reliable_size != expected_reliable_size ||
+                !stream_ctx->ps.stream_state.is_fin_sent) {
                 ret = -1;
             }
         }
-        else if (reset_ret == 0 || stream == NULL || stream->reset_requested) {
+        else if (reset_ret == 0 || stream == NULL || stream->reset_requested ||
+            stream->reliable_size != 0 ||
+            stream_ctx->ps.stream_state.is_fin_sent) {
             ret = -1;
         }
     }
@@ -2437,19 +2454,27 @@ static int picowt_reset_error_case(uint64_t app_error, uint64_t h3_error, int ex
 
 int picowt_reset_error_test(void)
 {
-    int ret = picowt_reset_error_case(0, H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST, 1);
+    int ret = picowt_reset_error_case(0,
+        H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST, 1, 1);
 
     if (ret == 0) {
-        ret = picowt_reset_error_case(0x1d, H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST + 0x1d, 1);
+        ret = picowt_reset_error_case(0,
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST, 1, 0);
     }
     if (ret == 0) {
-        ret = picowt_reset_error_case(0x1e, H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST + 0x1f, 1);
+        ret = picowt_reset_error_case(0x1d,
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST + 0x1d, 1, 1);
     }
     if (ret == 0) {
-        ret = picowt_reset_error_case(UINT32_MAX, H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_LAST, 1);
+        ret = picowt_reset_error_case(0x1e,
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST + 0x1f, 1, 1);
     }
     if (ret == 0) {
-        ret = picowt_reset_error_case(((uint64_t)UINT32_MAX) + 1, 0, 0);
+        ret = picowt_reset_error_case(UINT32_MAX,
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_LAST, 1, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_reset_error_case(((uint64_t)UINT32_MAX) + 1, 0, 0, 1);
     }
 
     return ret;
