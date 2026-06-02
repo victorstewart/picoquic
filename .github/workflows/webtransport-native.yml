@@ -1,0 +1,44 @@
+---
+name: "WebTransportNative"
+
+on:
+  push:
+    branches:
+      - master
+      - webtransport_refresh
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-wire-strict:
+    name: Native WebTransport wire/strict
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+
+      - name: Build picohttp_ct
+        run: |
+          cmake -S . -B build -DPICOQUIC_FETCH_PTLS:BOOL=ON
+          cmake --build build -j$(nproc) --target picohttp_ct
+
+      - name: Run direct SETTINGS error regression
+        run: |
+          ./build/picohttp_ct -S . -n -r h3zero_setting_error
+
+      - name: Run WebTransport native wire/strict tests
+        run: |
+          ctest --test-dir build -L 'wt_wire|wt_strict' --output-on-failure -j$(nproc)
