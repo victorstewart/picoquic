@@ -43,7 +43,10 @@ https://trusted.example/index.html?url=https%3A%2F%2Flocalhost%3A4433%2Fbaton%3F
 ```
 
 The harness passes `allowPooling: false`, `requireUnreliable: true`, and, when
-provided, `serverCertificateHashes: [{ algorithm: "sha-256", value }]`.
+provided, `serverCertificateHashes: [{ algorithm: "sha-256", value }]`. Add
+`requireDatagram=0` to the page URL, or set `PICOQUIC_WT_REQUIRE_DATAGRAM=0`
+for `run-chrome.mjs`, to run a scenario that does not require unreliable
+datagram support in the `WebTransport` constructor.
 Certificate hash authentication requires a browser-acceptable X.509v3 leaf
 certificate, normally P-256 ECDSA, with a validity period under two weeks. A
 local cert/hash pair can be made with:

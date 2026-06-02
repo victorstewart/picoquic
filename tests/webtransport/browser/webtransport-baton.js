@@ -214,9 +214,10 @@
   }
 
   function buildTransportOptions(options) {
+    var requireDatagram = options.requireDatagram !== false;
     var transportOptions = {
       allowPooling: false,
-      requireUnreliable: true,
+      requireUnreliable: requireDatagram,
       anticipatedConcurrentIncomingBidirectionalStreams: 4,
       anticipatedConcurrentIncomingUnidirectionalStreams: 4
     };
@@ -331,9 +332,12 @@
       throw new Error("WebTransport is unavailable");
     }
 
+    var requireDatagram = options.requireDatagram !== false;
     var result = {
       ok: false,
       url: options.url,
+      requireDatagram: requireDatagram,
+      constructorRequireUnreliable: requireDatagram,
       startedMs: nowMs(),
       readyMs: 0,
       closedMs: 0,
@@ -345,7 +349,6 @@
       events: []
     };
     var timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
-    var requireDatagram = options.requireDatagram !== false;
     var transport = new WebTransport(options.url, buildTransportOptions(options));
     var finished = false;
     var sentZero = false;
@@ -608,6 +611,8 @@
       var failed = {
         ok: false,
         url: options.url,
+        requireDatagram: options.requireDatagram !== false,
+        constructorRequireUnreliable: options.requireDatagram !== false,
         received: [],
         sent: [],
         datagramsReceived: [],

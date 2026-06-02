@@ -305,6 +305,14 @@ function assertHarnessResult(result) {
   if (result.protocol !== PROTOCOL) {
     throw new Error(`unexpected protocol: ${result.protocol}`);
   }
+  if (result.requireDatagram !== REQUIRE_DATAGRAM ||
+    result.constructorRequireUnreliable !== REQUIRE_DATAGRAM) {
+    throw new Error(`unexpected datagram requirement mode: ${JSON.stringify({
+      requireDatagram: result.requireDatagram,
+      constructorRequireUnreliable: result.constructorRequireUnreliable,
+      expected: REQUIRE_DATAGRAM
+    })}`);
+  }
   if (!equalArray(result.received, [251, 253, 255])) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
   }
