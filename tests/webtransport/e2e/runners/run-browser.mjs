@@ -8,6 +8,8 @@ const ROOT = resolve(new URL("../../../..", import.meta.url).pathname);
 const DEFAULT_MANIFEST = join(ROOT, "tests", "webtransport", "e2e", "manifests", "core.json");
 const DEFAULT_EXPECTED_DIR = join(ROOT, "tests", "webtransport", "e2e", "expected");
 const DEFAULT_PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
+const CHILD_TIMEOUT_OVERRIDE_MS =
+  Number(process.env.PICOQUIC_WT_E2E_CHILD_TIMEOUT_MS || 0);
 const WRONG_CERT_HASH = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const BROWSER_RUNNERS = {
   chrome: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
@@ -446,7 +448,16 @@ function assertScenarioResult(id, result, expect) {
   }
 }
 
-function runChild(command, args, env) {
+function childTimeoutMs(scenario) {
+  if (Number.isFinite(CHILD_TIMEOUT_OVERRIDE_MS) &&
+    CHILD_TIMEOUT_OVERRIDE_MS > 0) {
+    return CHILD_TIMEOUT_OVERRIDE_MS;
+  }
+  const scenarioTimeoutMs = Number(scenario.timeoutMs || 30000);
+  return Math.max(90000, scenarioTimeoutMs * 4 + 60000);
+}
+
+function runChild(command, args, env, timeoutMs) {
   const child = spawn(command, args, {
     cwd: ROOT,
     env,
@@ -462,11 +473,34 @@ function runChild(command, args, env) {
   });
 
   return new Promise((resolveRun, rejectRun) => {
+    let timedOut = false;
+    let killTimer = null;
+    const timeoutTimer = Number.isFinite(timeoutMs) && timeoutMs > 0 ?
+      setTimeout(() => {
+        timedOut = true;
+        try {
+          child.kill("SIGTERM");
+        } catch (_) {}
+        killTimer = setTimeout(() => {
+          try {
+            child.kill("SIGKILL");
+          } catch (_) {}
+        }, 3000);
+      }, timeoutMs) : null;
+
     child.once("exit", (code, signal) => {
-      if (code === 0) {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
+      }
+      if (killTimer) {
+        clearTimeout(killTimer);
+      }
+      if (code === 0 && !timedOut) {
         resolveRun({ stdout, stderr });
       } else {
-        rejectRun(new Error(`${args[0]} failed: code=${code} signal=${signal}\n${stdout}\n${stderr}`));
+        const reason = timedOut ?
+          `timeout after ${timeoutMs} ms` : `code=${code} signal=${signal}`;
+        rejectRun(new Error(`${args[0]} failed: ${reason}\n${stdout}\n${stderr}`));
       }
     });
   });
@@ -533,7 +567,8 @@ async function runScenario(browser, scenario, vars) {
     rendered.certificateHashAlgorithm !== "sha-256") {
     env.PICOQUIC_WT_IGNORE_CERT_ERRORS = "0";
   }
-  const run = await runChild(process.execPath, [runner], env);
+  const run = await runChild(process.execPath, [runner], env,
+    childTimeoutMs(rendered));
   const result = parseJsonOutput(run.stdout);
   assertScenarioResult(rendered.id, result, scenarioExpect);
   const scenarioResult = {
