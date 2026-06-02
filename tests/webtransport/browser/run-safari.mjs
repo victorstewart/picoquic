@@ -160,7 +160,7 @@ async function getCertificateConfig(workDir) {
     "-addext", "extendedKeyUsage=serverAuth"
   ]);
 
-  return { cert, key, hash: certHash(cert) };
+  return { cert, key, hash: process.env.PICOQUIC_WT_CERT_HASH || certHash(cert) };
 }
 
 function certHash(certPath) {

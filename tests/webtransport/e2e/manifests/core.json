@@ -62,6 +62,37 @@
       }
     },
     {
+      "id": "handshake.reject_bad_certificate_hash",
+      "title": "Wrong serverCertificateHashes value rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "certificateHashMode": "wrong",
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "serverCertificateHashes",
+        "certificate-hash-reject",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
       "id": "handshake.reject_bad_baton_query",
       "title": "Malformed baton endpoint parameters reject ready",
       "runner": "browser-baton",

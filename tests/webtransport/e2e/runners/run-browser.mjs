@@ -8,6 +8,7 @@ const ROOT = resolve(new URL("../../../..", import.meta.url).pathname);
 const DEFAULT_MANIFEST = join(ROOT, "tests", "webtransport", "e2e", "manifests", "core.json");
 const DEFAULT_EXPECTED_DIR = join(ROOT, "tests", "webtransport", "e2e", "expected");
 const DEFAULT_PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
+const WRONG_CERT_HASH = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const BROWSER_RUNNERS = {
   chrome: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
   safari: join(ROOT, "tests", "webtransport", "browser", "run-safari.mjs")
@@ -22,6 +23,7 @@ const SCENARIO_FIELDS = new Set([
   "requireDatagram",
   "useByob",
   "timeoutMs",
+  "certificateHashMode",
   "coverage",
   "expect"
 ]);
@@ -81,6 +83,10 @@ function validateScenario(scenario, path) {
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "timeoutMs")) {
     requirePositiveInteger(scenario.timeoutMs, `${scenario.id}.timeoutMs`);
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "certificateHashMode") &&
+    !["generated", "wrong"].includes(scenario.certificateHashMode)) {
+    throw new Error(`invalid manifest field ${scenario.id}.certificateHashMode: unsupported mode ${scenario.certificateHashMode}`);
   }
   if (!Array.isArray(scenario.coverage) || scenario.coverage.length === 0) {
     throw new Error(`invalid manifest field ${scenario.id}.coverage: expected non-empty string array`);
@@ -358,6 +364,10 @@ async function runScenario(browser, scenario, vars) {
     PICOQUIC_WT_TIMEOUT_MS: String(rendered.timeoutMs || 30000),
     PICOQUIC_WT_PORT: String(vars.port)
   };
+  if (rendered.certificateHashMode === "wrong") {
+    env.PICOQUIC_WT_CERT_HASH = WRONG_CERT_HASH;
+    env.PICOQUIC_WT_IGNORE_CERT_ERRORS = "0";
+  }
   const run = await runChild(process.execPath, [runner], env);
   const result = parseJsonOutput(run.stdout);
   assertScenarioResult(rendered.id, result, rendered.expect || {});

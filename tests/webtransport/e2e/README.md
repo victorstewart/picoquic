@@ -15,6 +15,10 @@ node tests/webtransport/e2e/runners/run-browser.mjs list
 Every scenario must declare a stable lowercase ID, title, `browser-baton`
 runner configuration, non-empty coverage tags, and an explicit `expect.ok`
 value. The runner rejects underspecified scenarios before launching a browser.
+Set `certificateHashMode` to `wrong` for negative certificate-hash scenarios;
+the default uses the generated server certificate hash. Wrong-hash scenarios
+also disable Chrome's certificate-error bypass so the browser actually enforces
+`serverCertificateHashes`.
 
 Run the portable core scenario in Chrome:
 

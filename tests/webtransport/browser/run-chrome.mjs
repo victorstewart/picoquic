@@ -27,6 +27,7 @@ const CDP_TIMEOUT_MS = Number(process.env.PICOQUIC_WT_CDP_TIMEOUT_MS || 30000);
  * behavior is encountered.
  */
 const CHROME_HEADLESS = process.env.PICOQUIC_WT_CHROME_HEADLESS || "new";
+const CHROME_IGNORE_CERT_ERRORS = process.env.PICOQUIC_WT_IGNORE_CERT_ERRORS !== "0";
 const WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
 const PAGE_URL = process.env.PICOQUIC_WT_PAGE_URL ||
@@ -168,7 +169,7 @@ async function getCertificateConfig(workDir) {
     "-addext", "extendedKeyUsage=serverAuth"
   ]);
 
-  return { cert, key, hash: certHash(cert) };
+  return { cert, key, hash: process.env.PICOQUIC_WT_CERT_HASH || certHash(cert) };
 }
 
 function certHash(certPath) {
@@ -520,7 +521,7 @@ async function main() {
       "--disable-dev-shm-usage",
       "--disable-gpu",
       "--enable-quic",
-      "--ignore-certificate-errors",
+      ...(CHROME_IGNORE_CERT_ERRORS ? ["--ignore-certificate-errors"] : []),
       `--origin-to-force-quic-on=localhost:${PORT}`,
       `--remote-debugging-port=${CDP_PORT}`,
       `--user-data-dir=${profile}`,
