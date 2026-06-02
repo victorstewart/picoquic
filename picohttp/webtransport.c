@@ -863,9 +863,15 @@ int picowt_send_drain_session_message(picoquic_cnx_t* cnx,
         /* cannot send! */
         ret = -1;
     }
+    else if (control_stream_ctx->wt_drain_sent) {
+        ret = 0;
+    }
     else {
         ret = h3zero_send_capsule(cnx, control_stream_ctx, picowt_capsule_drain_webtransport_session,
             0, null_msg, 0 /* Do not set fin, there could be other capsules */);
+        if (ret == 0) {
+            control_stream_ctx->wt_drain_sent = 1;
+        }
     }
 
     return ret;

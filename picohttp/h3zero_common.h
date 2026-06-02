@@ -110,6 +110,7 @@ extern "C" {
         unsigned int wt_data_blocked_sent : 1;
         unsigned int wt_streams_bidi_blocked_sent : 1;
         unsigned int wt_streams_uni_blocked_sent : 1;
+        unsigned int wt_drain_sent : 1;
         uint64_t wt_data_received;
         uint64_t wt_data_sent;
         uint64_t wt_max_data_local;

@@ -3652,6 +3652,13 @@ int picowt_drain_test_one(int expect_error)
                         ret = -1;
                     }
                 }
+                if (ret == 0 &&
+                    (!control_stream_ctx->wt_drain_sent ||
+                        picowt_send_drain_session_message(cnx,
+                            control_stream_ctx) != 0 ||
+                        queued == NULL || queued->next_stream_data != NULL)) {
+                    ret = -1;
+                }
             }
         }
     }
