@@ -6058,6 +6058,12 @@ int picowt_session_limit_test(void)
     int ret = picowt_session_limit_case(0, 0, 1);
 
     if (ret == 0) {
+        ret = picowt_session_limit_case(1, 0, 1);
+    }
+    if (ret == 0) {
+        ret = picowt_session_limit_case(0, 1, 1);
+    }
+    if (ret == 0) {
         ret = picowt_session_limit_case(1, 1, 0);
     }
 
