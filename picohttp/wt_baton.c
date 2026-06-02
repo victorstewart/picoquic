@@ -598,7 +598,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             const uint8_t* queries = path + query_offset;
             size_t queries_length = path_length - query_offset;
 
-            if (h3zero_query_parameter_number(queries, queries_length, "version", 5, &baton_ctx->version, 0) != 0 ||
+            if (h3zero_query_parameter_number(queries, queries_length, "version", 7, &baton_ctx->version, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "baton", 5, &baton_ctx->initial_baton, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "count", 5, &baton_ctx->nb_lanes, 1) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "inject", 6, &baton_ctx->inject_error, 0) != 0 ||
@@ -818,8 +818,15 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             * Then, callback the application. That means the WT app context
             * should be obtained from the path app context, etc.
             */
-            (void)picowt_select_wt_protocol(stream_ctx, PICOWT_BATON_ALPN_FILTER);
-            ret = wt_baton_accept(cnx, bytes, length, stream_ctx);
+            /* The baton endpoint requires a WT-Protocol value. If the app has
+             * not preselected one, choose it from WT-Available-Protocols and
+             * refuse the CONNECT when there is no supported value.
+             */
+            ret = (stream_ctx->ps.stream_state.wt_protocol == NULL) ?
+                picowt_select_wt_protocol(stream_ctx, PICOWT_BATON_ALPN_FILTER) : 0;
+            if (ret == 0) {
+                ret = wt_baton_accept(cnx, bytes, length, stream_ctx);
+            }
             break;
         case picohttp_callback_connect_refused:
             /* The response from the server has arrived and it is negative. The

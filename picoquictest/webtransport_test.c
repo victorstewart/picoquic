@@ -510,6 +510,7 @@ int picowt_baton_compact_test(void)
 {
     wt_baton_ctx_t baton_ctx = { 0 };
     const uint8_t compact_path[] = "/baton?baton=33&padding=0";
+    const uint8_t bad_version_path[] = "/baton?version=1&baton=33&padding=0";
     const uint8_t too_large_path[] = "/baton?baton=33&padding=16384";
     int ret = wt_baton_ctx_path_params(&baton_ctx, compact_path, sizeof(compact_path) - 1);
 
@@ -517,6 +518,11 @@ int picowt_baton_compact_test(void)
         (baton_ctx.initial_baton != 33 ||
             baton_ctx.nb_lanes != 1 ||
             baton_ctx.max_padding != 0)) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_version_path,
+            sizeof(bad_version_path) - 1) == 0) {
         ret = -1;
     }
     if (ret == 0 &&
@@ -634,6 +640,30 @@ static int picowt_baton_protocol_copy_test(void)
     return ret;
 }
 
+static int picowt_baton_protocol_offer_refusal_test(void)
+{
+    h3zero_stream_ctx_t stream_ctx = { 0 };
+    const char path[] = "/baton?baton=240";
+    const char unsupported[] = "\"wrong-end-baton\"";
+    int ret = 0;
+
+    stream_ctx.ps.stream_state.header.wt_available_protocols =
+        (uint8_t const*)unsupported;
+    stream_ctx.ps.stream_state.header.wt_available_protocols_length =
+        strlen(unsupported);
+
+    if (wt_baton_callback(NULL, (uint8_t*)path, strlen(path),
+        picohttp_callback_connect, &stream_ctx, NULL) == 0) {
+        ret = -1;
+    }
+    else if (stream_ctx.ps.stream_state.wt_protocol != NULL ||
+        stream_ctx.path_callback_ctx != NULL) {
+        ret = -1;
+    }
+
+    return ret;
+}
+
 static int picowt_accept_only_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
     picohttp_call_back_event_t wt_event, h3zero_stream_ctx_t* stream_ctx, void* path_app_ctx)
 {
@@ -653,6 +683,9 @@ int picowt_baton_protocol_test(void)
 
     if (ret == 0) {
         ret = picowt_baton_protocol_copy_test();
+    }
+    if (ret == 0) {
+        ret = picowt_baton_protocol_offer_refusal_test();
     }
     if (ret == 0) {
         ret = picowt_baton_protocol_refusal_test_one(11, "webtransport");

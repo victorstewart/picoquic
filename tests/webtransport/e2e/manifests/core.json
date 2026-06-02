@@ -32,6 +32,65 @@
       }
     },
     {
+      "id": "handshake.reject_unsupported_protocol",
+      "title": "Unsupported WT-Available-Protocols value rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+      "protocol": "unsupported-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "WT-Available-Protocols",
+        "WT-Protocol-required",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "handshake.reject_bad_baton_query",
+      "title": "Malformed baton endpoint parameters reject ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=1&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "endpoint-parameter-validation",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=1&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
       "id": "baton.core.padded-byob",
       "title": "Baton stream/datagram/protocol exchange with default padding and BYOB readers",
       "runner": "browser-baton",
