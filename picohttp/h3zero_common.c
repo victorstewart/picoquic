@@ -2678,16 +2678,22 @@ static int h3zero_callback_prepare_datagram_in_context(picoquic_cnx_t* cnx, void
 	int data_sent = 0;
 	if (prefix_ctx->ready_to_send_datagrams && prefix_ctx->function_call != NULL) {
 		h3zero_prepare_datagram_ctx_t pdg_ctx = { 0 };
+		h3zero_stream_ctx_t* stream_ctx = h3zero_find_stream(h3_ctx, prefix_ctx->prefix);
 		uint8_t* next_byte;
 		prefix_ctx->ready_to_send_datagrams = 0;
-		pdg_ctx.picoquic_context = context;
-		pdg_ctx.picoquic_space = space;
 		pdg_ctx.quarter_stream_id = (prefix_ctx->prefix) >> 2;
-		if ((next_byte = picoquic_frames_varint_encode(pdg_ctx.buffer, pdg_ctx.buffer + 8, pdg_ctx.quarter_stream_id)) == NULL) {
+		if (stream_ctx == NULL ||
+			stream_ctx->ps.stream_state.is_fin_sent ||
+			stream_ctx->ps.stream_state.is_fin_received) {
+			/* The session closed after datagram readiness was marked. */
+		}
+		else if ((next_byte = picoquic_frames_varint_encode(pdg_ctx.buffer,
+			pdg_ctx.buffer + 8, pdg_ctx.quarter_stream_id)) == NULL) {
 			/* error !*/
 		}
 		else {
-			h3zero_stream_ctx_t* stream_ctx = h3zero_find_stream(h3_ctx, prefix_ctx->prefix);
+			pdg_ctx.picoquic_context = context;
+			pdg_ctx.picoquic_space = space;
 			pdg_ctx.stream_id_encoding_length = next_byte - pdg_ctx.buffer;
 			if (space > pdg_ctx.stream_id_encoding_length) {
 				/* Call the application */
@@ -2760,7 +2766,10 @@ int h3zero_set_datagram_ready(picoquic_cnx_t* cnx, uint64_t stream_id)
 	if (h3_ctx != NULL) {
 		/* Find the control stream. */
 		h3zero_stream_prefix_t* prefix_ctx = h3zero_find_stream_prefix(h3_ctx, stream_id);
-		if (prefix_ctx != NULL) {
+		h3zero_stream_ctx_t* stream_ctx = h3zero_find_stream(h3_ctx, stream_id);
+		if (prefix_ctx != NULL && stream_ctx != NULL &&
+			!stream_ctx->ps.stream_state.is_fin_sent &&
+			!stream_ctx->ps.stream_state.is_fin_received) {
 			/* mark this control stream as ready for sending datagrams. */
 			prefix_ctx->ready_to_send_datagrams = 1;
 			/* declare readiness to picoquic. */

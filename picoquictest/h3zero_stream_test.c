@@ -1143,6 +1143,20 @@ int h3zero_wt_datagram_post_close_test(void)
         ret = -1;
     }
     if (ret == 0) {
+        session_ctx->ps.stream_state.is_fin_sent = 1;
+        if (h3zero_set_datagram_ready(cnx, session_id) == 0) {
+            ret = -1;
+        }
+        session_ctx->ps.stream_state.is_fin_sent = 0;
+    }
+    if (ret == 0) {
+        session_ctx->ps.stream_state.is_fin_received = 1;
+        if (h3zero_set_datagram_ready(cnx, session_id) == 0) {
+            ret = -1;
+        }
+        session_ctx->ps.stream_state.is_fin_received = 0;
+    }
+    if (ret == 0) {
         picowt_deregister(cnx, h3_ctx, session_ctx);
         ret = h3zero_callback_datagram(cnx, post_close_datagram,
             sizeof(post_close_datagram), h3_ctx);
