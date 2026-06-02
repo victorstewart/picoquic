@@ -247,6 +247,24 @@ async function waitForCdpEndpoint() {
   throw new Error("Chrome DevTools endpoint did not become ready");
 }
 
+async function readChromeBrowserInfo(endpoint) {
+  const response = await fetch(`${endpoint}/json/version`);
+  if (!response.ok) {
+    throw new Error(`Chrome DevTools version query failed: HTTP ${response.status}`);
+  }
+  const version = await response.json();
+  const product = version.Browser || "";
+  const slash = product.indexOf("/");
+  return {
+    browserName: slash > 0 ? product.slice(0, slash) : (product || "Chrome"),
+    browserVersion: slash >= 0 ? product.slice(slash + 1) : "",
+    product,
+    protocolVersion: version["Protocol-Version"] || "",
+    userAgent: version["User-Agent"] || "",
+    platformName: process.platform
+  };
+}
+
 async function newTarget(endpoint) {
   const targetUrl = `${endpoint}/json/new?about%3Ablank`;
   let response = await fetch(targetUrl, { method: "PUT" });
@@ -464,6 +482,7 @@ async function main() {
 
   let chromeProcess = null;
   let cdp = null;
+  let browserInfo = {};
   try {
     await waitForServer(server);
 
@@ -497,6 +516,7 @@ async function main() {
     let endpoint = "";
     try {
       endpoint = await waitForCdpEndpoint();
+      browserInfo = await readChromeBrowserInfo(endpoint);
     } catch (error) {
       const stderr = chromeStderr.trim();
       throw new Error(stderr ? `${error.message}: ${stderr}` : error.message);
@@ -507,6 +527,7 @@ async function main() {
     await cdp.send("Page.navigate", { url: targetUrl });
     await waitForHarness(cdp);
     const result = await readHarnessResult(cdp);
+    result.browser = browserInfo;
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);
     }

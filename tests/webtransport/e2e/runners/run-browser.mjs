@@ -127,6 +127,22 @@ function selectedScenarios(manifest, scenarioId) {
   return scenarios;
 }
 
+function firstBrowserInfo(results, browser) {
+  for (const result of results) {
+    if (result.result && result.result.browser) {
+      return result.result.browser;
+    }
+    if (result.expected && (result.expected.browserVersion || result.expected.platform)) {
+      return {
+        browserName: browser,
+        browserVersion: result.expected.browserVersion || "",
+        platformName: result.expected.platform || ""
+      };
+    }
+  }
+  return {};
+}
+
 function parseJsonOutput(output) {
   const trimmed = output.trim();
   for (let index = 0; index < trimmed.length; index++) {
@@ -323,6 +339,7 @@ async function commandRun(args) {
   const summary = {
     ok: true,
     browser,
+    browserInfo: firstBrowserInfo(results, browser),
     suite: manifest.suite || "",
     manifest: manifestPath,
     expected: expected.path,

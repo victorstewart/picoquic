@@ -26,6 +26,8 @@ loaded automatically by browser name when present, and every skipped scenario
 must include browser/version, platform, category, reason, and evidence.
 Expected-result files are validated against the manifest: stale scenario IDs
 and duplicate entries are test failures.
+Run output includes browser metadata so support tables can cite exact browser
+versions from CI artifacts.
 
 Safari execution requires Safari WebDriver remote automation:
 
