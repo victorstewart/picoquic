@@ -552,6 +552,62 @@ static int picowt_baton_protocol_refusal_test_one(uint8_t test_id, const char* c
         path_item_list, 1, "https", connect_protocol, NULL, NULL, 0, 0, 1);
 }
 
+static int picowt_baton_protocol_copy_one(char const* protocol,
+    size_t expected_len)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t stream_ctx = { 0 };
+    wt_baton_ctx_t baton_ctx = { 0 };
+    uint64_t simulated_time = 0;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    if (ret == 0) {
+        memset(baton_ctx.wt_protocol, 0xa5, sizeof(baton_ctx.wt_protocol));
+        stream_ctx.ps.stream_state.header.wt_protocol =
+            (uint8_t const*)protocol;
+        stream_ctx.ps.stream_state.header.wt_protocol_length =
+            strlen(protocol);
+        if (wt_baton_callback(cnx, NULL, 0,
+            picohttp_callback_connect_accepted, &stream_ctx,
+            &baton_ctx) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0 &&
+        (memcmp(baton_ctx.wt_protocol, protocol, expected_len) != 0 ||
+            baton_ctx.wt_protocol[expected_len] != 0)) {
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
+static int picowt_baton_protocol_copy_test(void)
+{
+    char long_protocol[300];
+    int ret = picowt_baton_protocol_copy_one(PICOWT_BATON_ALPN,
+        strlen(PICOWT_BATON_ALPN));
+
+    memset(long_protocol, 'a', sizeof(long_protocol));
+    long_protocol[sizeof(long_protocol) - 1] = 0;
+    if (ret == 0) {
+        ret = picowt_baton_protocol_copy_one(long_protocol, 254);
+    }
+
+    return ret;
+}
+
 static int picowt_accept_only_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
     picohttp_call_back_event_t wt_event, h3zero_stream_ctx_t* stream_ctx, void* path_app_ctx)
 {
@@ -569,6 +625,9 @@ int picowt_baton_protocol_test(void)
     int ret = picowt_baton_test_one_ex(10, "/baton?baton=240", 0, 2000000, NULL, NULL,
         path_item_list, 1, "https", H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 0, 0, 0);
 
+    if (ret == 0) {
+        ret = picowt_baton_protocol_copy_test();
+    }
     if (ret == 0) {
         ret = picowt_baton_protocol_refusal_test_one(11, "webtransport");
     }

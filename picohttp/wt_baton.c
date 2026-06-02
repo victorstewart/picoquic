@@ -845,7 +845,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     wt_protocol_len = 254;
                 }
                 memcpy(baton_ctx->wt_protocol, stream_ctx->ps.stream_state.header.wt_protocol, wt_protocol_len);
-                baton_ctx->wt_protocol[wt_protocol_len + 1] = 0;
+                baton_ctx->wt_protocol[wt_protocol_len] = 0;
             }
             break;
         case picohttp_callback_post_fin:
