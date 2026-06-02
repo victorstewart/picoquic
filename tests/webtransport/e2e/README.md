@@ -34,8 +34,8 @@ the main scenario still successfully sends and receives the exact expected
 baton datagram payload, such as `datagramsReceived: [252]`.
 Use `datagramWritableTestsInclude` and `streamWritableTestsInclude` to require
 the exact bad-chunk diagnostic subtests that ran.
-Use `protocolConstructorTestsInclude` and `urlConstructorTestsInclude` the same
-way for constructor diagnostics.
+Use `protocolConstructorTestsInclude`, `urlConstructorTestsInclude`, and
+`optionsConstructorTestsInclude` the same way for constructor diagnostics.
 Use `eventsInclude` for required browser-observable state-machine events such
 as `ready`, stream receive/send labels, datagram labels, and `closed`.
 Use `streamWritableOk` the same way for outgoing unidirectional and

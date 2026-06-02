@@ -355,6 +355,10 @@ function assertScenarioResult(id, result, expect) {
       result.optionsConstructor.ok !== expect.optionsConstructorOk)) {
     throw new Error(`${id}: options constructor check failed`);
   }
+  if (expect.optionsConstructorTestsInclude) {
+    assertDiagnosticTestsInclude(id, "optionsConstructor", result.optionsConstructor,
+      expect.optionsConstructorTestsInclude);
+  }
   if (expect.datagramWritableOk !== undefined &&
     (!result.datagramWritable ||
       result.datagramWritable.ok !== expect.datagramWritableOk)) {

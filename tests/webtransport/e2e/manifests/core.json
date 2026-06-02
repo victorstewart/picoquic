@@ -313,6 +313,9 @@
           "url-fragment",
           "malformed-url"
         ],
+        "optionsConstructorTestsInclude": [
+          "allow-pooling-with-certificate-hash"
+        ],
         "server": {
           "connectAcceptedMin": 1,
           "packetsReceivedMin": 1,
@@ -393,6 +396,9 @@
           "http-url",
           "url-fragment",
           "malformed-url"
+        ],
+        "optionsConstructorTestsInclude": [
+          "allow-pooling-with-certificate-hash"
         ],
         "server": {
           "connectAcceptedMin": 1,
