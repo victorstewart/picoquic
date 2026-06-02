@@ -768,6 +768,10 @@ static void picowt_wire_harness_dispose(picowt_wire_harness_t* harness)
         h3zero_callback_delete_context(
             (harness->test_ctx == NULL) ? NULL : harness->test_ctx->cnx_client,
             harness->client_h3_ctx);
+        if (harness->test_ctx != NULL &&
+            harness->test_ctx->cnx_client != NULL) {
+            picoquic_set_callback(harness->test_ctx->cnx_client, NULL, NULL);
+        }
         harness->client_h3_ctx = NULL;
         harness->client_control_stream = NULL;
     }

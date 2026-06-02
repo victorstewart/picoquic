@@ -4798,9 +4798,8 @@ static int picowt_max_data_reset_final_size_case(size_t delivered_body,
                 control_stream->local_stop_error !=
                     H3ZERO_WEBTRANSPORT_FLOW_CONTROL_ERROR ||
                 h3zero_find_stream_prefix(h3_ctx, control_stream_id) != NULL ||
+                h3zero_find_stream(h3_ctx, data_stream_id) != NULL ||
                 control_stream_ctx->wt_data_received != delivered_body ||
-                data_stream_ctx->ps.stream_state.wt_body_bytes_received !=
-                    delivered_body ||
                 test_ctx.nb_reset != 0 ||
                 test_ctx.nb_deregister != 1) {
                 ret = -1;
