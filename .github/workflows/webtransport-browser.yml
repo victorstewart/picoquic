@@ -51,6 +51,13 @@ jobs:
         run: |
           npx -y node@22 tests/webtransport/browser/run-chrome.mjs
 
+      - name: Run Chrome WebTransport core E2E
+        env:
+          CHROME_BIN: google-chrome
+          PICOQUIC_WT_CHROME_HEADLESS: old
+        run: |
+          npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser chrome
+
   safari:
     name: Safari WebTransport smoke
     runs-on: macos-26
@@ -92,3 +99,9 @@ jobs:
           PICOQUIC_WT_URL: "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0"
         run: |
           npx -y node@22 tests/webtransport/browser/run-safari.mjs
+
+      - name: Run Safari WebTransport core E2E
+        env:
+          PICOQUIC_WT_SERVER_LOG: "1"
+        run: |
+          npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser safari
