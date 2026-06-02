@@ -526,6 +526,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
           "closeSessionReceivedMin": 1,
           "writableBadChunkCloseReceived": true,
           "browserCloseReceived": true
@@ -624,6 +625,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
           "closeSessionReceivedMin": 1,
           "writableBadChunkCloseReceived": true,
           "browserCloseReceived": true
@@ -690,7 +692,8 @@
           "originMissing": 0,
           "originRejected": 0,
           "packetsReceivedMin": 1,
-          "packetsSentMin": 1
+          "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1
         }
       }
     },
@@ -791,6 +794,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
           "closeSessionReceivedMin": 1,
           "writableBadChunkCloseReceived": true,
           "browserCloseReceived": true
@@ -962,6 +966,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
           "closeSessionReceivedMin": 1,
           "writableBadChunkCloseReceived": true,
           "browserCloseReceived": true
@@ -1068,6 +1073,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
           "closeSessionReceivedMin": 1,
           "writableBadChunkCloseReceived": true,
           "browserCloseReceived": true
