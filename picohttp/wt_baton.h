@@ -117,6 +117,7 @@ extern "C" {
         uint64_t count_fin_wait;
         uint64_t inject_error;
         uint64_t max_padding;
+        int wt_protocol_optional;
         int nb_turns;
         wt_baton_state_enum baton_state;
         wt_baton_lane_t lanes[256];

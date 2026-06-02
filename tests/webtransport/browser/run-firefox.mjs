@@ -12,7 +12,6 @@ const BATON = process.env.PICO_BATON_BIN || join(ROOT, "build", "pico_baton");
 const WEB_ROOT = process.env.PICOQUIC_WT_WEB_ROOT ||
   join(ROOT, "tests", "webtransport", "browser");
 const PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
-const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
@@ -24,6 +23,12 @@ const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const GECKO_DRIVER_PORT = Number(process.env.PICOQUIC_WT_GECKO_DRIVER_PORT || 9445);
 const HARNESS_PORT = Number(process.env.PICOQUIC_WT_HARNESS_PORT || 8081);
 const FIREFOX_HEADLESS = process.env.PICOQUIC_WT_FIREFOX_HEADLESS !== "0";
+/* Firefox 151.0.2 in GitHub Actions did not provide a usable
+ * WT-Available-Protocols value to pico_baton after CONNECT reached the server;
+ * see run 26801289699. This opt-in keeps the Firefox lane on the data path
+ * without claiming WT-Protocol selection for Firefox.
+ */
+const FIREFOX_PROTOCOL_OPTIONAL = process.env.PICOQUIC_WT_FIREFOX_PROTOCOL_OPTIONAL === "1";
 /* Firefox 151.0.2 in GitHub Actions rejected the local self-signed
  * WebTransport endpoint before CONNECT when relying only on
  * serverCertificateHashes; see run 26801130235. Keep this WebDriver-only
@@ -34,8 +39,11 @@ const FIREFOX_HEADLESS = process.env.PICOQUIC_WT_FIREFOX_HEADLESS !== "0";
 const FIREFOX_ACCEPT_INSECURE_CERTS =
   process.env.PICOQUIC_WT_FIREFOX_ACCEPT_INSECURE_CERTS === "1";
 const FIREFOX_BIN = process.env.FIREFOX_BIN || "";
-const WT_URL = process.env.PICOQUIC_WT_URL ||
+const RAW_WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
+const WT_URL = firefoxWtUrl(RAW_WT_URL);
+const REQUESTED_PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
+const PROTOCOL = FIREFOX_PROTOCOL_OPTIONAL ? "" : REQUESTED_PROTOCOL;
 const PAGE_URL = process.env.PICOQUIC_WT_PAGE_URL || "";
 
 const geckoDriverNames = [
@@ -179,12 +187,24 @@ function certHash(certPath) {
   return createHash("sha256").update(cert.raw).digest("base64url");
 }
 
+function firefoxWtUrl(rawUrl) {
+  if (!FIREFOX_PROTOCOL_OPTIONAL) {
+    return rawUrl;
+  }
+  const url = new URL(rawUrl);
+  url.searchParams.set("protocol", "optional");
+  return url.href;
+}
+
 function buildPageUrl(pageUrl, certificateHash) {
   const url = new URL(pageUrl);
   url.searchParams.set("autorun", "1");
   url.searchParams.set("timeoutMs", String(TIMEOUT_MS));
   url.searchParams.set("url", WT_URL);
-  url.searchParams.set("protocol", PROTOCOL);
+  url.searchParams.set("protocol", REQUESTED_PROTOCOL);
+  if (FIREFOX_PROTOCOL_OPTIONAL) {
+    url.searchParams.set("requireProtocol", "0");
+  }
   url.searchParams.set("certHash", certificateHash);
   if (!REQUIRE_DATAGRAM) {
     url.searchParams.set("requireDatagram", "0");

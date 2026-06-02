@@ -593,7 +593,10 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
     {
         int ret = 0;
         size_t query_offset = h3zero_query_offset(path, path_length);
+        uint8_t protocol_mode[16];
+        size_t protocol_mode_length = 0;
         baton_ctx->max_padding = WT_BATON_DEFAULT_PADDING;
+        baton_ctx->wt_protocol_optional = 0;
         if (query_offset < path_length) {
             const uint8_t* queries = path + query_offset;
             size_t queries_length = path_length - query_offset;
@@ -602,7 +605,9 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 h3zero_query_parameter_number(queries, queries_length, "baton", 5, &baton_ctx->initial_baton, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "count", 5, &baton_ctx->nb_lanes, 1) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "inject", 6, &baton_ctx->inject_error, 0) != 0 ||
-                h3zero_query_parameter_number(queries, queries_length, "padding", 7, &baton_ctx->max_padding, WT_BATON_DEFAULT_PADDING) != 0) {
+                h3zero_query_parameter_number(queries, queries_length, "padding", 7, &baton_ctx->max_padding, WT_BATON_DEFAULT_PADDING) != 0 ||
+                h3zero_query_parameter_string(queries, queries_length, "protocol", 8,
+                    protocol_mode, sizeof(protocol_mode), &protocol_mode_length) != 0) {
                 ret = -1;
             }
             else if (baton_ctx->version != WT_BATON_VERSION ||
@@ -611,6 +616,15 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 baton_ctx->nb_lanes < 1 ||
                 baton_ctx->max_padding > WT_BATON_DEFAULT_PADDING) {
                 ret = -1;
+            }
+            else if (protocol_mode_length > 0) {
+                if (protocol_mode_length == sizeof("optional") - 1 &&
+                    memcmp(protocol_mode, "optional", sizeof("optional") - 1) == 0) {
+                    baton_ctx->wt_protocol_optional = 1;
+                }
+                else {
+                    ret = -1;
+                }
             }
         }
         else {
@@ -822,8 +836,27 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
              * not preselected one, choose it from WT-Available-Protocols and
              * refuse the CONNECT when there is no supported value.
              */
-            ret = (stream_ctx->ps.stream_state.wt_protocol == NULL) ?
-                picowt_select_wt_protocol(stream_ctx, PICOWT_BATON_ALPN_FILTER) : 0;
+            {
+                wt_baton_ctx_t path_params = { 0 };
+                ret = wt_baton_ctx_path_params(&path_params, bytes, length);
+                if (ret == 0 && stream_ctx->ps.stream_state.wt_protocol == NULL &&
+                    picowt_select_wt_protocol(stream_ctx, PICOWT_BATON_ALPN_FILTER) != 0) {
+                    if (!path_params.wt_protocol_optional) {
+                        ret = -1;
+                    }
+                    else {
+                        /* Firefox 151.0.2 CI reaches pico_baton without a
+                         * usable WT-Available-Protocols value. Only URLs that
+                         * explicitly set protocol=optional use this demo-app
+                         * fallback; the default baton path still requires
+                         * WT-Protocol negotiation for conformance evidence.
+                         */
+                        picoquic_log_app_message(cnx,
+                            "Accepting optional-protocol WebTransport CONNECT on stream: %" PRIu64,
+                            stream_ctx->stream_id);
+                    }
+                }
+            }
             if (ret == 0) {
                 ret = wt_baton_accept(cnx, bytes, length, stream_ctx);
             }

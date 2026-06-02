@@ -4,6 +4,15 @@
   "platform": "linux",
   "expected": [
     {
+      "scenario": "handshake.reject_unsupported_protocol",
+      "status": "skip",
+      "category": "browser-missing",
+      "browserVersion": "151.0.2",
+      "platform": "linux",
+      "reason": "Firefox 151.0.2 in GitHub Actions reached pico_baton without a usable WT-Available-Protocols value. The Firefox lane uses protocol=optional to exercise the WebTransport data path, so unsupported-protocol negotiation is not claimed for Firefox in this lane.",
+      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, logged Unsupported callback on stream before wt_baton_accept; server trace reached CONNECT path but did not select WT-Protocol."
+    },
+    {
       "scenario": "handshake.reject_bad_certificate_hash",
       "status": "skip",
       "category": "browser-bug",
@@ -11,6 +20,30 @@
       "platform": "linux",
       "reason": "Firefox 151.0.2 in GitHub Actions rejected the local self-signed WebTransport endpoint before CONNECT when relying only on serverCertificateHashes. The Firefox CI lane temporarily uses WebDriver acceptInsecureCerts to exercise picoquic's data path, so wrong-hash certificate enforcement is not claimed for Firefox in this lane.",
       "evidence": "GitHub WebTransportBrowser run 26801130235, Firefox job 79007856552, failed baton smoke with WebTransportError: WebTransport connection rejected; browser=firefox 151.0.2, geckodriver=0.36.0, server log showed no accepted WebTransport CONNECT."
+    },
+    {
+      "scenario": "baton.core.padded-byob",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.2",
+      "platform": "linux",
+      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure.",
+      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected.",
+      "expect": {
+        "protocol": ""
+      }
+    },
+    {
+      "scenario": "baton.core.compact-default-reader",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.2",
+      "platform": "linux",
+      "reason": "Firefox 151.0.2 did not provide a usable WT-Available-Protocols value in CI, so the Firefox lane uses the baton protocol=optional endpoint and does not claim selected WT-Protocol exposure.",
+      "evidence": "GitHub WebTransportBrowser run 26801289699, Firefox job 79008337128, reached CONNECT path but rejected before wt_baton_accept because no WT-Protocol was selected.",
+      "expect": {
+        "protocol": ""
+      }
     }
   ]
 }
