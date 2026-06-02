@@ -16,6 +16,7 @@ const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const CDP_PORT = Number(process.env.PICOQUIC_WT_CDP_PORT || 9223);
+const CDP_TIMEOUT_MS = Number(process.env.PICOQUIC_WT_CDP_TIMEOUT_MS || 30000);
 /* Chrome 148 x64 under Rosetta on Apple Silicon was observed to stay alive but
  * never expose the DevTools endpoint with --headless=new. Keep the modern
  * default, but let local/CI runs select --headless=old when that startup
@@ -229,7 +230,7 @@ function waitForServer(child) {
 
 async function waitForCdpEndpoint() {
   const endpoint = `http://127.0.0.1:${CDP_PORT}`;
-  const deadline = Date.now() + 10000;
+  const deadline = Date.now() + CDP_TIMEOUT_MS;
   while (Date.now() < deadline) {
     try {
       const response = await fetch(`${endpoint}/json/version`);

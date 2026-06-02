@@ -691,6 +691,7 @@ int picowt_baton_multi_test(void);
 int picowt_baton_random_test(void);
 int picowt_baton_wrong_test(void);
 int picowt_baton_uri_test(void);
+int picowt_baton_compact_test(void);
 int picowt_baton_krome_test(void);
 int picowt_baton_reset_test(void);
 int picowt_baton_wildcard_test(void);

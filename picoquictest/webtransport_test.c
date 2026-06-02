@@ -506,6 +506,32 @@ int picowt_baton_uri_test(void)
     return ret;
 }
 
+int picowt_baton_compact_test(void)
+{
+    wt_baton_ctx_t baton_ctx = { 0 };
+    const uint8_t compact_path[] = "/baton?baton=33&padding=0";
+    const uint8_t too_large_path[] = "/baton?baton=33&padding=16384";
+    int ret = wt_baton_ctx_path_params(&baton_ctx, compact_path, sizeof(compact_path) - 1);
+
+    if (ret == 0 &&
+        (baton_ctx.initial_baton != 33 ||
+            baton_ctx.nb_lanes != 1 ||
+            baton_ctx.max_padding != 0)) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, too_large_path,
+            sizeof(too_large_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        ret = picowt_baton_test_one(29, "/baton?baton=240&padding=0",
+            0, 2000000, ".", ".");
+    }
+
+    return ret;
+}
+
 int picowt_baton_multi_test(void)
 {
     int ret = picowt_baton_test_one(6, "/baton?baton=240&count=4", 0, 5000000, ".", ".");

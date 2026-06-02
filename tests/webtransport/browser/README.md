@@ -50,6 +50,8 @@ datagram support in the `WebTransport` constructor.
 Add `useByob=0` to the page URL, or set `PICOQUIC_WT_USE_BYOB=0` for the
 browser runners, to exercise WebTransport receive streams through default
 readers instead of BYOB readers.
+Add `padding=0` to the WebTransport endpoint URL to make `pico_baton` send
+compact baton stream packets instead of the default padded packets.
 Certificate hash authentication requires a browser-acceptable X.509v3 leaf
 certificate, normally P-256 ECDSA, with a validity period under two weeks. A
 local cert/hash pair can be made with:

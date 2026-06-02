@@ -50,6 +50,7 @@ extern "C" {
 #define WT_BATON_VERSION 0
 #define WT_BATON_MAX_COUNT 256
 #define WT_BATON_MAX_LANES 256
+#define WT_BATON_DEFAULT_PADDING 0x3fff
     /* WT Protocol */
 #define PICOWT_BATON_ALPN "devious-baton-00"
 #define PICOWT_BATON_ALPN_AVAILABLE "wrong-end-baton, devious-baton-00"
@@ -115,6 +116,7 @@ extern "C" {
         uint64_t lanes_completed;
         uint64_t count_fin_wait;
         uint64_t inject_error;
+        uint64_t max_padding;
         int nb_turns;
         wt_baton_state_enum baton_state;
         wt_baton_lane_t lanes[256];

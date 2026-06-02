@@ -531,19 +531,16 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             int more_to_send = 0;
 
             if (baton_ctx->lanes[lane_id].padding_required == UINT64_MAX) {
+                uint64_t padding_required = baton_ctx->max_padding;
                 if (baton_ctx->baton_state == wt_baton_state_done ||
                     baton_ctx->nb_baton_bytes_sent > 0x10000) {
-                    baton_ctx->lanes[lane_id].padding_required = 0;
-                    padding_length_length = 1;
+                    padding_required = 0;
                 }
-                else if (space == 1) {
-                    baton_ctx->lanes[lane_id].padding_required = 0x3F;
-                    padding_length_length = 1;
+                else if (space == 1 && padding_required > 0x3F) {
+                    padding_required = 0x3F;
                 }
-                else {
-                    baton_ctx->lanes[lane_id].padding_required = 0x3FFF;
-                    padding_length_length = 2;
-                }
+                baton_ctx->lanes[lane_id].padding_required = padding_required;
+                padding_length_length = (padding_required < 0x40) ? 1 : 2;
             }
             useful = padding_length_length + (size_t)(baton_ctx->lanes[lane_id].padding_required -
                 baton_ctx->lanes[lane_id].padding_sent) + 1;
@@ -596,6 +593,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
     {
         int ret = 0;
         size_t query_offset = h3zero_query_offset(path, path_length);
+        baton_ctx->max_padding = WT_BATON_DEFAULT_PADDING;
         if (query_offset < path_length) {
             const uint8_t* queries = path + query_offset;
             size_t queries_length = path_length - query_offset;
@@ -603,13 +601,15 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             if (h3zero_query_parameter_number(queries, queries_length, "version", 5, &baton_ctx->version, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "baton", 5, &baton_ctx->initial_baton, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "count", 5, &baton_ctx->nb_lanes, 1) != 0 ||
-                h3zero_query_parameter_number(queries, queries_length, "inject", 6, &baton_ctx->inject_error, 0) != 0) {
+                h3zero_query_parameter_number(queries, queries_length, "inject", 6, &baton_ctx->inject_error, 0) != 0 ||
+                h3zero_query_parameter_number(queries, queries_length, "padding", 7, &baton_ctx->max_padding, WT_BATON_DEFAULT_PADDING) != 0) {
                 ret = -1;
             }
             else if (baton_ctx->version != WT_BATON_VERSION ||
                 baton_ctx->initial_baton > 255 ||
                 baton_ctx->nb_lanes > WT_BATON_MAX_LANES ||
-                baton_ctx->nb_lanes < 1) {
+                baton_ctx->nb_lanes < 1 ||
+                baton_ctx->max_padding > WT_BATON_DEFAULT_PADDING) {
                 ret = -1;
             }
         }
@@ -617,6 +617,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             /* Set parameters to default values */
             baton_ctx->initial_baton = 240;
             baton_ctx->nb_lanes = 1;
+            baton_ctx->max_padding = WT_BATON_DEFAULT_PADDING;
         }
 
         return ret;
