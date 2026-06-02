@@ -820,6 +820,13 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/fixtures/expected-unknown-test.json)
         set_tests_properties(picohttp_wt_wpt_expected_reject_unknown
                              PROPERTIES LABELS wt_wpt WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_wpt_expected_reject_missing_metadata
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/run-wpt.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/fixtures/expected-missing-metadata.json)
+        set_tests_properties(picohttp_wt_wpt_expected_reject_missing_metadata
+                             PROPERTIES LABELS wt_wpt WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_wpt_run_dry
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/run-wpt.mjs

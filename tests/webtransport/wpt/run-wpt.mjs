@@ -254,11 +254,20 @@ function selectTests(discoveredTests, selectors) {
   return selected;
 }
 
+function requireNonEmptyString(object, name, expectedPath) {
+  if (typeof object[name] !== "string" || object[name].length === 0) {
+    throw new Error(`expected manifest must contain a non-empty ${name}: ${expectedPath}`);
+  }
+}
+
 function loadExpectedManifest(expectedPath, discoveredTests) {
   const expected = JSON.parse(readFileSync(expectedPath, "utf8"));
   if (expected === null || typeof expected !== "object" || Array.isArray(expected)) {
     throw new Error(`expected manifest must be an object: ${expectedPath}`);
   }
+  requireNonEmptyString(expected, "browser", expectedPath);
+  requireNonEmptyString(expected, "channel", expectedPath);
+  requireNonEmptyString(expected, "platform", expectedPath);
   if (!Array.isArray(expected.expected)) {
     throw new Error(`expected manifest must contain an expected array: ${expectedPath}`);
   }
