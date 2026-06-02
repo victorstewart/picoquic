@@ -133,6 +133,10 @@ jobs:
           PICOQUIC_WT_FIREFOX_ACCEPT_INSECURE_CERTS: "1"
           PICOQUIC_WT_FIREFOX_PROTOCOL_OPTIONAL: "1"
           PICOQUIC_WT_PROTOCOL_CONSTRUCTOR_REQUIRED: "0"
+          # Firefox 151.0.3 CI can reject the bidirectional bad-chunk diagnostic
+          # setup with InvalidStateError after the successful baton exchange;
+          # see run 26830361560, job 79109595183.
+          PICOQUIC_WT_STREAM_WRITABLE_REQUIRED: "0"
           PICOQUIC_WT_SERVER_LOG: "1"
         run: |
           npx -y node@22 tests/webtransport/browser/run-firefox.mjs
