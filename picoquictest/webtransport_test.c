@@ -514,6 +514,8 @@ int picowt_baton_compact_test(void)
     const uint8_t bad_protocol_path[] = "/baton?baton=33&padding=0&protocol=bogus";
     const uint8_t empty_datagram_path[] = "/baton?baton=33&padding=0&datagram=empty";
     const uint8_t bad_datagram_path[] = "/baton?baton=33&padding=0&datagram=bogus";
+    const uint8_t empty_client_datagram_path[] = "/baton?baton=33&padding=0&client_datagram=empty";
+    const uint8_t bad_client_datagram_path[] = "/baton?baton=33&padding=0&client_datagram=bogus";
     const uint8_t bad_version_path[] = "/baton?version=1&baton=33&padding=0";
     const uint8_t too_large_path[] = "/baton?baton=33&padding=16384";
     int ret = wt_baton_ctx_path_params(&baton_ctx, compact_path, sizeof(compact_path) - 1);
@@ -523,7 +525,8 @@ int picowt_baton_compact_test(void)
             baton_ctx.nb_lanes != 1 ||
             baton_ctx.max_padding != 0 ||
             baton_ctx.wt_protocol_optional != 0 ||
-            baton_ctx.send_empty_datagram != 0)) {
+            baton_ctx.send_empty_datagram != 0 ||
+            baton_ctx.accept_empty_datagram != 0)) {
         ret = -1;
     }
     if (ret == 0 &&
@@ -539,6 +542,12 @@ int picowt_baton_compact_test(void)
         ret = -1;
     }
     if (ret == 0 &&
+        (wt_baton_ctx_path_params(&baton_ctx, empty_client_datagram_path,
+            sizeof(empty_client_datagram_path) - 1) != 0 ||
+            baton_ctx.accept_empty_datagram != 1)) {
+        ret = -1;
+    }
+    if (ret == 0 &&
         wt_baton_ctx_path_params(&baton_ctx, bad_protocol_path,
             sizeof(bad_protocol_path) - 1) == 0) {
         ret = -1;
@@ -546,6 +555,11 @@ int picowt_baton_compact_test(void)
     if (ret == 0 &&
         wt_baton_ctx_path_params(&baton_ctx, bad_datagram_path,
             sizeof(bad_datagram_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_client_datagram_path,
+            sizeof(bad_client_datagram_path) - 1) == 0) {
         ret = -1;
     }
     if (ret == 0 &&

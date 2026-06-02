@@ -639,9 +639,12 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         size_t protocol_mode_length = 0;
         uint8_t datagram_mode[16];
         size_t datagram_mode_length = 0;
+        uint8_t client_datagram_mode[16];
+        size_t client_datagram_mode_length = 0;
         baton_ctx->max_padding = WT_BATON_DEFAULT_PADDING;
         baton_ctx->wt_protocol_optional = 0;
         baton_ctx->send_empty_datagram = 0;
+        baton_ctx->accept_empty_datagram = 0;
         if (query_offset < path_length) {
             const uint8_t* queries = path + query_offset;
             size_t queries_length = path_length - query_offset;
@@ -654,7 +657,9 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 h3zero_query_parameter_string(queries, queries_length, "protocol", 8,
                     protocol_mode, sizeof(protocol_mode), &protocol_mode_length) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "datagram", 8,
-                    datagram_mode, sizeof(datagram_mode), &datagram_mode_length) != 0) {
+                    datagram_mode, sizeof(datagram_mode), &datagram_mode_length) != 0 ||
+                h3zero_query_parameter_string(queries, queries_length, "client_datagram", 15,
+                    client_datagram_mode, sizeof(client_datagram_mode), &client_datagram_mode_length) != 0) {
                 ret = -1;
             }
             else if (baton_ctx->version != WT_BATON_VERSION ||
@@ -682,6 +687,15 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     ret = -1;
                 }
             }
+            if (ret == 0 && client_datagram_mode_length > 0) {
+                if (client_datagram_mode_length == sizeof("empty") - 1 &&
+                    memcmp(client_datagram_mode, "empty", sizeof("empty") - 1) == 0) {
+                    baton_ctx->accept_empty_datagram = 1;
+                }
+                else {
+                    ret = -1;
+                }
+            }
         }
         else {
             /* Set parameters to default values */
@@ -689,6 +703,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             baton_ctx->nb_lanes = 1;
             baton_ctx->max_padding = WT_BATON_DEFAULT_PADDING;
             baton_ctx->send_empty_datagram = 0;
+            baton_ctx->accept_empty_datagram = 0;
         }
 
         return ret;
@@ -809,7 +824,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
 
     /* Management of datagrams
      */
-    int wt_baton_receive_datagram(
+    int wt_baton_receive_datagram(picoquic_cnx_t* cnx,
         const uint8_t * bytes, size_t length,
         struct st_h3zero_stream_ctx_t* stream_ctx,
         void* path_app_ctx)
@@ -824,10 +839,20 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         if (stream_ctx != NULL && stream_ctx->stream_id != baton_ctx->control_stream_id) {
             /* error, unexpected datagram on this stream */
         }
+        else if (length == 0 && baton_ctx->accept_empty_datagram) {
+            picoquic_log_app_message(cnx,
+                "Received empty WebTransport datagram on stream: %" PRIu64,
+                baton_ctx->control_stream_id);
+            baton_ctx->nb_datagrams_received += 1;
+            baton_ctx->nb_empty_datagrams_received += 1;
+        }
         else if ((bytes = picoquic_frames_varint_decode(bytes, bytes_max, &padding_length)) != NULL &&
             (bytes = picoquic_frames_fixed_skip(bytes, bytes_max, padding_length)) != NULL &&
             (bytes = picoquic_frames_uint8_decode(bytes, bytes_max, &next_baton)) != NULL &&
             bytes == bytes_max) {
+            picoquic_log_app_message(cnx,
+                "Received baton WebTransport datagram on stream: %" PRIu64 ", length: %zu",
+                baton_ctx->control_stream_id, length);
             baton_ctx->baton_datagram_received = next_baton;
             baton_ctx->nb_datagrams_received += 1;
             baton_ctx->nb_datagram_bytes_received += length;
@@ -986,7 +1011,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             /* Data received on a stream for which the per-app stream context is known.
             * the app just has to process the data.
             */
-            ret = wt_baton_receive_datagram(bytes, length, stream_ctx, path_app_ctx);
+            ret = wt_baton_receive_datagram(cnx, bytes, length, stream_ctx, path_app_ctx);
             break;
         case picohttp_callback_provide_datagram: /* Stack is ready to send a datagram */
             ret = wt_baton_provide_datagram(bytes, length, path_app_ctx);

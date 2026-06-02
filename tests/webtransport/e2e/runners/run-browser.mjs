@@ -28,6 +28,7 @@ const SCENARIO_FIELDS = new Set([
   "requireDatagram",
   "useByob",
   "datagramReceiveMode",
+  "datagramSendMode",
   "timeoutMs",
   "certificateHashMode",
   "certificateHashAlgorithm",
@@ -91,6 +92,10 @@ function validateScenario(scenario, path) {
   if (Object.prototype.hasOwnProperty.call(scenario, "datagramReceiveMode") &&
     !["baton", "empty"].includes(scenario.datagramReceiveMode)) {
     throw new Error(`invalid manifest field ${scenario.id}.datagramReceiveMode: unsupported mode ${scenario.datagramReceiveMode}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "datagramSendMode") &&
+    !["baton", "empty"].includes(scenario.datagramSendMode)) {
+    throw new Error(`invalid manifest field ${scenario.id}.datagramSendMode: unsupported mode ${scenario.datagramSendMode}`);
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "timeoutMs")) {
     requirePositiveInteger(scenario.timeoutMs, `${scenario.id}.timeoutMs`);
@@ -332,6 +337,10 @@ function assertScenarioResult(id, result, expect) {
     result.datagramReceiveMode !== expect.datagramReceiveMode) {
     throw new Error(`${id}: expected datagramReceiveMode=${JSON.stringify(expect.datagramReceiveMode)}, got ${JSON.stringify(result.datagramReceiveMode)}`);
   }
+  if (hasExpectedValue(expect, "datagramSendMode") &&
+    (result.datagramSendMode || "baton") !== expect.datagramSendMode) {
+    throw new Error(`${id}: expected datagramSendMode=${JSON.stringify(expect.datagramSendMode)}, got ${JSON.stringify(result.datagramSendMode)}`);
+  }
   if (expect.received) {
     assertArrayEquals(id, "received", result.received, expect.received,
       sequenceOrderMatters);
@@ -549,6 +558,7 @@ async function runScenario(browser, scenario, vars) {
     PICOQUIC_WT_REQUIRE_DATAGRAM: rendered.requireDatagram === false ? "0" : "1",
     PICOQUIC_WT_USE_BYOB: rendered.useByob === false ? "0" : "1",
     PICOQUIC_WT_DATAGRAM_RECEIVE_MODE: rendered.datagramReceiveMode || "baton",
+    PICOQUIC_WT_DATAGRAM_SEND_MODE: rendered.datagramSendMode || "baton",
     PICOQUIC_WT_EXPECT_OK: scenarioExpect.ok === false ? "0" : "1",
     PICOQUIC_WT_PROTOCOL_CONSTRUCTOR: scenarioExpect.ok === false ? "0" : "1",
     PICOQUIC_WT_INCLUDE_SERVER_SUMMARY: "1",

@@ -761,6 +761,7 @@
       constructorRequireUnreliable: requireDatagram,
       useByob: options.useByob !== false,
       datagramReceiveMode: options.datagramReceiveMode || "baton",
+      datagramSendMode: options.datagramSendMode || "baton",
       startedMs: nowMs(),
       readyMs: 0,
       closedMs: 0,
@@ -1111,12 +1112,17 @@
         var datagramWriter = datagramWritable.getWriter();
         try {
           await datagramWriter.ready;
-          await datagramWriter.write(makeBatonPacket(42, 0));
+          if (options.datagramSendMode === "empty") {
+            await datagramWriter.write(new Uint8Array(0));
+            note("datagram sent length 0");
+          } else {
+            await datagramWriter.write(makeBatonPacket(42, 0));
+            note("datagram sent");
+          }
         } finally {
           datagramWriter.releaseLock();
         }
         result.datagramsSent = 1;
-        note("datagram sent");
       }
 
       return await withTimeout(done, timeoutMs, function () {
@@ -1158,6 +1164,7 @@
       requireProtocol: search.get("requireProtocol") !== "0",
       requireDatagram: search.get("requireDatagram") !== "0",
       datagramReceiveMode: search.get("datagramReceiveMode") || "baton",
+      datagramSendMode: search.get("datagramSendMode") || "baton",
       useByob: search.get("useByob") !== "0",
       onProgress: render
     };
@@ -1186,6 +1193,7 @@
         constructorRequireUnreliable: options.requireDatagram !== false,
         useByob: options.useByob !== false,
         datagramReceiveMode: options.datagramReceiveMode || "baton",
+        datagramSendMode: options.datagramSendMode || "baton",
         received: [],
         sent: [],
         datagramsReceived: [],

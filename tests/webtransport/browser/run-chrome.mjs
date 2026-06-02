@@ -15,6 +15,7 @@ const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const DATAGRAM_RECEIVE_MODE = process.env.PICOQUIC_WT_DATAGRAM_RECEIVE_MODE || "baton";
+const DATAGRAM_SEND_MODE = process.env.PICOQUIC_WT_DATAGRAM_SEND_MODE || "baton";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
 const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
@@ -261,6 +262,9 @@ function buildPageUrl(certificateHash) {
   if (DATAGRAM_RECEIVE_MODE !== "baton") {
     url.searchParams.set("datagramReceiveMode", DATAGRAM_RECEIVE_MODE);
   }
+  if (DATAGRAM_SEND_MODE !== "baton") {
+    url.searchParams.set("datagramSendMode", DATAGRAM_SEND_MODE);
+  }
   return url.href;
 }
 
@@ -472,6 +476,12 @@ function assertHarnessResult(result) {
       expected: DATAGRAM_RECEIVE_MODE
     })}`);
   }
+  if ((result.datagramSendMode || "baton") !== DATAGRAM_SEND_MODE) {
+    throw new Error(`unexpected datagram send mode: ${JSON.stringify({
+      datagramSendMode: result.datagramSendMode,
+      expected: DATAGRAM_SEND_MODE
+    })}`);
+  }
   if (!equalExpectedBatonArray(result.received, EXPECT_RECEIVED)) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
   }
@@ -667,6 +677,10 @@ function summarizeServerOutput(output) {
     originRejected: countMatches(output, /WebTransport CONNECT origin rejected/g),
     closeSessionReceived: countMatches(output,
       /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
+    emptyDatagramsReceived: countMatches(output,
+      /Received empty WebTransport datagram on stream/g),
+    batonDatagramsReceived: countMatches(output,
+      /Received baton WebTransport datagram on stream/g),
     writableBadChunkCloseReceived:
       output.includes("error: 0 (writable-bad-chunk-test)"),
     browserCloseReceived: serverOutputHasBrowserClose(output)

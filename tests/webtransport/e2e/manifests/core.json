@@ -798,6 +798,71 @@
       }
     },
     {
+      "id": "datagrams.client-empty",
+      "title": "Server receives a zero-length browser WebTransport datagram",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&client_datagram=empty",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "datagramSendMode": "empty",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "Origin-header",
+        "origin-policy-allow",
+        "WT-Protocol",
+        "incoming-unidirectional-stream",
+        "incoming-bidirectional-stream",
+        "outgoing-unidirectional-stream",
+        "outgoing-bidirectional-stream",
+        "zero-length-datagram-send",
+        "datagram-receive",
+        "server-empty-datagram-trace",
+        "new-stream-after-close"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&client_datagram=empty",
+        "protocol": "devious-baton-00",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "datagramSendMode": "empty",
+        "received": [251, 253, 255],
+        "sent": [252, 254, 0],
+        "datagramsReceived": [252],
+        "datagramsSent": 1,
+        "eventsInclude": [
+          "ready",
+          "received 251 on remote-uni",
+          "datagram sent length 0",
+          "sent 252",
+          "datagram 252",
+          "received 253 on local-bidi",
+          "sent 254",
+          "received 255 on remote-bidi",
+          "sent 0",
+          "closed"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "emptyDatagramsReceivedMin": 1
+        }
+      }
+    },
+    {
       "id": "baton.core.medium-padded-default-reader",
       "title": "Baton stream/datagram/protocol exchange with medium padded packets",
       "runner": "browser-baton",

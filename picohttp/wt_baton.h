@@ -131,6 +131,8 @@ extern "C" {
         size_t nb_datagram_bytes_sent;
         int is_datagram_ready;
         int send_empty_datagram;
+        int accept_empty_datagram;
+        int nb_empty_datagrams_received;
         uint8_t baton_datagram_send_next;
         uint64_t nb_baton_bytes_received;
         uint64_t nb_baton_bytes_sent;
