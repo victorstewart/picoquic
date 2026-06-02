@@ -249,6 +249,7 @@ typedef struct st_h3zero_header_parts_t {
 #define h3zero_settings_wt_initial_max_data 0x2b61
 #define h3zero_settings_wt_initial_max_streams_uni 0x2b64
 #define h3zero_settings_wt_initial_max_streams_bidi 0x2b65
+/* Legacy WebTransport max-session SETTINGS used only in compatibility mode. */
 #define h3zero_settings_webtransport_max_sessions 0x14e9cd29
 #define h3zero_settings_webtransport_max_sessions_old 0xc671706aull
 /* Chrome compatibility: SETTINGS_ENABLE_WEBTRANSPORT from older draft */
@@ -266,6 +267,7 @@ typedef struct st_h3zero_settings_t {
     unsigned int enable_connect_protocol : 1;
     unsigned int h3_datagram : 1;
     unsigned int settings_received : 1;
+    unsigned int enable_legacy_webtransport_settings : 1;
 } h3zero_settings_t;
 
 extern uint8_t const * h3zero_default_setting_frame;

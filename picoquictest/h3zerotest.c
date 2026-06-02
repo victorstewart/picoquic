@@ -4095,7 +4095,6 @@ int h3zero_settings_decode_test(const uint8_t* bytes, size_t length, h3zero_sett
 }
 
 h3zero_settings_t default_setting_expected = {
-    .webtransport_max_sessions = 1,
     .webtransport_enabled = 1,
     .table_size = 0,
     .max_header_list_size = 0,
@@ -4112,6 +4111,78 @@ static uint8_t* h3zero_settings_test_component_encode(uint8_t* bytes,
         bytes = picoquic_frames_varint_encode(bytes, bytes_max, setting_value);
     }
     return bytes;
+}
+
+static int h3zero_settings_frame_has_key(const uint8_t* bytes, size_t length,
+    uint64_t setting_key)
+{
+    const uint8_t* bytes_max = bytes + length;
+    uint64_t frame_type = 0;
+    uint64_t frame_length = 0;
+    int ret = -1;
+
+    if ((bytes = picoquic_frames_varint_decode(bytes, bytes_max, &frame_type)) != NULL &&
+        frame_type == h3zero_frame_settings &&
+        (bytes = picoquic_frames_varint_decode(bytes, bytes_max, &frame_length)) != NULL &&
+        bytes + frame_length == bytes_max) {
+        ret = 0;
+        while (bytes != NULL && bytes < bytes_max) {
+            uint64_t component_key = 0;
+            uint64_t component_value = 0;
+
+            if ((bytes = picoquic_frames_varint_decode(bytes, bytes_max, &component_key)) == NULL ||
+                (bytes = picoquic_frames_varint_decode(bytes, bytes_max, &component_value)) == NULL) {
+                ret = -1;
+                break;
+            }
+            else if (component_key == setting_key) {
+                ret = 1;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+static int h3zero_settings_legacy_presence_test(void)
+{
+    uint8_t buffer[128];
+    uint8_t* bytes = buffer;
+    uint8_t* bytes_max = buffer + sizeof(buffer);
+    h3zero_settings_t strict_settings = default_setting_expected;
+    int ret = 0;
+
+    strict_settings.webtransport_max_sessions = 1;
+    bytes = h3zero_settings_encode(bytes, bytes_max, &strict_settings);
+    if (bytes == NULL ||
+        h3zero_settings_frame_has_key(buffer, bytes - buffer,
+            h3zero_settings_webtransport_max_sessions) != 0 ||
+        h3zero_settings_frame_has_key(buffer, bytes - buffer,
+            h3zero_settings_webtransport_max_sessions_old) != 0 ||
+        h3zero_settings_frame_has_key(buffer, bytes - buffer,
+            h3zero_settings_enable_webtransport) != 0) {
+        ret = -1;
+    }
+
+    if (ret == 0) {
+        h3zero_settings_t compat_settings = strict_settings;
+
+        compat_settings.enable_legacy_webtransport_settings = 1;
+        bytes = h3zero_settings_encode(buffer, bytes_max, &compat_settings);
+        if (bytes == NULL ||
+            h3zero_settings_frame_has_key(buffer, bytes - buffer,
+                h3zero_settings_webtransport_max_sessions) != 1 ||
+            h3zero_settings_frame_has_key(buffer, bytes - buffer,
+                h3zero_settings_webtransport_max_sessions_old) != 1 ||
+            h3zero_settings_frame_has_key(buffer, bytes - buffer,
+                h3zero_settings_enable_webtransport) != 1 ||
+            h3zero_settings_decode_test(buffer, bytes - buffer,
+                &compat_settings, 1) != 0) {
+            ret = -1;
+        }
+    }
+
+    return ret;
 }
 
 static int h3zero_settings_unknown_grease_test(void)
@@ -4221,6 +4292,9 @@ int h3zero_settings_test(void)
     }
     if (ret == 0) {
         ret = h3zero_settings_unknown_grease_test();
+    }
+    if (ret == 0) {
+        ret = h3zero_settings_legacy_presence_test();
     }
     if (ret == 0) {
         ret = h3zero_settings_malformed_length_test();

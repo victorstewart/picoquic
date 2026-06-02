@@ -2604,7 +2604,6 @@ static uint8_t* h3zero_settings_fragment_valid_stream(uint8_t* bytes,
     const uint8_t* bytes_max)
 {
     h3zero_settings_t settings = {
-        .webtransport_max_sessions = 1,
         .webtransport_enabled = 1,
         .wt_initial_max_data = 0x12345,
         .wt_initial_max_streams_uni = 7,
@@ -2681,7 +2680,7 @@ static int h3zero_settings_fragment_submit(const uint8_t* bytes, size_t length,
             h3_ctx->settings.enable_connect_protocol != 1 ||
             h3_ctx->settings.h3_datagram != 1 ||
             h3_ctx->settings.webtransport_enabled != 1 ||
-            h3_ctx->settings.webtransport_max_sessions != 1 ||
+            h3_ctx->settings.webtransport_max_sessions != 0 ||
             h3_ctx->settings.wt_initial_max_data != 0x12345 ||
             h3_ctx->settings.wt_initial_max_streams_uni != 7 ||
             h3_ctx->settings.wt_initial_max_streams_bidi != 5) {

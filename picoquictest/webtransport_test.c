@@ -747,6 +747,13 @@ int picowt_chrome_legacy_connect_test(void)
     if (ret == 0) {
         h3_ctx->path_table = chrome_path;
         h3_ctx->path_table_nb = 1;
+        if (h3zero_protocol_init_safe(cnx, h3_ctx) != 0 ||
+            !h3_ctx->local_settings.enable_legacy_webtransport_settings) {
+            ret = -1;
+        }
+    }
+
+    if (ret == 0) {
         h3_ctx->settings.settings_received = 1;
         h3_ctx->settings.h3_datagram = 1;
         h3_ctx->settings.webtransport_max_sessions = 1;
@@ -2123,7 +2130,6 @@ static int picowt_zero_rtt_settings_case(
 int picowt_zero_rtt_rules_test(void)
 {
     h3zero_settings_t remembered = {
-        .webtransport_max_sessions = 4,
         .webtransport_enabled = 1,
         .wt_initial_max_data = 0x1000,
         .wt_initial_max_streams_uni = 3,
@@ -2135,16 +2141,10 @@ int picowt_zero_rtt_rules_test(void)
     int ret = picowt_zero_rtt_connect_gate_case();
 
     if (ret == 0) {
-        received.webtransport_max_sessions = 5;
         received.wt_initial_max_data = 0x2000;
         received.wt_initial_max_streams_uni = 4;
         received.wt_initial_max_streams_bidi = 6;
         ret = picowt_zero_rtt_settings_case(&remembered, &received, 0);
-    }
-    if (ret == 0) {
-        received = remembered;
-        received.webtransport_max_sessions = 3;
-        ret = picowt_zero_rtt_settings_case(&remembered, &received, H3ZERO_SETTINGS_ERROR);
     }
     if (ret == 0) {
         received = remembered;

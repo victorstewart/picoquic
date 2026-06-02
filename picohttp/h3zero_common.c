@@ -170,9 +170,10 @@ int h3zero_origin_validator_allow_all(
 static int h3zero_settings_validate_webtransport_0rtt(
 	const h3zero_settings_t* remembered, const h3zero_settings_t* received)
 {
-	/* Draft-15 inherits HTTP/3 0-RTT SETTINGS safety: a server that
-	 * accepts 0-RTT must not reduce remembered WebTransport session or
-	 * initial flow-control limits.
+	/* Draft-15 inherits HTTP/3 0-RTT SETTINGS safety for remembered
+	 * WebTransport SETTINGS. Strict draft-15 settings cover the initial
+	 * flow-control limits; keep the max-session comparison only for
+	 * decoded legacy compatibility SETTINGS.
 	 */
 	return (remembered != NULL && received != NULL &&
 		(remembered->webtransport_max_sessions > received->webtransport_max_sessions ||
@@ -497,6 +498,21 @@ static void h3zero_settings_init_local(picoquic_cnx_t* cnx, h3zero_settings_t* s
 	}
 }
 
+static int h3zero_path_table_accepts_legacy_webtransport(const h3zero_callback_ctx_t* ctx)
+{
+	int ret = 0;
+
+	if (ctx != NULL && ctx->path_table != NULL) {
+		for (size_t i = 0; i < ctx->path_table_nb; i++) {
+			if (ctx->path_table[i].accept_legacy_webtransport) {
+				ret = 1;
+				break;
+			}
+		}
+	}
+	return ret;
+}
+
 static int h3zero_protocol_init_with_settings(picoquic_cnx_t* cnx, const h3zero_settings_t* settings)
 {
 	uint8_t decoder_stream_head = (uint8_t)h3zero_stream_type_qpack_decoder;
@@ -556,6 +572,14 @@ int h3zero_protocol_init_safe(picoquic_cnx_t* cnx, h3zero_callback_ctx_t* ctx)
 	if (!ctx->settings_sent) {
 		ctx->settings_sent = 1;
 		h3zero_settings_init_local(cnx, &ctx->local_settings);
+		if (h3zero_path_table_accepts_legacy_webtransport(ctx)) {
+			/* Chrome/Edge 148 compatibility: those browser WebTransport stacks
+			 * still need the legacy "webtransport" negotiation path exercised
+			 * by wt_compat tests. Strict/default paths do not advertise these
+			 * draft-14 SETTINGS.
+			 */
+			ctx->local_settings.enable_legacy_webtransport_settings = 1;
+		}
 		ret = h3zero_protocol_init_with_settings(cnx, &ctx->local_settings);
 	}
 	return ret;
@@ -2961,11 +2985,16 @@ uint8_t* h3zero_settings_encode(uint8_t* bytes, const uint8_t* bytes_max, const 
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_wt_enabled, settings->webtransport_enabled, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_wt_initial_max_data, settings->wt_initial_max_data, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_wt_initial_max_streams_uni, settings->wt_initial_max_streams_uni, 0)) != NULL &&
-				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_wt_initial_max_streams_bidi, settings->wt_initial_max_streams_bidi, 0)) != NULL &&
-				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions, settings->webtransport_max_sessions, 0)) != NULL &&
-				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions_old, settings->webtransport_max_sessions, 0)) != NULL &&
-				/* Chrome compatibility: also send SETTINGS_ENABLE_WEBTRANSPORT (0x2b603742) */
-				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_enable_webtransport, (settings->webtransport_max_sessions > 0) ? 1 : 0, 0)) != NULL) {
+				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_wt_initial_max_streams_bidi, settings->wt_initial_max_streams_bidi, 0)) != NULL) {
+				if (settings->enable_legacy_webtransport_settings &&
+					(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions, settings->webtransport_max_sessions, 0)) != NULL &&
+					(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions_old, settings->webtransport_max_sessions, 0)) != NULL) {
+					bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_enable_webtransport,
+						(settings->webtransport_max_sessions > 0) ? 1 : 0, 0);
+				}
+				if (bytes == NULL) {
+					return NULL;
+				}
 				size_t actual_length = bytes - bytes_after_length;
 				uint8_t* bytes_final_length = picoquic_frames_varint_encode(bytes_of_length, bytes_after_length, actual_length);
 				if (bytes_final_length == NULL) {
