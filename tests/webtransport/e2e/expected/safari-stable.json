@@ -18,14 +18,14 @@
       "category": "browser-bug",
       "browserVersion": "26.4",
       "platform": "macOS",
-      "reason": "Safari 26.4 passed the optional-unreliable browser data path, including datagram delivery with requireUnreliable disabled, but did not emit an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path or the dedicated browser-close diagnostic in this scenario.",
-      "evidence": "GitHub WebTransportBrowser run 26829426456, Safari job 79106144176, failed only on server.closeSessionReceived >= 1 for datagrams.optional-unreliable after Safari baton smoke completed with datagramsReceived=[252], datagramsSent=1, protocol='devious-baton-00', and optionsConstructor.ok=true. Run 26835807876, Safari job 79129244107, failed datagrams.optional-unreliable only because server.browserCloseReceived=false.",
+      "reason": "Safari 26.4 passed the optional-unreliable browser data path, including datagram delivery with requireUnreliable disabled, but did not emit an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path and shows nondeterministic server visibility for the dedicated browser-close diagnostic in this scenario.",
+      "evidence": "GitHub WebTransportBrowser run 26829426456, Safari job 79106144176, failed only on server.closeSessionReceived >= 1 for datagrams.optional-unreliable after Safari baton smoke completed with datagramsReceived=[252], datagramsSent=1, protocol='devious-baton-00', and optionsConstructor.ok=true. Run 26835807876, Safari job 79129244107, failed datagrams.optional-unreliable only because server.browserCloseReceived=false. Run 26836501212, Safari job 79131700226, failed datagrams.optional-unreliable only because server.browserCloseReceived=true, so this field is treated as nondeterministic instead of a stable false assertion.",
       "expect": {
         "optionsConstructorOk": true,
         "server": {
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": false,
-          "browserCloseReceived": false
+          "browserCloseReceived": null
         }
       }
     },
