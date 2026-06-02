@@ -51,10 +51,15 @@ function loadManifest(path) {
   if (!manifest || !Array.isArray(manifest.scenarios)) {
     throw new Error(`manifest has no scenarios array: ${path}`);
   }
+  const scenarioIds = new Set();
   for (const scenario of manifest.scenarios) {
     if (!scenario.id || scenario.runner !== "browser-baton" || !scenario.wtUrl) {
       throw new Error(`invalid scenario in ${path}`);
     }
+    if (scenarioIds.has(scenario.id)) {
+      throw new Error(`duplicate scenario id in ${path}: ${scenario.id}`);
+    }
+    scenarioIds.add(scenario.id);
   }
   return manifest;
 }
@@ -63,17 +68,31 @@ function defaultExpectedPath(browser) {
   return join(DEFAULT_EXPECTED_DIR, `${browser}-stable.json`);
 }
 
-function loadExpected(path) {
+function manifestScenarioIds(manifest) {
+  return new Set(manifest.scenarios.map((scenario) => scenario.id));
+}
+
+function loadExpected(path, manifest) {
   if (!path || !existsSync(path)) {
     return { path: "", entries: new Map() };
   }
 
   const expected = JSON.parse(readFileSync(path, "utf8"));
+  if (!expected || !Array.isArray(expected.expected)) {
+    throw new Error(`expected-results file has no expected array: ${path}`);
+  }
   const entries = new Map();
+  const scenarioIds = manifestScenarioIds(manifest);
   for (const entry of expected.expected || []) {
     if (!entry.scenario || !entry.status || !entry.category ||
       !entry.reason || !entry.evidence) {
       throw new Error(`invalid expected-result entry in ${path}`);
+    }
+    if (!scenarioIds.has(entry.scenario)) {
+      throw new Error(`expected-result entry references unknown scenario in ${path}: ${entry.scenario}`);
+    }
+    if (entries.has(entry.scenario)) {
+      throw new Error(`duplicate expected-result scenario in ${path}: ${entry.scenario}`);
     }
     entries.set(entry.scenario, entry);
   }
@@ -294,7 +313,7 @@ async function commandRun(args) {
   }
 
   const manifest = loadManifest(manifestPath);
-  const expected = loadExpected(expectedPath);
+  const expected = loadExpected(expectedPath, manifest);
   const vars = { port: DEFAULT_PORT, expected };
   const scenarios = selectedScenarios(manifest, scenarioId);
   const results = [];

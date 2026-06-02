@@ -809,6 +809,14 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          list)
         set_tests_properties(picohttp_wt_e2e_manifest
                              PROPERTIES LABELS wt_browser)
+        add_test(NAME picohttp_wt_e2e_expected_safari
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         --browser safari
+                         --scenario baton.core.padded-byob
+                         --json)
+        set_tests_properties(picohttp_wt_e2e_expected_safari
+                             PROPERTIES LABELS wt_browser)
     endif()
 
     add_executable(thread_test

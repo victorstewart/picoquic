@@ -24,6 +24,8 @@ npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser chrome
 Expected-result files live under `tests/webtransport/e2e/expected/`. They are
 loaded automatically by browser name when present, and every skipped scenario
 must include browser/version, platform, category, reason, and evidence.
+Expected-result files are validated against the manifest: stale scenario IDs
+and duplicate entries are test failures.
 
 Safari execution requires Safari WebDriver remote automation:
 
