@@ -39,6 +39,20 @@
       "evidence": "GitHub WebTransportBrowser run 26842019982, Safari job 79151393623, timed out in datagrams.server-empty with datagramLengths=[] after pico_baton logged `datagram, length: 1: 00`."
     },
     {
+      "scenario": "datagrams.client-empty",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 completes the browser-side zero-length datagram write scenario, but pico_baton does not receive an observable empty WebTransport datagram on the server side.",
+      "evidence": "GitHub WebTransportBrowser run 26842843051, Safari job 79154369173, reached datagrams.client-empty and failed only after earlier scenario assertions passed because server.emptyDatagramsReceived was 0.",
+      "expect": {
+        "server": {
+          "emptyDatagramsReceivedMin": null
+        }
+      }
+    },
+    {
       "scenario": "baton.core.compact-default-reader",
       "status": "pass",
       "category": "browser-bug",
