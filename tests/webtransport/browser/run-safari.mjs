@@ -644,6 +644,36 @@ async function readWritableBadChunkResult(endpoint, sessionId, certificateHash) 
   return wrapped.value;
 }
 
+async function readCloseSessionResult(endpoint, sessionId, certificateHash) {
+  const wrapped = await executeAsyncScript(endpoint, sessionId, `
+    const done = arguments[arguments.length - 1];
+    const options = arguments[0];
+    function errorText(error) {
+      if (error && typeof error === "object") {
+        return (error.name ? error.name + ": " : "") + (error.message || String(error));
+      }
+      return String(error);
+    }
+    Promise.resolve(
+      window.picoquicWebTransportBaton.runCloseSessionTests(options)
+    ).then(
+      (value) => done({ ok: true, value }),
+      (error) => done({ ok: false, error: errorText(error) })
+    );
+  `, [{
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL,
+    requireDatagram: REQUIRE_DATAGRAM
+  }]);
+
+  if (!wrapped || wrapped.ok !== true) {
+    throw new Error((wrapped && wrapped.error) ||
+      "browser close-session tests failed");
+  }
+  return wrapped.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
@@ -704,7 +734,9 @@ function summarizeServerOutput(output) {
     closeSessionReceived: countMatches(output,
       /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
     writableBadChunkCloseReceived:
-      output.includes("error: 0 (writable-bad-chunk-test)")
+      output.includes("error: 0 (writable-bad-chunk-test)"),
+    browserCloseReceived:
+      /error: 2a \(browser-close-test\)/.test(output)
   };
 }
 
@@ -791,6 +823,8 @@ async function main() {
       assertDatagramWritableResult(result.datagramWritable);
       result.streamWritable = writableBadChunk.streamWritable;
       assertStreamWritableResult(result.streamWritable);
+      result.closeSession = await readCloseSessionResult(endpoint,
+        sessionId, certConfig.hash);
     }
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);

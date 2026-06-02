@@ -412,6 +412,15 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "postClose", result.postClose,
       expect.postCloseTestsInclude);
   }
+  if (hasExpectedValue(expect, "closeSessionOk") &&
+    (!result.closeSession ||
+      result.closeSession.ok !== expect.closeSessionOk)) {
+    throw new Error(`${id}: close-session check failed`);
+  }
+  if (expect.closeSessionTestsInclude) {
+    assertDiagnosticTestsInclude(id, "closeSession", result.closeSession,
+      expect.closeSessionTestsInclude);
+  }
   if (expect.server) {
     if (!result.server) {
       throw new Error(`${id}: missing server summary`);

@@ -52,6 +52,12 @@ Use `postCloseOk` and `postCloseTestsInclude` on positive scenarios to require
 browser-observable session termination behavior, such as rejecting new
 bidirectional and unidirectional stream creation after `transport.closed`
 settles.
+Use `closeSessionOk` and `closeSessionTestsInclude` to require the dedicated
+browser close diagnostic. That diagnostic opens a fresh WebTransport session,
+calls `transport.close({ closeCode: 42, reason: "browser-close-test" })`, and
+requires `transport.closed` to resolve. Pair it with
+`server.browserCloseReceived` when a browser lane must prove that pico_baton
+observed the corresponding `WT_CLOSE_SESSION` capsule and close reason.
 Use `protocolConstructorTestsInclude`, `urlConstructorTestsInclude`, and
 `optionsConstructorTestsInclude` the same way for constructor diagnostics.
 Use `eventsInclude` for required browser-observable state-machine events such
@@ -70,6 +76,8 @@ diagnostic `transport.close({ closeCode: 0, reason: "writable-bad-chunk-test" })
 path through `server.closeSessionReceivedMin` and
 `server.writableBadChunkCloseReceived`. Browser expected-result files may
 override these server expectations only with browser/version evidence.
+The separate browser-close diagnostic asserts `server.browserCloseReceived`
+when the browser/version lane is expected to deliver `browser-close-test`.
 
 Run the portable core scenario in Chrome:
 

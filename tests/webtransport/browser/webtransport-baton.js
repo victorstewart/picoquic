@@ -646,6 +646,56 @@
     return result;
   }
 
+  async function runCloseSessionTests(options) {
+    if (typeof WebTransport !== "function") {
+      throw new Error("WebTransport is unavailable");
+    }
+
+    var result = {
+      ok: false,
+      tests: []
+    };
+    var url = options.url || defaultTarget();
+    var transport = null;
+    var closedPromise = null;
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    try {
+      transport = new WebTransport(url, buildTransportOptions(options));
+      closedPromise = transport.closed.then(function () {
+        return { ok: true, detail: "" };
+      }, function (error) {
+        return { ok: false, detail: errorText(error) };
+      });
+      await transport.ready;
+      record("ready", true, "");
+      transport.close({ closeCode: 42, reason: "browser-close-test" });
+      record("close-called", true, "");
+      var closed = await withTimeout(closedPromise, 3000);
+      record("closed-resolved", closed.ok, closed.detail);
+    } catch (error) {
+      record("setup", false, errorText(error));
+    } finally {
+      if (transport) {
+        try {
+          transport.close({ closeCode: 42, reason: "browser-close-test" });
+        } catch (_) {}
+      }
+    }
+
+    result.ok = result.tests.length > 0 && result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   async function runPostCloseTests(transport) {
     var result = {
       ok: false,
@@ -1115,6 +1165,7 @@
     runDatagramWritableTests: runDatagramWritableTests,
     runStreamWritableTests: runStreamWritableTests,
     runWritableBadChunkTests: runWritableBadChunkTests,
+    runCloseSessionTests: runCloseSessionTests,
     runBatonTest: runBatonTest
   };
 

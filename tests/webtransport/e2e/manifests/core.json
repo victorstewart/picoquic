@@ -458,7 +458,9 @@
         "datagram-send",
         "datagram-bad-chunk",
         "datagram-receive",
-        "new-stream-after-close"
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
       ],
       "expect": {
         "ok": true,
@@ -495,6 +497,12 @@
           "create-bidirectional-stream",
           "create-unidirectional-stream"
         ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
           "valid-protocol",
@@ -519,7 +527,8 @@
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
           "closeSessionReceivedMin": 1,
-          "writableBadChunkCloseReceived": true
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
         }
       }
     },
@@ -547,7 +556,9 @@
         "datagram-send",
         "datagram-receive",
         "datagram-available-without-requireUnreliable",
-        "new-stream-after-close"
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
       ],
       "expect": {
         "ok": true,
@@ -584,6 +595,12 @@
           "create-bidirectional-stream",
           "create-unidirectional-stream"
         ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
           "valid-protocol",
@@ -608,7 +625,8 @@
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
           "closeSessionReceivedMin": 1,
-          "writableBadChunkCloseReceived": true
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
         }
       }
     },
@@ -641,7 +659,9 @@
         "datagram-send",
         "datagram-bad-chunk",
         "datagram-receive",
-        "new-stream-after-close"
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
       ],
       "expect": {
         "ok": true,
@@ -678,6 +698,12 @@
           "create-bidirectional-stream",
           "create-unidirectional-stream"
         ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
           "valid-protocol",
@@ -702,7 +728,8 @@
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
           "closeSessionReceivedMin": 1,
-          "writableBadChunkCloseReceived": true
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
         }
       }
     },
@@ -738,7 +765,9 @@
         "datagram-send",
         "datagram-bad-chunk",
         "datagram-receive",
-        "new-stream-after-close"
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
       ],
       "expect": {
         "ok": true,
@@ -775,6 +804,12 @@
           "create-bidirectional-stream",
           "create-unidirectional-stream"
         ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
           "valid-protocol",
@@ -799,7 +834,8 @@
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
           "closeSessionReceivedMin": 1,
-          "writableBadChunkCloseReceived": true
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
         }
       }
     },
@@ -834,7 +870,9 @@
         "datagram-send",
         "datagram-bad-chunk",
         "datagram-receive",
-        "new-stream-after-close"
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
       ],
       "expect": {
         "ok": true,
@@ -872,6 +910,12 @@
           "create-bidirectional-stream",
           "create-unidirectional-stream"
         ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
           "valid-protocol",
@@ -896,7 +940,8 @@
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
           "closeSessionReceivedMin": 1,
-          "writableBadChunkCloseReceived": true
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
         }
       }
     }

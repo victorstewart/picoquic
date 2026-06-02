@@ -550,6 +550,28 @@ async function readWritableBadChunkResult(cdp, certificateHash) {
   return result.result.value;
 }
 
+async function readCloseSessionResult(cdp, certificateHash) {
+  const options = JSON.stringify({
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL,
+    requireDatagram: REQUIRE_DATAGRAM
+  });
+  const result = await cdp.send("Runtime.evaluate", {
+    expression: `window.picoquicWebTransportBaton.runCloseSessionTests(${options})`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+
+  if (result.exceptionDetails) {
+    const text = result.exceptionDetails.exception &&
+      result.exceptionDetails.exception.description;
+    throw new Error(text || result.exceptionDetails.text ||
+      "browser close-session tests failed");
+  }
+  return result.result.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
@@ -598,7 +620,9 @@ function summarizeServerOutput(output) {
     closeSessionReceived: countMatches(output,
       /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
     writableBadChunkCloseReceived:
-      output.includes("error: 0 (writable-bad-chunk-test)")
+      output.includes("error: 0 (writable-bad-chunk-test)"),
+    browserCloseReceived:
+      /error: 2a \(browser-close-test\)/.test(output)
   };
 }
 
@@ -704,6 +728,7 @@ async function main() {
       assertDatagramWritableResult(result.datagramWritable);
       result.streamWritable = writableBadChunk.streamWritable;
       assertStreamWritableResult(result.streamWritable);
+      result.closeSession = await readCloseSessionResult(cdp, certConfig.hash);
     }
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);

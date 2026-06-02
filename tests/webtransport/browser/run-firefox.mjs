@@ -604,7 +604,9 @@ function summarizeServerOutput(output) {
     closeSessionReceived: countMatches(output,
       /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
     writableBadChunkCloseReceived:
-      output.includes("error: 0 (writable-bad-chunk-test)")
+      output.includes("error: 0 (writable-bad-chunk-test)"),
+    browserCloseReceived:
+      /error: 2a \(browser-close-test\)/.test(output)
   };
 }
 
@@ -702,6 +704,10 @@ async function main() {
       if (REQUIRE_STREAM_WRITABLE) {
         assertDiagnosticResult("streamWritable", result.streamWritable);
       }
+      result.closeSession = await readDiagnostic(endpoint, sessionId,
+        "runCloseSessionTests", certConfig.hash, {
+          requireDatagram: REQUIRE_DATAGRAM
+        });
     }
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);
