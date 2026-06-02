@@ -370,6 +370,15 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     picowt_capsule_close_webtransport_session) {
                 int is_client = baton_ctx->is_client;
 
+                baton_ctx->close_received = 1;
+                baton_ctx->close_error_code = baton_ctx->capsule.error_code;
+                baton_ctx->close_reason_len = baton_ctx->capsule.error_msg_len;
+                if (baton_ctx->close_reason_len > 0) {
+                    memcpy(baton_ctx->close_reason,
+                        baton_ctx->capsule.error_msg,
+                        baton_ctx->close_reason_len);
+                }
+                baton_ctx->close_reason[baton_ctx->close_reason_len] = 0;
                 stream_ctx->ps.stream_state.is_fin_received = 1;
                 baton_ctx->baton_state = wt_baton_state_closed;
                 h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx,

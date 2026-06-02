@@ -2900,6 +2900,11 @@ static int picowt_baton_close_capsule_case(void)
 
         if (baton_ctx.baton_state != wt_baton_state_closed ||
             !baton_ctx.connection_closed ||
+            !baton_ctx.close_received ||
+            baton_ctx.close_error_code != 42 ||
+            baton_ctx.close_reason_len != sizeof(close_msg) ||
+            memcmp(baton_ctx.close_reason, close_msg, sizeof(close_msg)) != 0 ||
+            baton_ctx.close_reason[baton_ctx.close_reason_len] != 0 ||
             h3zero_find_stream_prefix(h3_ctx, control_stream_id) != NULL ||
             h3zero_find_stream(h3_ctx, 4) != NULL ||
             !control_stream_ctx->ps.stream_state.is_fin_received ||

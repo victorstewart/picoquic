@@ -103,6 +103,10 @@ extern "C" {
         int is_client;
         int connection_ready;
         int connection_closed;
+        int close_received;
+        uint32_t close_error_code;
+        size_t close_reason_len;
+        uint8_t close_reason[picowt_close_message_max + 1];
         /* Baton protocol data */
         uint64_t version;
         uint64_t initial_baton;
