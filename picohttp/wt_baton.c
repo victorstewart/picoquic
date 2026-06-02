@@ -389,15 +389,14 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 return ret;
             }
             if (is_fin) {
+                int is_client = baton_ctx->is_client;
+
                 stream_ctx->ps.stream_state.is_fin_received = 1;
                 baton_ctx->baton_state = wt_baton_state_closed;
-                if (baton_ctx->is_client) {
-                    /* Most baton memory is allocated on the stack, but not the capsule! */
-                    picowt_release_capsule(&baton_ctx->capsule);
+                h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx,
+                    stream_ctx->stream_id);
+                if (is_client) {
                     ret = picoquic_close(cnx, 0);
-                }
-                else {
-                    h3zero_delete_stream_prefix(cnx, baton_ctx->h3_ctx, stream_ctx->stream_id);
                 }
             }
         }
