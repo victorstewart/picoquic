@@ -692,6 +692,8 @@ static void h3zero_reset_control_stream_state(h3zero_data_stream_state_t* stream
 	stream_state->current_frame_type = UINT64_MAX;
 	stream_state->current_frame_length = UINT64_MAX;
 	stream_state->current_frame_read = 0;
+	stream_state->frame_header_read = 0;
+	stream_state->is_current_frame_ignored = 0;
 	if (stream_state->current_frame != NULL) {
 		free(stream_state->current_frame);
 		stream_state->current_frame = NULL;

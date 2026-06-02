@@ -3055,6 +3055,16 @@ typedef struct st_picowt_goaway_test_ctx_t {
     int nb_drains;
 } picowt_goaway_test_ctx_t;
 
+typedef struct st_picowt_goaway_case_ctx_t {
+    picoquic_quic_t* quic;
+    picoquic_cnx_t* cnx;
+    h3zero_callback_ctx_t* h3_ctx;
+    h3zero_stream_ctx_t* control_stream_ctx;
+    h3zero_stream_ctx_t* goaway_stream_ctx;
+    uint64_t simulated_time;
+    picowt_goaway_test_ctx_t app_ctx;
+} picowt_goaway_case_ctx_t;
+
 static int picowt_goaway_callback(picoquic_cnx_t* UNUSED(cnx),
     uint8_t* UNUSED(bytes), size_t UNUSED(length), picohttp_call_back_event_t wt_event,
     h3zero_stream_ctx_t* UNUSED(stream_ctx), void* path_app_ctx)
@@ -3096,68 +3106,226 @@ static size_t picowt_format_goaway_test_input(uint8_t* bytes, uint8_t* bytes_max
     return (bytes == NULL) ? 0 : (size_t)(bytes - start);
 }
 
-int picowt_goaway_test(void)
+static int picowt_goaway_case_init(picowt_goaway_case_ctx_t* ctx)
 {
-    picoquic_quic_t* quic = NULL;
-    picoquic_cnx_t* cnx = NULL;
-    h3zero_callback_ctx_t* h3_ctx = NULL;
-    h3zero_stream_ctx_t* control_stream_ctx = NULL;
-    h3zero_stream_ctx_t* goaway_stream_ctx = NULL;
-    uint8_t goaway_input[16];
-    size_t goaway_input_length = 0;
-    uint64_t simulated_time = 0;
-    picowt_goaway_test_ctx_t test_ctx = { 0 };
-    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx, &simulated_time);
+    int ret = 0;
 
+    memset(ctx, 0, sizeof(picowt_goaway_case_ctx_t));
+    ret = h3zero_set_test_context(&ctx->quic, &ctx->cnx, &ctx->h3_ctx,
+        &ctx->simulated_time);
     if (ret == 0) {
-        h3_ctx->settings.settings_received = 1;
-        h3_ctx->settings.enable_connect_protocol = 1;
-        h3_ctx->settings.h3_datagram = 1;
-        h3_ctx->settings.webtransport_enabled = 1;
-        cnx->local_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
-        cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
-        cnx->local_parameters.is_reset_stream_at_enabled = 1;
-        cnx->remote_parameters.is_reset_stream_at_enabled = 1;
-    }
-    if (ret == 0 && (control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx)) == NULL) {
-        ret = -1;
-    }
-    if (ret == 0) {
-        control_stream_ctx->is_upgraded = 1;
-        control_stream_ctx->ps.stream_state.is_webtransport_requested = 1;
-        ret = h3zero_declare_stream_prefix(h3_ctx, control_stream_ctx->stream_id,
-            picowt_goaway_callback, &test_ctx);
+        ctx->h3_ctx->settings.settings_received = 1;
+        ctx->h3_ctx->settings.enable_connect_protocol = 1;
+        ctx->h3_ctx->settings.h3_datagram = 1;
+        ctx->h3_ctx->settings.webtransport_enabled = 1;
+        ctx->cnx->cnx_state = picoquic_state_ready;
+        ctx->cnx->local_parameters.max_datagram_frame_size =
+            PICOQUIC_MAX_PACKET_SIZE;
+        ctx->cnx->remote_parameters.max_datagram_frame_size =
+            PICOQUIC_MAX_PACKET_SIZE;
+        ctx->cnx->local_parameters.is_reset_stream_at_enabled = 1;
+        ctx->cnx->remote_parameters.is_reset_stream_at_enabled = 1;
     }
     if (ret == 0 &&
-        (goaway_stream_ctx = h3zero_find_or_create_stream(cnx, 3, h3_ctx, 1, 1)) == NULL) {
+        (ctx->control_stream_ctx =
+            picowt_set_control_stream(ctx->cnx, ctx->h3_ctx)) == NULL) {
         ret = -1;
     }
     if (ret == 0) {
-        goaway_input_length = picowt_format_goaway_test_input(goaway_input,
-            goaway_input + sizeof(goaway_input), 1, 4);
-        if (goaway_input_length == 0 ||
-            h3zero_process_remote_stream(cnx, 3, goaway_input, goaway_input_length,
-                picoquic_callback_stream_data, goaway_stream_ctx, h3_ctx) != 0 ||
-            !h3_ctx->goaway_received ||
-            h3_ctx->goaway_stream_id != 4 ||
-            test_ctx.nb_drains != 1) {
-            ret = -1;
-        }
+        ctx->control_stream_ctx->is_upgraded = 1;
+        ctx->control_stream_ctx->ps.stream_state.is_webtransport_requested = 1;
+        ret = h3zero_declare_stream_prefix(ctx->h3_ctx,
+            ctx->control_stream_ctx->stream_id, picowt_goaway_callback,
+            &ctx->app_ctx);
     }
-    if (ret == 0) {
-        h3zero_stream_ctx_t* blocked_control_stream_ctx = picowt_set_control_stream(cnx, h3_ctx);
-        if (blocked_control_stream_ctx == NULL ||
-            picowt_connect(cnx, h3_ctx, blocked_control_stream_ctx, PICOQUIC_TEST_SNI, "/baton",
-                picowt_goaway_callback, &test_ctx, NULL) != H3ZERO_REQUEST_REJECTED) {
-            ret = -1;
-        }
+    if (ret == 0 &&
+        (ctx->goaway_stream_ctx = h3zero_find_or_create_stream(ctx->cnx, 3,
+            ctx->h3_ctx, 1, 1)) == NULL) {
+        ret = -1;
     }
 
-    picoquic_set_callback(cnx, NULL, NULL);
-    if (h3_ctx != NULL) {
-        h3zero_callback_delete_context(cnx, h3_ctx);
+    return ret;
+}
+
+static void picowt_goaway_case_dispose(picowt_goaway_case_ctx_t* ctx)
+{
+    if (ctx->cnx != NULL) {
+        picoquic_set_callback(ctx->cnx, NULL, NULL);
     }
-    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+    if (ctx->h3_ctx != NULL) {
+        h3zero_callback_delete_context(ctx->cnx, ctx->h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&ctx->quic, &ctx->cnx);
+}
+
+static int picowt_goaway_submit(picowt_goaway_case_ctx_t* ctx,
+    const uint8_t* bytes, size_t length)
+{
+    return h3zero_process_remote_stream(ctx->cnx, 3, (uint8_t*)bytes, length,
+        picoquic_callback_stream_data, ctx->goaway_stream_ctx, ctx->h3_ctx);
+}
+
+static int picowt_goaway_format_and_submit(picowt_goaway_case_ctx_t* ctx,
+    int include_stream_type, uint64_t goaway_stream_id)
+{
+    uint8_t goaway_input[16];
+    size_t goaway_input_length = picowt_format_goaway_test_input(goaway_input,
+        goaway_input + sizeof(goaway_input), include_stream_type,
+        goaway_stream_id);
+    int ret = -1;
+
+    if (goaway_input_length > 0) {
+        ret = picowt_goaway_submit(ctx, goaway_input, goaway_input_length);
+    }
+
+    return ret;
+}
+
+static int picowt_goaway_fragmentation_case(void)
+{
+    uint8_t goaway_input[16];
+    size_t goaway_input_length = picowt_format_goaway_test_input(goaway_input,
+        goaway_input + sizeof(goaway_input), 1, 4);
+    int ret = (goaway_input_length == 0) ? -1 : 0;
+
+    for (size_t split = 1; ret == 0 && split < goaway_input_length; split++) {
+        picowt_goaway_case_ctx_t ctx;
+
+        ret = picowt_goaway_case_init(&ctx);
+        if (ret == 0 &&
+            (picowt_goaway_submit(&ctx, goaway_input, split) != 0 ||
+                ctx.cnx->application_error != 0 ||
+                ctx.h3_ctx->goaway_received ||
+                ctx.app_ctx.nb_drains != 0)) {
+            DBG_PRINTF("GOAWAY split %zu first part failed: app_error=%" PRIu64
+                ", received=%d, drains=%d", split, ctx.cnx->application_error,
+                ctx.h3_ctx->goaway_received, ctx.app_ctx.nb_drains);
+            ret = -1;
+        }
+        if (ret == 0 &&
+            (picowt_goaway_submit(&ctx, goaway_input + split,
+                goaway_input_length - split) != 0 ||
+                ctx.cnx->application_error != 0 ||
+                !ctx.h3_ctx->goaway_received ||
+                ctx.h3_ctx->goaway_stream_id != 4 ||
+                ctx.app_ctx.nb_drains != 1)) {
+            DBG_PRINTF("GOAWAY split %zu second part failed: app_error=%" PRIu64
+                ", received=%d, id=%" PRIu64 ", drains=%d", split,
+                ctx.cnx->application_error, ctx.h3_ctx->goaway_received,
+                ctx.h3_ctx->goaway_stream_id, ctx.app_ctx.nb_drains);
+            ret = -1;
+        }
+        picowt_goaway_case_dispose(&ctx);
+    }
+
+    return ret;
+}
+
+static int picowt_goaway_duplicate_case(void)
+{
+    picowt_goaway_case_ctx_t ctx;
+    int ret = picowt_goaway_case_init(&ctx);
+
+    if (ret == 0 &&
+        (picowt_goaway_format_and_submit(&ctx, 1, 8) != 0 ||
+            ctx.cnx->application_error != 0 ||
+            !ctx.h3_ctx->goaway_received ||
+            ctx.h3_ctx->goaway_stream_id != 8 ||
+            ctx.app_ctx.nb_drains != 1)) {
+        DBG_PRINTF("GOAWAY first duplicate case failed: app_error=%" PRIu64
+            ", received=%d, id=%" PRIu64 ", drains=%d",
+            ctx.cnx->application_error, ctx.h3_ctx->goaway_received,
+            ctx.h3_ctx->goaway_stream_id, ctx.app_ctx.nb_drains);
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (picowt_goaway_format_and_submit(&ctx, 0, 8) != 0 ||
+            ctx.cnx->application_error != 0 ||
+            ctx.h3_ctx->goaway_stream_id != 8 ||
+            ctx.app_ctx.nb_drains != 1)) {
+        DBG_PRINTF("GOAWAY equal duplicate case failed: app_error=%" PRIu64
+            ", id=%" PRIu64 ", drains=%d", ctx.cnx->application_error,
+            ctx.h3_ctx->goaway_stream_id, ctx.app_ctx.nb_drains);
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (picowt_goaway_format_and_submit(&ctx, 0, 4) != 0 ||
+            ctx.cnx->application_error != 0 ||
+            ctx.h3_ctx->goaway_stream_id != 4 ||
+            ctx.app_ctx.nb_drains != 1)) {
+        DBG_PRINTF("GOAWAY lower duplicate case failed: app_error=%" PRIu64
+            ", id=%" PRIu64 ", drains=%d", ctx.cnx->application_error,
+            ctx.h3_ctx->goaway_stream_id, ctx.app_ctx.nb_drains);
+        ret = -1;
+    }
+    if (ret == 0 &&
+        ((ret = picowt_goaway_format_and_submit(&ctx, 0, 8)) != 0 ||
+            ctx.cnx->application_error != H3ZERO_ID_ERROR ||
+            ctx.app_ctx.nb_drains != 1)) {
+        DBG_PRINTF("GOAWAY increasing duplicate case failed: app_error=%" PRIu64
+            ", id=%" PRIu64 ", drains=%d, ret=%d",
+            ctx.cnx->application_error, ctx.h3_ctx->goaway_stream_id,
+            ctx.app_ctx.nb_drains, ret);
+        ret = -1;
+    }
+
+    picowt_goaway_case_dispose(&ctx);
+    return ret;
+}
+
+static int picowt_goaway_invalid_id_case(void)
+{
+    picowt_goaway_case_ctx_t ctx;
+    int ret = picowt_goaway_case_init(&ctx);
+
+    if (ret == 0 &&
+        (picowt_goaway_format_and_submit(&ctx, 1, 2) != 0 ||
+            ctx.cnx->application_error != H3ZERO_ID_ERROR ||
+            ctx.h3_ctx->goaway_received ||
+            ctx.app_ctx.nb_drains != 0)) {
+        DBG_PRINTF("GOAWAY invalid ID case failed: app_error=%" PRIu64
+            ", received=%d, drains=%d", ctx.cnx->application_error,
+            ctx.h3_ctx->goaway_received, ctx.app_ctx.nb_drains);
+        ret = -1;
+    }
+
+    picowt_goaway_case_dispose(&ctx);
+    return ret;
+}
+
+int picowt_goaway_test(void)
+{
+    picowt_goaway_case_ctx_t ctx = { 0 };
+    int ret = picowt_goaway_fragmentation_case();
+
+    if (ret == 0) {
+        ret = picowt_goaway_duplicate_case();
+    }
+    if (ret == 0) {
+        ret = picowt_goaway_invalid_id_case();
+    }
+    if (ret == 0) {
+        ret = picowt_goaway_case_init(&ctx);
+    }
+    if (ret == 0 &&
+        (picowt_goaway_format_and_submit(&ctx, 1, 4) != 0 ||
+            !ctx.h3_ctx->goaway_received ||
+            ctx.h3_ctx->goaway_stream_id != 4 ||
+            ctx.app_ctx.nb_drains != 1)) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        h3zero_stream_ctx_t* blocked_control_stream_ctx =
+            picowt_set_control_stream(ctx.cnx, ctx.h3_ctx);
+
+        if (blocked_control_stream_ctx == NULL ||
+            picowt_connect(ctx.cnx, ctx.h3_ctx, blocked_control_stream_ctx,
+                PICOQUIC_TEST_SNI, "/baton", picowt_goaway_callback,
+                &ctx.app_ctx, NULL) != H3ZERO_REQUEST_REJECTED) {
+            ret = -1;
+        }
+    }
+    picowt_goaway_case_dispose(&ctx);
 
     return ret;
 }
