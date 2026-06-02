@@ -745,6 +745,7 @@
         "datagram-bad-chunk",
         "datagram-receive",
         "new-stream-after-close",
+        "datagram-write-after-close",
         "browser-close",
         "close-capsule"
       ],
@@ -782,6 +783,10 @@
         "postCloseTestsInclude": [
           "create-bidirectional-stream",
           "create-unidirectional-stream"
+        ],
+        "postCloseDatagramOk": true,
+        "postCloseDatagramTestsInclude": [
+          "datagram-write-after-close"
         ],
         "closeSessionOk": true,
         "closeSessionTestsInclude": [

@@ -751,6 +751,49 @@
     return result;
   }
 
+  async function runPostCloseDatagramTests(transport) {
+    var result = {
+      ok: false,
+      tests: []
+    };
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    var datagramWritable = getDatagramWritable(transport.datagrams);
+    if (!datagramWritable) {
+      record("datagram-writable-available", false,
+        "WebTransport datagrams are unavailable");
+    } else {
+      var writer = null;
+      try {
+        writer = datagramWritable.getWriter();
+        await withTimeout(writer.write(new Uint8Array(0)), 3000);
+        record("datagram-write-after-close", false, "write resolved");
+      } catch (error) {
+        var text = errorText(error);
+        record("datagram-write-after-close",
+          text.indexOf("timeout after") < 0, text);
+      } finally {
+        if (writer) {
+          try {
+            writer.releaseLock();
+          } catch (_) {}
+        }
+      }
+    }
+
+    result.ok = result.tests.length > 0 && result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   async function runSessionDiagnostics(transport) {
     var result = {
       ok: false,
@@ -1060,6 +1103,7 @@
           throw new Error("post-close tests failed: " +
             JSON.stringify(result.postClose));
         }
+        result.postCloseDatagram = await runPostCloseDatagramTests(transport);
         if (!finished) {
           finished = true;
           result.ok = true;
@@ -1382,6 +1426,7 @@
     runStreamWritableTests: runStreamWritableTests,
     runWritableBadChunkTests: runWritableBadChunkTests,
     runCloseSessionTests: runCloseSessionTests,
+    runPostCloseDatagramTests: runPostCloseDatagramTests,
     runSessionDiagnostics: runSessionDiagnostics,
     runBatonTest: runBatonTest
   };

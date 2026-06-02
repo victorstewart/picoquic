@@ -436,6 +436,15 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "postClose", result.postClose,
       expect.postCloseTestsInclude);
   }
+  if (hasExpectedValue(expect, "postCloseDatagramOk") &&
+    (!result.postCloseDatagram ||
+      result.postCloseDatagram.ok !== expect.postCloseDatagramOk)) {
+    throw new Error(`${id}: post-close datagram check failed`);
+  }
+  if (expect.postCloseDatagramTestsInclude) {
+    assertDiagnosticTestsInclude(id, "postCloseDatagram",
+      result.postCloseDatagram, expect.postCloseDatagramTestsInclude);
+  }
   if (hasExpectedValue(expect, "closeSessionOk") &&
     (!result.closeSession ||
       result.closeSession.ok !== expect.closeSessionOk)) {
