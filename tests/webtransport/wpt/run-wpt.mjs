@@ -35,6 +35,7 @@ function usage() {
   console.error([
     "usage:",
     "  node tests/webtransport/wpt/run-wpt.mjs list [--wpt-root <path>] [--expected <path>] [--json]",
+    "  node tests/webtransport/wpt/run-wpt.mjs run --wpt-root <path> --browser <name> [--test <path-or-pattern>] [--expected <path>] [--dry-run] [--wpt-arg <arg>...]",
     "  node tests/webtransport/wpt/run-wpt.mjs server-smoke [--baton-bin <path>] [--port <n>] [--web-root <path>]"
   ].join("\n"));
 }
@@ -61,6 +62,22 @@ function hasOption(args, name) {
   return true;
 }
 
+function takeOptions(args, name) {
+  const values = [];
+  for (let index = 0; index < args.length;) {
+    if (args[index] !== name) {
+      index++;
+      continue;
+    }
+    if (index + 1 >= args.length) {
+      throw new Error(`missing value for ${name}`);
+    }
+    values.push(args[index + 1]);
+    args.splice(index, 2);
+  }
+  return values;
+}
+
 function runChecked(command, args) {
   const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
   let stderr = "";
@@ -73,6 +90,22 @@ function runChecked(command, args) {
         resolveRun();
       } else {
         rejectRun(new Error(`${command} failed: code=${code} signal=${signal} ${stderr.trim()}`));
+      }
+    });
+  });
+}
+
+function runInteractive(command, args, cwd) {
+  const child = spawn(command, args, {
+    cwd,
+    stdio: "inherit"
+  });
+  return new Promise((resolveRun, rejectRun) => {
+    child.once("exit", (code, signal) => {
+      if (code === 0) {
+        resolveRun();
+      } else {
+        rejectRun(new Error(`${command} failed: code=${code} signal=${signal}`));
       }
     });
   });
@@ -185,11 +218,40 @@ function discoverTests(wptRoot) {
   return { source: webtransportRoot, tests: discovered };
 }
 
+function resolveWptCommand(wptRoot) {
+  const command = join(resolve(wptRoot), "wpt");
+  if (!existsSync(command)) {
+    throw new Error(`WPT command not found: ${command}`);
+  }
+  return command;
+}
+
 function expectedEntryMatchesTest(entryTest, discoveredTest) {
   if (entryTest.endsWith("*.js")) {
     return matchesExpected(discoveredTest, entryTest);
   }
   return entryTest === discoveredTest;
+}
+
+function selectTests(discoveredTests, selectors) {
+  if (selectors.length === 0) {
+    return discoveredTests;
+  }
+
+  const selected = [];
+  for (const selector of selectors) {
+    const matches = discoveredTests.filter((test) =>
+      expectedEntryMatchesTest(selector, test) || matchesExpected(test, selector));
+    if (matches.length === 0) {
+      throw new Error(`selected WPT test does not match the target subset: ${selector}`);
+    }
+    for (const match of matches) {
+      if (!selected.includes(match)) {
+        selected.push(match);
+      }
+    }
+  }
+  return selected;
 }
 
 function loadExpectedManifest(expectedPath, discoveredTests) {
@@ -283,12 +345,72 @@ async function commandServerSmoke(args) {
   }
 }
 
+async function commandRun(args) {
+  const rawWptRoot = takeOption(args, "--wpt-root", process.env.PICOQUIC_WPT_ROOT || "");
+  const browser = takeOption(args, "--browser", process.env.PICOQUIC_WPT_BROWSER || "");
+  const expectedPath = takeOption(args, "--expected", "");
+  const selectors = takeOptions(args, "--test");
+  const wptArgs = takeOptions(args, "--wpt-arg");
+  const dryRun = hasOption(args, "--dry-run");
+  if (args.length !== 0) {
+    throw new Error(`unexpected run arguments: ${args.join(" ")}`);
+  }
+  if (!rawWptRoot) {
+    throw new Error("missing WPT checkout; pass --wpt-root or set PICOQUIC_WPT_ROOT");
+  }
+  const wptRoot = resolve(rawWptRoot);
+  if (!existsSync(wptRoot)) {
+    throw new Error(`WPT checkout not found: ${wptRoot}`);
+  }
+  if (!browser) {
+    throw new Error("missing browser; pass --browser or set PICOQUIC_WPT_BROWSER");
+  }
+
+  const command = resolveWptCommand(wptRoot);
+  const discovered = discoverTests(wptRoot);
+  if (expectedPath) {
+    loadExpectedManifest(resolve(expectedPath), discovered.tests);
+  }
+  const selected = selectTests(discovered.tests, selectors);
+  const testArgs = selected.map((test) => `webtransport/${test}`);
+  const runArgs = [
+    "run",
+    "--enable-webtransport-h3",
+    ...wptArgs,
+    browser,
+    ...testArgs
+  ];
+
+  const result = {
+    ok: true,
+    dryRun,
+    command,
+    cwd: wptRoot,
+    args: runArgs,
+    tests: selected,
+    server: "upstream-wpt-webtransport-h3"
+  };
+  if (expectedPath) {
+    result.expected = resolve(expectedPath);
+  }
+
+  if (dryRun) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  await runInteractive(command, runArgs, wptRoot);
+  console.log(JSON.stringify(result, null, 2));
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const command = args.shift();
 
   if (command === "list") {
     await commandList(args);
+  } else if (command === "run") {
+    await commandRun(args);
   } else if (command === "server-smoke") {
     await commandServerSmoke(args);
   } else {

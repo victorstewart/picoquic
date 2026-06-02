@@ -820,6 +820,16 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/fixtures/expected-unknown-test.json)
         set_tests_properties(picohttp_wt_wpt_expected_reject_unknown
                              PROPERTIES LABELS wt_wpt WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_wpt_run_dry
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/run-wpt.mjs
+                         run
+                         --wpt-root ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/fixtures/fake-wpt
+                         --browser chrome
+                         --test constructor.https.sub.any.js
+                         --dry-run)
+        set_tests_properties(picohttp_wt_wpt_run_dry
+                             PROPERTIES LABELS wt_wpt)
         add_test(NAME picohttp_wt_e2e_manifest
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
