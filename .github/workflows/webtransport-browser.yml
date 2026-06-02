@@ -76,5 +76,7 @@ jobs:
           cmake --build build -j$(sysctl -n hw.ncpu) --target pico_baton
 
       - name: Run Safari WebTransport baton smoke
+        env:
+          PICOQUIC_WT_SERVER_LOG: "1"
         run: |
           npx -y node@22 tests/webtransport/browser/run-safari.mjs

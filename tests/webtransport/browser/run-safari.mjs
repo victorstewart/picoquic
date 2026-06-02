@@ -32,6 +32,48 @@ function sleep(ms) {
   return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 }
 
+function terminateProcess(child, signal = "SIGTERM", timeoutMs = 3000) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve();
+  }
+  return new Promise((resolveTerminate) => {
+    let settled = false;
+    const done = () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        resolveTerminate();
+      }
+    };
+    const timer = setTimeout(() => {
+      try {
+        child.kill("SIGKILL");
+      } catch (_) {}
+      done();
+    }, timeoutMs);
+    child.once("exit", done);
+    try {
+      child.kill(signal);
+    } catch (_) {
+      done();
+    }
+  });
+}
+
+async function removeTree(path) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      rmSync(path, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (!["ENOTEMPTY", "EBUSY", "EPERM"].includes(error.code) || attempt === 4) {
+        throw error;
+      }
+      await sleep(100 * (attempt + 1));
+    }
+  }
+}
+
 function findOnPath(name) {
   if (name.includes("/") && existsSync(name)) {
     return name;
@@ -479,8 +521,10 @@ async function main() {
   } catch (error) {
     const output = serverOutput.trim();
     const driverText = driverOutput.trim();
+    const context = `page url: ${targetUrl}\nwt url: ${WT_URL}`;
     const details = [
       error.message,
+      `context:\n${context}`,
       output ? `server output:\n${output}` : "",
       driverText ? `safaridriver output:\n${driverText}` : ""
     ].filter(Boolean).join("\n");
@@ -491,12 +535,12 @@ async function main() {
         await webdriver(endpoint, "DELETE", `/session/${sessionId}`);
       } catch (_) {}
     }
-    driver.kill("SIGTERM");
-    server.kill("SIGTERM");
+    await terminateProcess(driver);
+    await terminateProcess(server);
     if (harness) {
       harness.close();
     }
-    rmSync(workDir, { recursive: true, force: true });
+    await removeTree(workDir);
   }
 }
 
