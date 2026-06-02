@@ -703,6 +703,7 @@
         "Origin-header",
         "origin-policy-allow",
         "WT-Protocol",
+        "session-diagnostics",
         "incoming-unidirectional-stream",
         "incoming-bidirectional-stream",
         "outgoing-unidirectional-stream",
@@ -740,6 +741,25 @@
         "postCloseTestsInclude": [
           "create-bidirectional-stream",
           "create-unidirectional-stream"
+        ],
+        "sessionDiagnosticsOk": true,
+        "sessionDiagnosticsTestsInclude": [
+          "ready-promise",
+          "closed-promise",
+          "protocol-property",
+          "incoming-bidirectional-readable",
+          "incoming-unidirectional-readable",
+          "create-bidirectional-stream-function",
+          "create-unidirectional-stream-function",
+          "datagrams-object",
+          "datagrams-readable",
+          "datagrams-writable-or-createWritable",
+          "reliability-optional",
+          "congestionControl-optional",
+          "supportsReliableOnly-optional",
+          "responseHeaders-optional",
+          "draining-optional",
+          "getStats-optional"
         ],
         "server": {
           "connectAcceptedMin": 1,
@@ -902,6 +922,7 @@
         "Origin-header",
         "origin-policy-allow",
         "WT-Protocol",
+        "session-diagnostics",
         "incoming-unidirectional-stream",
         "incoming-bidirectional-stream",
         "outgoing-unidirectional-stream",
@@ -939,6 +960,25 @@
         "postCloseTestsInclude": [
           "create-bidirectional-stream",
           "create-unidirectional-stream"
+        ],
+        "sessionDiagnosticsOk": true,
+        "sessionDiagnosticsTestsInclude": [
+          "ready-promise",
+          "closed-promise",
+          "protocol-property",
+          "incoming-bidirectional-readable",
+          "incoming-unidirectional-readable",
+          "create-bidirectional-stream-function",
+          "create-unidirectional-stream-function",
+          "datagrams-object",
+          "datagrams-readable",
+          "datagrams-writable-or-createWritable",
+          "reliability-optional",
+          "congestionControl-optional",
+          "supportsReliableOnly-optional",
+          "responseHeaders-optional",
+          "draining-optional",
+          "getStats-optional"
         ],
         "server": {
           "connectAcceptedMin": 1,
