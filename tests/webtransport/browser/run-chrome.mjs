@@ -22,6 +22,7 @@ const EXPECT_SENT = parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_SENT", [252, 254, 0
 const EXPECT_DATAGRAMS_RECEIVED =
   parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_DATAGRAMS_RECEIVED", null);
 const EXPECT_DATAGRAMS_SENT = parseOptionalIntegerEnv("PICOQUIC_WT_EXPECT_DATAGRAMS_SENT");
+const EXPECT_ORDERED = process.env.PICOQUIC_WT_EXPECT_ORDERED !== "0";
 /* W3C WebTransport requires allowPooling+serverCertificateHashes to throw, but
  * Chrome 148.0.7778.181 constructed instead during local validation. Record the
  * diagnostic by default and let browser/version-specific lanes opt into gating.
@@ -82,6 +83,17 @@ function parseOptionalIntegerEnv(name) {
     throw new Error(`${name} must be a non-negative integer`);
   }
   return parsed;
+}
+
+function equalExpectedBatonArray(actual, expected) {
+  if (!Array.isArray(actual)) {
+    return false;
+  }
+  if (EXPECT_ORDERED) {
+    return equalArray(actual, expected);
+  }
+  return equalArray([...actual].sort((a, b) => a - b),
+    [...expected].sort((a, b) => a - b));
 }
 
 function terminateProcess(child, signal = "SIGTERM", timeoutMs = 3000) {
@@ -434,10 +446,10 @@ function assertHarnessResult(result) {
       expected: USE_BYOB
     })}`);
   }
-  if (!equalArray(result.received, EXPECT_RECEIVED)) {
+  if (!equalExpectedBatonArray(result.received, EXPECT_RECEIVED)) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
   }
-  if (!equalArray(result.sent, EXPECT_SENT)) {
+  if (!equalExpectedBatonArray(result.sent, EXPECT_SENT)) {
     throw new Error(`unexpected sent baton sequence: ${JSON.stringify(result.sent)}`);
   }
   if (EXPECT_DATAGRAMS_RECEIVED &&

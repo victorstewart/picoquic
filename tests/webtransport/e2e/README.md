@@ -40,6 +40,12 @@ Use `datagramWritableOk` on positive scenarios that must prove
 `datagrams.writable` rejects a non-`BufferSource` chunk with `TypeError` while
 the main scenario still successfully sends and receives the exact expected
 baton datagram payload, such as `datagramsReceived: [252]`.
+Use `datagramsReceivedMin` when a positive scenario exercises concurrent lanes
+and only needs to prove browser datagram availability; HTTP/3 datagrams are
+unreliable, so duplicated or dropped baton datagram echoes are not a stream
+ordering failure. Set `sequenceOrderMatters: false` for concurrent baton stream
+scenarios where each expected byte must arrive exactly once, but cross-stream
+arrival order is intentionally not constrained.
 Use `datagramWritableTestsInclude` and `streamWritableTestsInclude` to require
 the exact bad-chunk diagnostic subtests that ran.
 Use `protocolConstructorTestsInclude`, `urlConstructorTestsInclude`, and

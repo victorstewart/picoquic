@@ -85,6 +85,7 @@ extern "C" {
     typedef struct st_wt_baton_incoming_t {
         int is_receiving;
         uint64_t receiving_stream_id; /* UINT64_MAX if unknown */
+        uint64_t completed_stream_id; /* Stream with baton received, waiting for FIN */
         uint64_t padding_expected;  /* UINT64_MAX if unknown */
         uint64_t padding_received; 
         uint8_t receive_buffer[8];
@@ -153,7 +154,7 @@ extern "C" {
     h3zero_stream_ctx_t* wt_baton_find_stream(wt_baton_ctx_t* ctx, uint64_t stream_id);
 
     int wt_baton_ctx_init(wt_baton_ctx_t* baton_ctx, h3zero_callback_ctx_t* h3_ctx, h3zero_stream_ctx_t* stream_ctx);
-    
+
     /* Web transport callback. This will be called from the web server
     * when the path points to a web transport callback
     */

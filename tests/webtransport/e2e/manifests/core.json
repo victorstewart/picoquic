@@ -818,9 +818,10 @@
         "requireDatagram": true,
         "constructorRequireUnreliable": true,
         "useByob": false,
+        "sequenceOrderMatters": false,
         "received": [251, 251, 253, 253, 255, 255],
         "sent": [252, 252, 254, 254, 0, 0],
-        "datagramsReceived": [252],
+        "datagramsReceivedMin": 1,
         "datagramsSent": 1,
         "eventsInclude": [
           "ready",

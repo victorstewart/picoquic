@@ -142,6 +142,7 @@ void wt_baton_set_receive_ready(wt_baton_ctx_t* baton_ctx)
     for (size_t i = 0; i < baton_ctx->nb_lanes; i++) {
         baton_ctx->incoming[i].is_receiving = 0;
         baton_ctx->incoming[i].receiving_stream_id = UINT64_MAX;
+        baton_ctx->incoming[i].completed_stream_id = UINT64_MAX;
         baton_ctx->incoming[i].padding_expected = UINT64_MAX;
     }
 }
@@ -337,6 +338,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
     wt_baton_ctx_t* baton_ctx = (wt_baton_ctx_t*)path_app_ctx;
     size_t receive_id = SIZE_MAX;
     size_t receive_available = SIZE_MAX;
+    size_t completed_id = SIZE_MAX;
+    int completed_fin = 0;
 
     /* Special case of data or fin received on the control stream.
      * The control stream should only carry capsule data, and these are
@@ -418,13 +421,28 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     receive_id = i;
                     break;
                 }
+                else if (baton_ctx->incoming[i].completed_stream_id == stream_ctx->stream_id) {
+                    completed_id = i;
+                }
                 else if (!baton_ctx->incoming[i].is_receiving) {
                     receive_available = i;
                 }
             }
 
             if (receive_id == SIZE_MAX) {
-                if (receive_available == SIZE_MAX) {
+                if (completed_id != SIZE_MAX) {
+                    if (length == 0 && is_fin) {
+                        baton_ctx->incoming[completed_id].completed_stream_id = UINT64_MAX;
+                        receive_id = completed_id;
+                        completed_fin = 1;
+                    }
+                    else {
+                        picoquic_log_app_message(cnx, "Received extra baton data on stream %" PRIu64 " after baton",
+                            stream_ctx->stream_id);
+                        ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_BRUH, "Too much data on stream!");
+                    }
+                }
+                else if (receive_available == SIZE_MAX) {
                     /* unexpected incoming stream */
                     picoquic_log_app_message(cnx, "Received baton data on wrong stream %" PRIu64 ", expected %" PRIu64,
                         stream_ctx->stream_id);
@@ -433,6 +451,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 else {
                     receive_id = receive_available;
                     baton_ctx->incoming[receive_available].receiving_stream_id = stream_ctx->stream_id;
+                    baton_ctx->incoming[receive_available].completed_stream_id = UINT64_MAX;
                     baton_ctx->incoming[receive_available].is_receiving = 1;
                     baton_ctx->incoming[receive_available].padding_expected = UINT64_MAX;
                     baton_ctx->incoming[receive_available].padding_received = 0;
@@ -443,9 +462,22 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             /* Process to receive the stream */
             if (ret == 0) {
                 wt_baton_incoming_t* incoming_ctx = &baton_ctx->incoming[receive_id];
+                int baton_checked = completed_fin;
 
                 if (length > 0) {
                     ret = wt_baton_incoming_data(cnx, baton_ctx, incoming_ctx, bytes, length);
+                }
+                if (ret == 0 && !incoming_ctx->is_receiving &&
+                    incoming_ctx->receiving_stream_id == stream_ctx->stream_id) {
+                    uint8_t baton_received = incoming_ctx->baton_received;
+
+                    incoming_ctx->receiving_stream_id = UINT64_MAX;
+                    incoming_ctx->completed_stream_id = is_fin ? UINT64_MAX : stream_ctx->stream_id;
+                    incoming_ctx->padding_expected = UINT64_MAX;
+                    incoming_ctx->padding_received = 0;
+                    incoming_ctx->nb_receive_buffer_bytes = 0;
+                    ret = wt_baton_check(cnx, stream_ctx, baton_ctx, baton_received);
+                    baton_checked = 1;
                 }
                 /* process FIN, including doing the baton check */
                 if (is_fin) {
@@ -464,7 +496,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                                 ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_BRUH, "Fin stream before baton");
                             }
                         }
-                        else if (ret == 0) {
+                        else if (ret == 0 && !baton_checked) {
                             ret = wt_baton_check(cnx, stream_ctx, baton_ctx, incoming_ctx->baton_received);
                         }
                     }

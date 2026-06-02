@@ -285,9 +285,13 @@ function parseJsonOutput(output) {
   throw new Error(`runner did not emit JSON: ${trimmed.slice(-2048)}`);
 }
 
-function assertArrayEquals(id, name, actual, expected) {
-  if (!Array.isArray(actual) || actual.length !== expected.length ||
-    actual.some((value, index) => value !== expected[index])) {
+function assertArrayEquals(id, name, actual, expected, orderMatters = true) {
+  const actualArray = orderMatters ? actual : Array.isArray(actual) ?
+    [...actual].sort((a, b) => a - b) : actual;
+  const expectedArray = orderMatters ? expected : [...expected].sort((a, b) => a - b);
+
+  if (!Array.isArray(actualArray) || actualArray.length !== expectedArray.length ||
+    actualArray.some((value, index) => value !== expectedArray[index])) {
     throw new Error(`${id}: expected ${name} ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
   }
 }
@@ -307,6 +311,8 @@ function hasExpectedValue(expect, name) {
 }
 
 function assertScenarioResult(id, result, expect) {
+  const sequenceOrderMatters = expect.sequenceOrderMatters !== false;
+
   if (result.ok !== expect.ok) {
     throw new Error(`${id}: expected ok=${expect.ok}, got ${result.ok}`);
   }
@@ -316,10 +322,12 @@ function assertScenarioResult(id, result, expect) {
     }
   }
   if (expect.received) {
-    assertArrayEquals(id, "received", result.received, expect.received);
+    assertArrayEquals(id, "received", result.received, expect.received,
+      sequenceOrderMatters);
   }
   if (expect.sent) {
-    assertArrayEquals(id, "sent", result.sent, expect.sent);
+    assertArrayEquals(id, "sent", result.sent, expect.sent,
+      sequenceOrderMatters);
   }
   if (expect.datagramsReceived) {
     assertArrayEquals(id, "datagramsReceived", result.datagramsReceived, expect.datagramsReceived);
@@ -497,6 +505,9 @@ async function runScenario(browser, scenario, vars) {
   }
   if (Number.isInteger(scenarioExpect.datagramsSent)) {
     env.PICOQUIC_WT_EXPECT_DATAGRAMS_SENT = String(scenarioExpect.datagramsSent);
+  }
+  if (scenarioExpect.sequenceOrderMatters === false) {
+    env.PICOQUIC_WT_EXPECT_ORDERED = "0";
   }
   if (rendered.certificateHashMode === "wrong") {
     env.PICOQUIC_WT_CERT_HASH = WRONG_CERT_HASH;
