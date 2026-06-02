@@ -2584,6 +2584,58 @@ static int picowt_receive_stream_error_callback(picoquic_cnx_t* UNUSED(cnx),
     return 0;
 }
 
+static int picowt_webtransport_error_accessor_case(void)
+{
+    h3zero_stream_ctx_t stream_ctx = { 0 };
+    uint32_t app_error = 0xa5a5a5a5;
+    int ret = 0;
+
+    if (h3zero_stream_get_webtransport_error(NULL,
+        picohttp_callback_reset, &app_error) == 0 ||
+        app_error != 0xa5a5a5a5) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (h3zero_stream_get_webtransport_error(&stream_ctx,
+            picohttp_callback_reset, &app_error) == 0 ||
+            app_error != 0xa5a5a5a5)) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        stream_ctx.last_reset_webtransport_error = 0x12345678;
+        stream_ctx.last_reset_webtransport_error_available = 1;
+        if (h3zero_stream_get_webtransport_error(&stream_ctx,
+            picohttp_callback_reset, &app_error) != 0 ||
+            app_error != 0x12345678 ||
+            h3zero_stream_get_webtransport_error(&stream_ctx,
+                picohttp_callback_reset, NULL) != 0) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        app_error = 0xa5a5a5a5;
+        if (h3zero_stream_get_webtransport_error(&stream_ctx,
+            picohttp_callback_stop_sending, &app_error) == 0 ||
+            app_error != 0xa5a5a5a5 ||
+            h3zero_stream_get_webtransport_error(&stream_ctx,
+                picohttp_callback_post_data, &app_error) == 0 ||
+            app_error != 0xa5a5a5a5) {
+            ret = -1;
+        }
+    }
+    if (ret == 0) {
+        stream_ctx.last_stop_sending_webtransport_error = UINT32_MAX;
+        stream_ctx.last_stop_sending_webtransport_error_available = 1;
+        if (h3zero_stream_get_webtransport_error(&stream_ctx,
+            picohttp_callback_stop_sending, &app_error) != 0 ||
+            app_error != UINT32_MAX) {
+            ret = -1;
+        }
+    }
+
+    return ret;
+}
+
 static int picowt_receive_stream_error_case(
     uint64_t stream_id, picoquic_call_back_event_t event, uint64_t h3_error,
     int expect_app_error, uint32_t expected_app_error)
@@ -2650,9 +2702,9 @@ static int picowt_receive_stream_error_case(
 int picowt_receive_stream_error_test(void)
 {
     uint32_t app_error = 0;
-    int ret = 0;
+    int ret = picowt_webtransport_error_accessor_case();
 
-    if (h3zero_webtransport_error_to_app(
+    if (ret == 0 && (h3zero_webtransport_error_to_app(
         H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST, &app_error) != 0 ||
         app_error != 0 ||
         h3zero_webtransport_error_to_app(
@@ -2661,7 +2713,7 @@ int picowt_receive_stream_error_test(void)
         h3zero_webtransport_error_to_app(
             H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST + 0x1e, &app_error) == 0 ||
         h3zero_webtransport_error_to_app(
-            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST - 1, &app_error) == 0) {
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST - 1, &app_error) == 0)) {
         ret = -1;
     }
     if (ret == 0) {
