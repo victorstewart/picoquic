@@ -485,6 +485,19 @@ async function runScenario(browser, scenario, vars) {
   if (rendered.certificateHashAlgorithm) {
     env.PICOQUIC_WT_CERT_HASH_ALG = rendered.certificateHashAlgorithm;
   }
+  if (Array.isArray(scenarioExpect.received)) {
+    env.PICOQUIC_WT_EXPECT_RECEIVED = JSON.stringify(scenarioExpect.received);
+  }
+  if (Array.isArray(scenarioExpect.sent)) {
+    env.PICOQUIC_WT_EXPECT_SENT = JSON.stringify(scenarioExpect.sent);
+  }
+  if (Array.isArray(scenarioExpect.datagramsReceived)) {
+    env.PICOQUIC_WT_EXPECT_DATAGRAMS_RECEIVED =
+      JSON.stringify(scenarioExpect.datagramsReceived);
+  }
+  if (Number.isInteger(scenarioExpect.datagramsSent)) {
+    env.PICOQUIC_WT_EXPECT_DATAGRAMS_SENT = String(scenarioExpect.datagramsSent);
+  }
   if (rendered.certificateHashMode === "wrong") {
     env.PICOQUIC_WT_CERT_HASH = WRONG_CERT_HASH;
     env.PICOQUIC_WT_IGNORE_CERT_ERRORS = "0";

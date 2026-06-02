@@ -59,6 +59,22 @@
           "writableBadChunkCloseReceived": false
         }
       }
+    },
+    {
+      "scenario": "baton.core.two-lane-compact-default-reader",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari stable throws NotSupportedError for allowPooling with serverCertificateHashes, matching the W3C constructor requirement, but Safari 26.4 CI has not emitted an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path.",
+      "evidence": "Same positive-path caveat as baton.core.compact-default-reader: GitHub run 26796690452 recorded optionsConstructor.ok=true and run 26798507855 showed server.closeSessionReceived stayed 0 after diagnostics. Run 26830997543 passed Safari core E2E including the medium-padded positive data path before this two-lane scenario was added.",
+      "expect": {
+        "optionsConstructorOk": true,
+        "server": {
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": false
+        }
+      }
     }
   ]
 }

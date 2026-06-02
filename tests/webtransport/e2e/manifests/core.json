@@ -778,6 +778,96 @@
           "writableBadChunkCloseReceived": true
         }
       }
+    },
+    {
+      "id": "baton.core.two-lane-compact-default-reader",
+      "title": "Baton stream/datagram/protocol exchange with two compact lanes",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=2&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "URL-constructor",
+        "constructor-options-observed",
+        "allowPooling-serverCertificateHashes-observed",
+        "ready",
+        "closed",
+        "Origin-header",
+        "origin-policy-allow",
+        "WT-Protocol",
+        "default-reader",
+        "two-lane-baton",
+        "concurrent-incoming-unidirectional-streams",
+        "concurrent-incoming-bidirectional-streams",
+        "concurrent-outgoing-unidirectional-streams",
+        "concurrent-outgoing-bidirectional-streams",
+        "stream-bad-chunk",
+        "unidirectional-stream-bad-chunk",
+        "bidirectional-stream-bad-chunk",
+        "datagram-send",
+        "datagram-bad-chunk",
+        "datagram-receive"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=2&padding=0",
+        "protocol": "devious-baton-00",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "received": [251, 251, 253, 253, 255, 255],
+        "sent": [252, 252, 254, 254, 0, 0],
+        "datagramsReceived": [252],
+        "datagramsSent": 1,
+        "eventsInclude": [
+          "ready",
+          "received 251 on remote-uni",
+          "datagram sent",
+          "sent 252",
+          "datagram 252",
+          "received 253 on local-bidi",
+          "sent 254",
+          "received 255 on remote-bidi",
+          "sent 0",
+          "closed"
+        ],
+        "datagramWritableOk": true,
+        "datagramWritableTestsInclude": ["string-chunk"],
+        "streamWritableOk": true,
+        "streamWritableTestsInclude": [
+          "unidirectional-string-chunk",
+          "bidirectional-string-chunk"
+        ],
+        "protocolConstructorOk": true,
+        "protocolConstructorTestsInclude": [
+          "valid-protocol",
+          "duplicate-protocol",
+          "empty-protocol",
+          "long-protocol",
+          "non-isomorphic-protocol"
+        ],
+        "urlConstructorOk": true,
+        "urlConstructorTestsInclude": [
+          "http-url",
+          "url-fragment",
+          "malformed-url"
+        ],
+        "optionsConstructorTestsInclude": [
+          "allow-pooling-with-certificate-hash"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "closeSessionReceivedMin": 1,
+          "writableBadChunkCloseReceived": true
+        }
+      }
     }
   ]
 }

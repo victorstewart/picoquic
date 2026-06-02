@@ -17,6 +17,11 @@ const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
 const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
+const EXPECT_RECEIVED = parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_RECEIVED", [251, 253, 255]);
+const EXPECT_SENT = parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_SENT", [252, 254, 0]);
+const EXPECT_DATAGRAMS_RECEIVED =
+  parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_DATAGRAMS_RECEIVED", null);
+const EXPECT_DATAGRAMS_SENT = parseOptionalIntegerEnv("PICOQUIC_WT_EXPECT_DATAGRAMS_SENT");
 /* W3C WebTransport requires allowPooling+serverCertificateHashes to throw, but
  * Chrome 148.0.7778.181 constructed instead during local validation. Record the
  * diagnostic by default and let browser/version-specific lanes opt into gating.
@@ -52,6 +57,31 @@ const chromeNames = [
 
 function sleep(ms) {
   return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
+}
+
+function parseIntegerArrayEnv(name, fallback) {
+  const value = process.env[name];
+  if (!value) {
+    return fallback;
+  }
+  const parsed = JSON.parse(value);
+  if (!Array.isArray(parsed) || !parsed.every((entry) =>
+    Number.isInteger(entry) && entry >= 0 && entry <= 255)) {
+    throw new Error(`${name} must be a JSON array of baton byte values`);
+  }
+  return parsed;
+}
+
+function parseOptionalIntegerEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${name} must be a non-negative integer`);
+  }
+  return parsed;
 }
 
 function terminateProcess(child, signal = "SIGTERM", timeoutMs = 3000) {
@@ -404,11 +434,18 @@ function assertHarnessResult(result) {
       expected: USE_BYOB
     })}`);
   }
-  if (!equalArray(result.received, [251, 253, 255])) {
+  if (!equalArray(result.received, EXPECT_RECEIVED)) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
   }
-  if (!equalArray(result.sent, [252, 254, 0])) {
+  if (!equalArray(result.sent, EXPECT_SENT)) {
     throw new Error(`unexpected sent baton sequence: ${JSON.stringify(result.sent)}`);
+  }
+  if (EXPECT_DATAGRAMS_RECEIVED &&
+    !equalArray(result.datagramsReceived, EXPECT_DATAGRAMS_RECEIVED)) {
+    throw new Error(`unexpected received datagram sequence: ${JSON.stringify(result.datagramsReceived)}`);
+  }
+  if (EXPECT_DATAGRAMS_SENT !== null && result.datagramsSent !== EXPECT_DATAGRAMS_SENT) {
+    throw new Error(`unexpected datagram sent count: ${JSON.stringify(result.datagramsSent)}`);
   }
   if (REQUIRE_DATAGRAM && (!Array.isArray(result.datagramsReceived) ||
     result.datagramsReceived.length === 0)) {
