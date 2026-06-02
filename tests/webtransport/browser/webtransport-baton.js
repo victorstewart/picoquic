@@ -526,6 +526,105 @@
     return result;
   }
 
+  async function runWritableBadChunkTests(options) {
+    if (typeof WebTransport !== "function") {
+      throw new Error("WebTransport is unavailable");
+    }
+
+    var result = {
+      ok: false,
+      datagramWritable: {
+        ok: false,
+        tests: []
+      },
+      streamWritable: {
+        ok: false,
+        tests: []
+      }
+    };
+    var url = options.url || defaultTarget();
+    var transport = null;
+    var datagramWriter = null;
+    var streamWriter = null;
+
+    function record(target, name, ok, detail) {
+      target.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    function finish(target) {
+      target.ok = target.tests.length > 0 && target.tests.every(function (entry) {
+        return entry.ok;
+      });
+    }
+
+    try {
+      transport = new WebTransport(url, buildTransportOptions(options));
+      try {
+        transport.closed.catch(function () {});
+      } catch (_) {}
+      await transport.ready;
+
+      var datagramWritable = getDatagramWritable(transport.datagrams);
+      if (!datagramWritable) {
+        record(result.datagramWritable, "writable-available", false,
+          "WebTransport datagrams are unavailable");
+      } else {
+        datagramWriter = datagramWritable.getWriter();
+        await datagramWriter.ready;
+        try {
+          await datagramWriter.write("not a BufferSource");
+          record(result.datagramWritable, "string-chunk", false, "write resolved");
+        } catch (error) {
+          record(result.datagramWritable, "string-chunk",
+            error && error.name === "TypeError", errorText(error));
+        }
+      }
+
+      var writable = await transport.createUnidirectionalStream();
+      streamWriter = writable.getWriter();
+      await streamWriter.ready;
+      try {
+        await streamWriter.write("not a BufferSource");
+        record(result.streamWritable, "string-chunk", false, "write resolved");
+      } catch (error) {
+        record(result.streamWritable, "string-chunk",
+          error && error.name === "TypeError", errorText(error));
+      }
+    } catch (error) {
+      if (result.datagramWritable.tests.length === 0) {
+        record(result.datagramWritable, "setup", false, errorText(error));
+      }
+      if (result.streamWritable.tests.length === 0) {
+        record(result.streamWritable, "setup", false, errorText(error));
+      }
+    } finally {
+      if (streamWriter) {
+        try {
+          streamWriter.releaseLock();
+        } catch (_) {}
+      }
+      if (datagramWriter) {
+        try {
+          datagramWriter.releaseLock();
+        } catch (_) {}
+      }
+      if (transport) {
+        try {
+          transport.close({ closeCode: 0, reason: "writable-bad-chunk-test" });
+        } catch (_) {}
+      }
+    }
+
+    finish(result.datagramWritable);
+    finish(result.streamWritable);
+    result.ok = result.datagramWritable.ok && result.streamWritable.ok;
+    return result;
+  }
+
   function withTimeout(promise, timeoutMs, onTimeout) {
     var timer = 0;
     var timeout = new Promise(function (_, reject) {
@@ -887,6 +986,7 @@
     runOptionsConstructorTests: runOptionsConstructorTests,
     runDatagramWritableTests: runDatagramWritableTests,
     runStreamWritableTests: runStreamWritableTests,
+    runWritableBadChunkTests: runWritableBadChunkTests,
     runBatonTest: runBatonTest
   };
 

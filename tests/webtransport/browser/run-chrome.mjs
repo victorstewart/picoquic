@@ -475,7 +475,7 @@ async function readOptionsConstructorResult(cdp, certificateHash) {
   return result.result.value;
 }
 
-async function readDatagramWritableResult(cdp, certificateHash) {
+async function readWritableBadChunkResult(cdp, certificateHash) {
   const options = JSON.stringify({
     url: WT_URL,
     certificateHash,
@@ -483,7 +483,7 @@ async function readDatagramWritableResult(cdp, certificateHash) {
     requireDatagram: REQUIRE_DATAGRAM
   });
   const result = await cdp.send("Runtime.evaluate", {
-    expression: `window.picoquicWebTransportBaton.runDatagramWritableTests(${options})`,
+    expression: `window.picoquicWebTransportBaton.runWritableBadChunkTests(${options})`,
     awaitPromise: true,
     returnByValue: true
   });
@@ -492,29 +492,7 @@ async function readDatagramWritableResult(cdp, certificateHash) {
     const text = result.exceptionDetails.exception &&
       result.exceptionDetails.exception.description;
     throw new Error(text || result.exceptionDetails.text ||
-      "browser datagram writable tests failed");
-  }
-  return result.result.value;
-}
-
-async function readStreamWritableResult(cdp, certificateHash) {
-  const options = JSON.stringify({
-    url: WT_URL,
-    certificateHash,
-    protocol: PROTOCOL,
-    requireDatagram: REQUIRE_DATAGRAM
-  });
-  const result = await cdp.send("Runtime.evaluate", {
-    expression: `window.picoquicWebTransportBaton.runStreamWritableTests(${options})`,
-    awaitPromise: true,
-    returnByValue: true
-  });
-
-  if (result.exceptionDetails) {
-    const text = result.exceptionDetails.exception &&
-      result.exceptionDetails.exception.description;
-    throw new Error(text || result.exceptionDetails.text ||
-      "browser stream writable tests failed");
+      "browser writable bad chunk tests failed");
   }
   return result.result.value;
 }
@@ -657,9 +635,10 @@ async function main() {
       if (REQUIRE_OPTIONS_CONSTRUCTOR) {
         assertOptionsConstructorResult(result.optionsConstructor);
       }
-      result.datagramWritable = await readDatagramWritableResult(cdp, certConfig.hash);
+      const writableBadChunk = await readWritableBadChunkResult(cdp, certConfig.hash);
+      result.datagramWritable = writableBadChunk.datagramWritable;
       assertDatagramWritableResult(result.datagramWritable);
-      result.streamWritable = await readStreamWritableResult(cdp, certConfig.hash);
+      result.streamWritable = writableBadChunk.streamWritable;
       assertStreamWritableResult(result.streamWritable);
     }
     console.log(JSON.stringify(result, null, 2));

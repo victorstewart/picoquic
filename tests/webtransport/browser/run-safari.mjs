@@ -533,7 +533,7 @@ async function readOptionsConstructorResult(endpoint, sessionId, certificateHash
   return wrapped.value;
 }
 
-async function readDatagramWritableResult(endpoint, sessionId, certificateHash) {
+async function readWritableBadChunkResult(endpoint, sessionId, certificateHash) {
   const wrapped = await executeAsyncScript(endpoint, sessionId, `
     const done = arguments[arguments.length - 1];
     const options = arguments[0];
@@ -544,7 +544,7 @@ async function readDatagramWritableResult(endpoint, sessionId, certificateHash) 
       return String(error);
     }
     Promise.resolve(
-      window.picoquicWebTransportBaton.runDatagramWritableTests(options)
+      window.picoquicWebTransportBaton.runWritableBadChunkTests(options)
     ).then(
       (value) => done({ ok: true, value }),
       (error) => done({ ok: false, error: errorText(error) })
@@ -558,37 +558,7 @@ async function readDatagramWritableResult(endpoint, sessionId, certificateHash) 
 
   if (!wrapped || wrapped.ok !== true) {
     throw new Error((wrapped && wrapped.error) ||
-      "browser datagram writable tests failed");
-  }
-  return wrapped.value;
-}
-
-async function readStreamWritableResult(endpoint, sessionId, certificateHash) {
-  const wrapped = await executeAsyncScript(endpoint, sessionId, `
-    const done = arguments[arguments.length - 1];
-    const options = arguments[0];
-    function errorText(error) {
-      if (error && typeof error === "object") {
-        return (error.name ? error.name + ": " : "") + (error.message || String(error));
-      }
-      return String(error);
-    }
-    Promise.resolve(
-      window.picoquicWebTransportBaton.runStreamWritableTests(options)
-    ).then(
-      (value) => done({ ok: true, value }),
-      (error) => done({ ok: false, error: errorText(error) })
-    );
-  `, [{
-    url: WT_URL,
-    certificateHash,
-    protocol: PROTOCOL,
-    requireDatagram: REQUIRE_DATAGRAM
-  }]);
-
-  if (!wrapped || wrapped.ok !== true) {
-    throw new Error((wrapped && wrapped.error) ||
-      "browser stream writable tests failed");
+      "browser writable bad chunk tests failed");
   }
   return wrapped.value;
 }
@@ -728,11 +698,11 @@ async function main() {
       if (REQUIRE_OPTIONS_CONSTRUCTOR) {
         assertOptionsConstructorResult(result.optionsConstructor);
       }
-      result.datagramWritable = await readDatagramWritableResult(endpoint,
+      const writableBadChunk = await readWritableBadChunkResult(endpoint,
         sessionId, certConfig.hash);
+      result.datagramWritable = writableBadChunk.datagramWritable;
       assertDatagramWritableResult(result.datagramWritable);
-      result.streamWritable = await readStreamWritableResult(endpoint,
-        sessionId, certConfig.hash);
+      result.streamWritable = writableBadChunk.streamWritable;
       assertStreamWritableResult(result.streamWritable);
     }
     console.log(JSON.stringify(result, null, 2));
