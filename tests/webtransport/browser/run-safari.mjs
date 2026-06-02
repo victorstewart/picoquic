@@ -322,7 +322,7 @@ async function newSafariSession(endpoint) {
     if (!value || !value.sessionId) {
       throw new Error(`Safari session response did not include sessionId: ${JSON.stringify(value)}`);
     }
-    return value.sessionId;
+    return value;
   } catch (error) {
     if (/Allow remote automation|remote automation/i.test(error.message)) {
       throw new Error(
@@ -456,6 +456,18 @@ function assertProtocolConstructorResult(result) {
   }
 }
 
+function summarizeCapabilities(capabilities) {
+  if (!capabilities || typeof capabilities !== "object") {
+    return {};
+  }
+  return {
+    browserName: capabilities.browserName || "",
+    browserVersion: capabilities.browserVersion || "",
+    platformName: capabilities.platformName || "",
+    safariUseSimulator: capabilities.safari_useSimulator || capabilities["safari:useSimulator"] || false
+  };
+}
+
 async function main() {
   assertFile(BATON, "pico_baton");
 
@@ -500,10 +512,13 @@ async function main() {
 
   const endpoint = `http://127.0.0.1:${SAFARI_DRIVER_PORT}`;
   let sessionId = "";
+  let browserCapabilities = {};
   try {
     await waitForServer(server);
     await waitForDriver(endpoint, () => driverOutput.trim());
-    sessionId = await newSafariSession(endpoint);
+    const session = await newSafariSession(endpoint);
+    sessionId = session.sessionId;
+    browserCapabilities = summarizeCapabilities(session.capabilities);
     await webdriver(endpoint, "POST", `/session/${sessionId}/timeouts`, {
       script: TIMEOUT_MS + 5000,
       pageLoad: TIMEOUT_MS + 5000
@@ -513,6 +528,7 @@ async function main() {
     });
     await waitForHarness(endpoint, sessionId);
     const result = await readHarnessResult(endpoint, sessionId);
+    result.browser = browserCapabilities;
     assertHarnessResult(result);
     result.protocolConstructor = await readProtocolConstructorResult(endpoint,
       sessionId, certConfig.hash);
@@ -525,6 +541,8 @@ async function main() {
     const details = [
       error.message,
       `context:\n${context}`,
+      Object.keys(browserCapabilities).length > 0 ?
+        `browser capabilities:\n${JSON.stringify(browserCapabilities, null, 2)}` : "",
       output ? `server output:\n${output}` : "",
       driverText ? `safaridriver output:\n${driverText}` : ""
     ].filter(Boolean).join("\n");

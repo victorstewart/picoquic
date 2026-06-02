@@ -348,6 +348,7 @@
       protocol: "",
       events: []
     };
+    window.__picoquicWebTransportProgress = result;
     var timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
     var transport = new WebTransport(options.url, buildTransportOptions(options));
     var finished = false;
@@ -362,6 +363,7 @@
 
     function note(event) {
       result.events.push({ t: nowMs() - result.startedMs, event: event });
+      window.__picoquicWebTransportProgress = result;
       if (options.onProgress) {
         options.onProgress(result);
       }
@@ -394,6 +396,7 @@
       }
       finished = true;
       result.error = errorText(error);
+      note("error " + result.error);
       rejectDone(error);
     }
 
@@ -468,6 +471,7 @@
     }
 
     async function handleBatonStream(readable, mode, stream) {
+      note("reading " + mode);
       var baton = await readBaton(readable);
       result.received.push(baton);
       note("received " + baton + " on " + mode);
@@ -528,41 +532,50 @@
       }
     }
 
-    await transport.ready;
-    result.readyMs = nowMs() - result.startedMs;
-    result.protocol = transport.protocol || "";
-    if (options.requireProtocol !== false &&
-      options.protocol && result.protocol !== options.protocol) {
-      throw new Error("unexpected WebTransport protocol '" + result.protocol + "'");
-    }
-    note("ready");
-
-    transport.closed.then(markClosed, function (error) {
-      fail(error, false);
-    });
-
-    track(acceptUnidirectional(), true);
-    track(acceptBidirectional(), true);
-    track(readDatagrams(), true);
-
-    var datagramWritable = getDatagramWritable(transport.datagrams);
-    if (datagramWritable) {
-      var datagramWriter = datagramWritable.getWriter();
-      try {
-        await datagramWriter.ready;
-        await datagramWriter.write(makeBatonPacket(42, 0));
-      } finally {
-        datagramWriter.releaseLock();
+    try {
+      note("connecting");
+      await transport.ready;
+      result.readyMs = nowMs() - result.startedMs;
+      result.protocol = transport.protocol || "";
+      if (options.requireProtocol !== false &&
+        options.protocol && result.protocol !== options.protocol) {
+        throw new Error("unexpected WebTransport protocol '" + result.protocol + "'");
       }
-      result.datagramsSent = 1;
-      note("datagram sent");
-    }
+      note("ready");
 
-    return withTimeout(done, timeoutMs, function () {
-      try {
-        transport.close({ closeCode: 1, reason: "timeout" });
-      } catch (_) {}
-    });
+      transport.closed.then(markClosed, function (error) {
+        fail(error, false);
+      });
+
+      track(acceptUnidirectional(), true);
+      track(acceptBidirectional(), true);
+      track(readDatagrams(), true);
+
+      var datagramWritable = getDatagramWritable(transport.datagrams);
+      if (datagramWritable) {
+        var datagramWriter = datagramWritable.getWriter();
+        try {
+          await datagramWriter.ready;
+          await datagramWriter.write(makeBatonPacket(42, 0));
+        } finally {
+          datagramWriter.releaseLock();
+        }
+        result.datagramsSent = 1;
+        note("datagram sent");
+      }
+
+      return await withTimeout(done, timeoutMs, function () {
+        try {
+          transport.close({ closeCode: 1, reason: "timeout" });
+        } catch (_) {}
+      });
+    } catch (error) {
+      if (!result.error) {
+        result.error = errorText(error);
+        note("error " + result.error);
+      }
+      throw error;
+    }
   }
 
   function setText(id, text) {
@@ -608,6 +621,7 @@
       setText("state", "pass");
       return result;
     } catch (error) {
+      var progress = window.__picoquicWebTransportProgress;
       var failed = {
         ok: false,
         url: options.url,
@@ -619,10 +633,15 @@
         protocol: "",
         error: errorText(error)
       };
+      if (progress && progress.url === options.url) {
+        failed = progress;
+        failed.ok = false;
+        failed.error = failed.error || errorText(error);
+      }
       render(failed);
       root.dataset.result = "fail";
       setText("state", "fail");
-      throw error;
+      return failed;
     } finally {
       button.disabled = false;
     }
