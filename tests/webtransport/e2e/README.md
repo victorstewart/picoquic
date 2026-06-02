@@ -36,7 +36,8 @@ bidirectional stream writers.
 Positive scenarios also assert server-side close-session evidence from the
 diagnostic `transport.close({ closeCode: 0, reason: "writable-bad-chunk-test" })`
 path through `server.closeSessionReceivedMin` and
-`server.writableBadChunkCloseReceived`.
+`server.writableBadChunkCloseReceived`. Browser expected-result files may
+override these server expectations only with browser/version evidence.
 
 Run the portable core scenario in Chrome:
 

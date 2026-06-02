@@ -15,13 +15,17 @@
     {
       "scenario": "baton.core.compact-default-reader",
       "status": "pass",
-      "category": "conformant",
+      "category": "browser-bug",
       "browserVersion": "26.4",
       "platform": "macOS",
-      "reason": "Safari stable throws NotSupportedError when allowPooling is true and serverCertificateHashes is non-empty, matching the W3C WebTransport constructor requirement.",
-      "evidence": "GitHub run 26796690452 on Safari 26.4 macOS recorded optionsConstructor.ok=true with detail 'NotSupportedError: The operation is not supported.' for baton.core.compact-default-reader.",
+      "reason": "Safari stable throws NotSupportedError when allowPooling is true and serverCertificateHashes is non-empty, matching the W3C WebTransport constructor requirement, but Safari 26.4 CI did not emit an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path.",
+      "evidence": "GitHub run 26796690452 on Safari 26.4 macOS recorded optionsConstructor.ok=true with detail 'NotSupportedError: The operation is not supported.' for baton.core.compact-default-reader. GitHub run 26798507855 passed Safari baton smoke but failed core E2E because server.closeSessionReceived stayed 0 for baton.core.compact-default-reader after diagnostics.",
       "expect": {
-        "optionsConstructorOk": true
+        "optionsConstructorOk": true,
+        "server": {
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": false
+        }
       }
     }
   ]
