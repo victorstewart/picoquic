@@ -78,5 +78,10 @@ jobs:
       - name: Run Safari WebTransport baton smoke
         env:
           PICOQUIC_WT_SERVER_LOG: "1"
+          # Safari 26.4 on the macos-26 GitHub image rejects the first BYOB
+          # read from an incoming WebTransport stream with NetworkError after
+          # ready has resolved. Keep the smoke on the default reader path; BYOB
+          # coverage belongs in a separate browser expected-results matrix.
+          PICOQUIC_WT_USE_BYOB: "0"
         run: |
           npx -y node@22 tests/webtransport/browser/run-safari.mjs

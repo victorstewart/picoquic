@@ -14,6 +14,7 @@ const WEB_ROOT = process.env.PICOQUIC_WT_WEB_ROOT ||
 const PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
+const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const SAFARI_DRIVER_PORT = Number(process.env.PICOQUIC_WT_SAFARI_DRIVER_PORT || 9444);
 const HARNESS_PORT = Number(process.env.PICOQUIC_WT_HARNESS_PORT || 8080);
@@ -172,6 +173,9 @@ function buildPageUrl(pageUrl, certificateHash) {
   url.searchParams.set("certHash", certificateHash);
   if (!REQUIRE_DATAGRAM) {
     url.searchParams.set("requireDatagram", "0");
+  }
+  if (!USE_BYOB) {
+    url.searchParams.set("useByob", "0");
   }
   return url.href;
 }
@@ -407,6 +411,12 @@ function assertHarnessResult(result) {
       requireDatagram: result.requireDatagram,
       constructorRequireUnreliable: result.constructorRequireUnreliable,
       expected: REQUIRE_DATAGRAM
+    })}`);
+  }
+  if (result.useByob !== USE_BYOB) {
+    throw new Error(`unexpected stream reader mode: ${JSON.stringify({
+      useByob: result.useByob,
+      expected: USE_BYOB
     })}`);
   }
   if (!equalArray(result.received, [251, 253, 255])) {

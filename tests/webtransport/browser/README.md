@@ -47,6 +47,9 @@ provided, `serverCertificateHashes: [{ algorithm: "sha-256", value }]`. Add
 `requireDatagram=0` to the page URL, or set `PICOQUIC_WT_REQUIRE_DATAGRAM=0`
 for `run-chrome.mjs`, to run a scenario that does not require unreliable
 datagram support in the `WebTransport` constructor.
+Add `useByob=0` to the page URL, or set `PICOQUIC_WT_USE_BYOB=0` for the
+browser runners, to exercise WebTransport receive streams through default
+readers instead of BYOB readers.
 Certificate hash authentication requires a browser-acceptable X.509v3 leaf
 certificate, normally P-256 ECDSA, with a validity period under two weeks. A
 local cert/hash pair can be made with:

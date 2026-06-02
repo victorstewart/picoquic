@@ -161,31 +161,33 @@
     return this.baton;
   };
 
-  async function readBaton(readable) {
+  async function readBaton(readable, useByob) {
     var decoder = new BatonDecoder(MAX_PACKET_BYTES);
     var byobReader = null;
 
-    try {
-      byobReader = readable.getReader({ mode: "byob" });
-      var buffer = new ArrayBuffer(READ_BUFFER_SIZE);
-      while (true) {
-        var result = await byobReader.read(new Uint8Array(buffer));
-        if (result.done) {
-          byobReader.releaseLock();
-          return decoder.finish();
+    if (useByob !== false) {
+      try {
+        byobReader = readable.getReader({ mode: "byob" });
+        var buffer = new ArrayBuffer(READ_BUFFER_SIZE);
+        while (true) {
+          var result = await byobReader.read(new Uint8Array(buffer));
+          if (result.done) {
+            byobReader.releaseLock();
+            return decoder.finish();
+          }
+          decoder.push(result.value);
+          buffer = result.value.buffer.byteLength >= READ_BUFFER_SIZE ?
+            result.value.buffer : new ArrayBuffer(READ_BUFFER_SIZE);
         }
-        decoder.push(result.value);
-        buffer = result.value.buffer.byteLength >= READ_BUFFER_SIZE ?
-          result.value.buffer : new ArrayBuffer(READ_BUFFER_SIZE);
-      }
-    } catch (error) {
-      if (byobReader) {
-        try {
-          byobReader.releaseLock();
-        } catch (_) {}
-      }
-      if (!(error instanceof TypeError) && !/byob|byte stream/i.test(errorText(error))) {
-        throw error;
+      } catch (error) {
+        if (byobReader) {
+          try {
+            byobReader.releaseLock();
+          } catch (_) {}
+        }
+        if (!(error instanceof TypeError) && !/byob|byte stream/i.test(errorText(error))) {
+          throw error;
+        }
       }
     }
 
@@ -338,6 +340,7 @@
       url: options.url,
       requireDatagram: requireDatagram,
       constructorRequireUnreliable: requireDatagram,
+      useByob: options.useByob !== false,
       startedMs: nowMs(),
       readyMs: 0,
       closedMs: 0,
@@ -472,7 +475,7 @@
 
     async function handleBatonStream(readable, mode, stream) {
       note("reading " + mode);
-      var baton = await readBaton(readable);
+      var baton = await readBaton(readable, options.useByob !== false);
       result.received.push(baton);
       note("received " + baton + " on " + mode);
       if (baton === 0) {
@@ -602,6 +605,7 @@
       protocol: search.get("protocol") || DEFAULT_PROTOCOL,
       requireProtocol: search.get("requireProtocol") !== "0",
       requireDatagram: search.get("requireDatagram") !== "0",
+      useByob: search.get("useByob") !== "0",
       onProgress: render
     };
   }
@@ -627,6 +631,7 @@
         url: options.url,
         requireDatagram: options.requireDatagram !== false,
         constructorRequireUnreliable: options.requireDatagram !== false,
+        useByob: options.useByob !== false,
         received: [],
         sent: [],
         datagramsReceived: [],
