@@ -470,9 +470,44 @@ async function readProtocolConstructorResult(endpoint, sessionId, certificateHas
   return wrapped.value;
 }
 
+async function readUrlConstructorResult(endpoint, sessionId, certificateHash) {
+  const wrapped = await executeAsyncScript(endpoint, sessionId, `
+    const done = arguments[arguments.length - 1];
+    const options = arguments[0];
+    function errorText(error) {
+      if (error && typeof error === "object") {
+        return (error.name ? error.name + ": " : "") + (error.message || String(error));
+      }
+      return String(error);
+    }
+    Promise.resolve(
+      window.picoquicWebTransportBaton.runUrlConstructorTests(options)
+    ).then(
+      (value) => done({ ok: true, value }),
+      (error) => done({ ok: false, error: errorText(error) })
+    );
+  `, [{
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL
+  }]);
+
+  if (!wrapped || wrapped.ok !== true) {
+    throw new Error((wrapped && wrapped.error) ||
+      "browser URL constructor tests failed");
+  }
+  return wrapped.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertUrlConstructorResult(result) {
+  if (!result || result.ok !== true) {
+    throw new Error(`browser URL constructor tests failed: ${JSON.stringify(result)}`);
   }
 }
 
@@ -573,6 +608,9 @@ async function main() {
       result.protocolConstructor = await readProtocolConstructorResult(endpoint,
         sessionId, certConfig.hash);
       assertProtocolConstructorResult(result.protocolConstructor);
+      result.urlConstructor = await readUrlConstructorResult(endpoint,
+        sessionId, certConfig.hash);
+      assertUrlConstructorResult(result.urlConstructor);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

@@ -87,7 +87,7 @@ google-chrome --user-data-dir=/tmp/picoquic-wt-chrome --ignore-certificate-error
 Pass criteria: the page state is `pass`, selected protocol is
 `devious-baton-00`, received batons are `[251,253,255]`, sent batons are
 `[252,254,0]`, at least one received datagram is recorded, and the Chrome
-runner's `protocolConstructor` checks all pass.
+runner's `protocolConstructor` and `urlConstructor` checks all pass.
 
 ## Safari
 

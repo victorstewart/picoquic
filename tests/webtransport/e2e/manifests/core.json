@@ -221,6 +221,7 @@
       "timeoutMs": 30000,
       "coverage": [
         "constructor",
+        "URL-constructor",
         "ready",
         "closed",
         "WT-Protocol",
@@ -245,6 +246,7 @@
         "datagramsReceivedMin": 1,
         "datagramsSent": 1,
         "protocolConstructorOk": true,
+        "urlConstructorOk": true,
         "server": {
           "connectAcceptedMin": 1,
           "packetsReceivedMin": 1,
@@ -263,6 +265,7 @@
       "timeoutMs": 30000,
       "coverage": [
         "constructor",
+        "URL-constructor",
         "ready",
         "closed",
         "WT-Protocol",
@@ -285,6 +288,7 @@
         "datagramsReceivedMin": 1,
         "datagramsSent": 1,
         "protocolConstructorOk": true,
+        "urlConstructorOk": true,
         "server": {
           "connectAcceptedMin": 1,
           "packetsReceivedMin": 1,

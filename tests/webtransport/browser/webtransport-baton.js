@@ -314,6 +314,57 @@
     return result;
   }
 
+  function buildUrlConstructorOptions(options) {
+    var transportOptions = buildTransportOptions({
+      certificateHash: options.certificateHash,
+      certificateHashAlgorithm: options.certificateHashAlgorithm,
+      requireDatagram: false
+    });
+    transportOptions.requireUnreliable = false;
+    transportOptions.protocols = [options.protocol || DEFAULT_PROTOCOL];
+    return transportOptions;
+  }
+
+  function runUrlConstructorTests(options) {
+    if (typeof WebTransport !== "function") {
+      throw new Error("WebTransport is unavailable");
+    }
+
+    var result = {
+      ok: false,
+      tests: []
+    };
+    var url = options.url || defaultTarget();
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    function expectThrows(name, targetUrl, expectedName) {
+      try {
+        var transport = new WebTransport(targetUrl,
+          buildUrlConstructorOptions(options));
+        closeConstructedTransport(transport);
+        record(name, false, "constructor did not throw");
+      } catch (error) {
+        record(name, error && error.name === expectedName, errorText(error));
+      }
+    }
+
+    expectThrows("http-url", url.replace(/^https:/, "http:"), "SyntaxError");
+    expectThrows("url-fragment", url + "#fragment", "SyntaxError");
+    expectThrows("malformed-url", "https://[", "SyntaxError");
+
+    result.ok = result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   function withTimeout(promise, timeoutMs, onTimeout) {
     var timer = 0;
     var timeout = new Promise(function (_, reject) {
@@ -671,6 +722,7 @@
     defaultTarget: defaultTarget,
     makeBatonPacket: makeBatonPacket,
     runProtocolConstructorTests: runProtocolConstructorTests,
+    runUrlConstructorTests: runUrlConstructorTests,
     runBatonTest: runBatonTest
   };
 

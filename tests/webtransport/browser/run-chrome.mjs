@@ -427,9 +427,36 @@ async function readProtocolConstructorResult(cdp, certificateHash) {
   return result.result.value;
 }
 
+async function readUrlConstructorResult(cdp, certificateHash) {
+  const options = JSON.stringify({
+    url: WT_URL,
+    certificateHash,
+    protocol: PROTOCOL
+  });
+  const result = await cdp.send("Runtime.evaluate", {
+    expression: `window.picoquicWebTransportBaton.runUrlConstructorTests(${options})`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+
+  if (result.exceptionDetails) {
+    const text = result.exceptionDetails.exception &&
+      result.exceptionDetails.exception.description;
+    throw new Error(text || result.exceptionDetails.text ||
+      "browser URL constructor tests failed");
+  }
+  return result.result.value;
+}
+
 function assertProtocolConstructorResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser protocol constructor tests failed: ${JSON.stringify(result)}`);
+  }
+}
+
+function assertUrlConstructorResult(result) {
+  if (!result || result.ok !== true) {
+    throw new Error(`browser URL constructor tests failed: ${JSON.stringify(result)}`);
   }
 }
 
@@ -535,6 +562,8 @@ async function main() {
     if (RUN_PROTOCOL_CONSTRUCTOR && EXPECT_OK) {
       result.protocolConstructor = await readProtocolConstructorResult(cdp, certConfig.hash);
       assertProtocolConstructorResult(result.protocolConstructor);
+      result.urlConstructor = await readUrlConstructorResult(cdp, certConfig.hash);
+      assertUrlConstructorResult(result.urlConstructor);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

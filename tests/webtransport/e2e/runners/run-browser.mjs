@@ -271,6 +271,11 @@ function assertScenarioResult(id, result, expect) {
       result.protocolConstructor.ok !== expect.protocolConstructorOk)) {
     throw new Error(`${id}: protocol constructor check failed`);
   }
+  if (expect.urlConstructorOk !== undefined &&
+    (!result.urlConstructor ||
+      result.urlConstructor.ok !== expect.urlConstructorOk)) {
+    throw new Error(`${id}: URL constructor check failed`);
+  }
   if (expect.server) {
     if (!result.server) {
       throw new Error(`${id}: missing server summary`);
