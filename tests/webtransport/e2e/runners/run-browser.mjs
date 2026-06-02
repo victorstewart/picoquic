@@ -286,6 +286,16 @@ function assertArrayEquals(id, name, actual, expected) {
   }
 }
 
+function assertDiagnosticTestsInclude(id, name, diagnostic, expectedNames) {
+  const tests = diagnostic && Array.isArray(diagnostic.tests) ?
+    diagnostic.tests.map((entry) => entry && entry.name) : [];
+  for (const expectedName of expectedNames) {
+    if (!tests.includes(expectedName)) {
+      throw new Error(`${id}: expected ${name} test ${JSON.stringify(expectedName)}, got ${JSON.stringify(tests)}`);
+    }
+  }
+}
+
 function assertScenarioResult(id, result, expect) {
   if (result.ok !== expect.ok) {
     throw new Error(`${id}: expected ok=${expect.ok}, got ${result.ok}`);
@@ -342,10 +352,18 @@ function assertScenarioResult(id, result, expect) {
       result.datagramWritable.ok !== expect.datagramWritableOk)) {
     throw new Error(`${id}: datagram writable check failed`);
   }
+  if (expect.datagramWritableTestsInclude) {
+    assertDiagnosticTestsInclude(id, "datagramWritable", result.datagramWritable,
+      expect.datagramWritableTestsInclude);
+  }
   if (expect.streamWritableOk !== undefined &&
     (!result.streamWritable ||
       result.streamWritable.ok !== expect.streamWritableOk)) {
     throw new Error(`${id}: stream writable check failed`);
+  }
+  if (expect.streamWritableTestsInclude) {
+    assertDiagnosticTestsInclude(id, "streamWritable", result.streamWritable,
+      expect.streamWritableTestsInclude);
   }
   if (expect.server) {
     if (!result.server) {

@@ -293,7 +293,12 @@
           "closed"
         ],
         "datagramWritableOk": true,
+        "datagramWritableTestsInclude": ["string-chunk"],
         "streamWritableOk": true,
+        "streamWritableTestsInclude": [
+          "unidirectional-string-chunk",
+          "bidirectional-string-chunk"
+        ],
         "protocolConstructorOk": true,
         "urlConstructorOk": true,
         "server": {
@@ -357,7 +362,12 @@
           "closed"
         ],
         "datagramWritableOk": true,
+        "datagramWritableTestsInclude": ["string-chunk"],
         "streamWritableOk": true,
+        "streamWritableTestsInclude": [
+          "unidirectional-string-chunk",
+          "bidirectional-string-chunk"
+        ],
         "protocolConstructorOk": true,
         "urlConstructorOk": true,
         "server": {
