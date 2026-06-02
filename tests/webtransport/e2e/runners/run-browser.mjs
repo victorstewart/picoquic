@@ -445,6 +445,15 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "closeSession", result.closeSession,
       expect.closeSessionTestsInclude);
   }
+  if (hasExpectedValue(expect, "sessionDiagnosticsOk") &&
+    (!result.sessionDiagnostics ||
+      result.sessionDiagnostics.ok !== expect.sessionDiagnosticsOk)) {
+    throw new Error(`${id}: session diagnostics check failed`);
+  }
+  if (expect.sessionDiagnosticsTestsInclude) {
+    assertDiagnosticTestsInclude(id, "sessionDiagnostics",
+      result.sessionDiagnostics, expect.sessionDiagnosticsTestsInclude);
+  }
   if (expect.server) {
     if (!result.server) {
       throw new Error(`${id}: missing server summary`);

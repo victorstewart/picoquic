@@ -215,6 +215,24 @@
     return null;
   }
 
+  function isPromiseLike(value) {
+    return value && typeof value.then === "function";
+  }
+
+  function isReadableStreamLike(value) {
+    return value && typeof value.getReader === "function";
+  }
+
+  function valueKind(value) {
+    if (value === null) {
+      return "null";
+    }
+    if (value === undefined) {
+      return "undefined";
+    }
+    return typeof value;
+  }
+
   function buildTransportOptions(options) {
     var requireDatagram = options.requireDatagram !== false;
     var transportOptions = {
@@ -733,6 +751,104 @@
     return result;
   }
 
+  async function runSessionDiagnostics(transport) {
+    var result = {
+      ok: false,
+      tests: []
+    };
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    function recordOptionalString(name) {
+      if (!(name in transport) || transport[name] === undefined) {
+        record(name + "-optional", true, "unsupported");
+        return;
+      }
+      record(name + "-optional", typeof transport[name] === "string",
+        String(transport[name]));
+    }
+
+    record("ready-promise", isPromiseLike(transport.ready), valueKind(transport.ready));
+    record("closed-promise", isPromiseLike(transport.closed), valueKind(transport.closed));
+    record("protocol-property", typeof transport.protocol === "string",
+      String(transport.protocol || ""));
+    record("incoming-bidirectional-readable",
+      isReadableStreamLike(transport.incomingBidirectionalStreams),
+      valueKind(transport.incomingBidirectionalStreams));
+    record("incoming-unidirectional-readable",
+      isReadableStreamLike(transport.incomingUnidirectionalStreams),
+      valueKind(transport.incomingUnidirectionalStreams));
+    record("create-bidirectional-stream-function",
+      typeof transport.createBidirectionalStream === "function",
+      valueKind(transport.createBidirectionalStream));
+    record("create-unidirectional-stream-function",
+      typeof transport.createUnidirectionalStream === "function",
+      valueKind(transport.createUnidirectionalStream));
+
+    var datagrams = transport.datagrams;
+    record("datagrams-object", !!datagrams && typeof datagrams === "object",
+      valueKind(datagrams));
+    record("datagrams-readable", !!datagrams &&
+      isReadableStreamLike(datagrams.readable), valueKind(datagrams && datagrams.readable));
+    record("datagrams-writable-or-createWritable", !!datagrams &&
+      (!!datagrams.writable || typeof datagrams.createWritable === "function"),
+      datagrams && datagrams.writable ? "writable" :
+        valueKind(datagrams && datagrams.createWritable));
+
+    recordOptionalString("reliability");
+    recordOptionalString("congestionControl");
+
+    if (!("supportsReliableOnly" in transport) ||
+      transport.supportsReliableOnly === undefined) {
+      record("supportsReliableOnly-optional", true, "unsupported");
+    } else {
+      record("supportsReliableOnly-optional",
+        typeof transport.supportsReliableOnly === "boolean",
+        String(transport.supportsReliableOnly));
+    }
+
+    if (!("responseHeaders" in transport) ||
+      transport.responseHeaders === undefined) {
+      record("responseHeaders-optional", true, "unsupported");
+    } else {
+      record("responseHeaders-optional",
+        isPromiseLike(transport.responseHeaders) ||
+          typeof transport.responseHeaders === "object",
+        valueKind(transport.responseHeaders));
+    }
+
+    if (!("draining" in transport) || transport.draining === undefined) {
+      record("draining-optional", true, "unsupported");
+    } else {
+      record("draining-optional", isPromiseLike(transport.draining),
+        valueKind(transport.draining));
+    }
+
+    if (typeof transport.getStats === "function") {
+      try {
+        var stats = await withTimeout(transport.getStats(), 1500);
+        var detail = stats && typeof stats === "object" ?
+          Object.keys(stats).slice(0, 8).join(",") : valueKind(stats);
+        record("getStats-optional", !!stats && typeof stats === "object", detail);
+      } catch (error) {
+        record("getStats-optional", false, errorText(error));
+      }
+    } else {
+      record("getStats-optional", true, "unsupported");
+    }
+
+    result.ok = result.tests.length > 0 && result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   function withTimeout(promise, timeoutMs, onTimeout) {
     var timer = 0;
     var timeout = new Promise(function (_, reject) {
@@ -1104,6 +1220,12 @@
         options.protocol && result.protocol !== options.protocol) {
         throw new Error("unexpected WebTransport protocol '" + result.protocol + "'");
       }
+      result.sessionDiagnostics = await runSessionDiagnostics(transport);
+      if (!result.sessionDiagnostics.ok) {
+        throw new Error("session diagnostics failed: " +
+          JSON.stringify(result.sessionDiagnostics));
+      }
+      note("session diagnostics");
       note("ready");
 
       transport.closed.then(markClosed, function (error) {
@@ -1247,6 +1369,7 @@
     runStreamWritableTests: runStreamWritableTests,
     runWritableBadChunkTests: runWritableBadChunkTests,
     runCloseSessionTests: runCloseSessionTests,
+    runSessionDiagnostics: runSessionDiagnostics,
     runBatonTest: runBatonTest
   };
 

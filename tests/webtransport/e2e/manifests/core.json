@@ -732,6 +732,8 @@
         "Origin-header",
         "origin-policy-allow",
         "WT-Protocol",
+        "session-diagnostics",
+        "stats-optional-observed",
         "incoming-unidirectional-stream",
         "incoming-bidirectional-stream",
         "outgoing-unidirectional-stream",
@@ -800,6 +802,25 @@
           "http-url",
           "url-fragment",
           "malformed-url"
+        ],
+        "sessionDiagnosticsOk": true,
+        "sessionDiagnosticsTestsInclude": [
+          "ready-promise",
+          "closed-promise",
+          "protocol-property",
+          "incoming-bidirectional-readable",
+          "incoming-unidirectional-readable",
+          "create-bidirectional-stream-function",
+          "create-unidirectional-stream-function",
+          "datagrams-object",
+          "datagrams-readable",
+          "datagrams-writable-or-createWritable",
+          "reliability-optional",
+          "congestionControl-optional",
+          "supportsReliableOnly-optional",
+          "responseHeaders-optional",
+          "draining-optional",
+          "getStats-optional"
         ],
         "optionsConstructorTestsInclude": [
           "allow-pooling-with-certificate-hash"
