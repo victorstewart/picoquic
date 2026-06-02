@@ -803,6 +803,23 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          list)
         set_tests_properties(picohttp_wt_wpt_discovery
                              PROPERTIES LABELS wt_wpt)
+        foreach(PICOQUIC_WT_WPT_EXPECTED chrome-stable edge-stable safari-stable)
+            string(REPLACE "-" "_" PICOQUIC_WT_WPT_EXPECTED_TEST ${PICOQUIC_WT_WPT_EXPECTED})
+            add_test(NAME picohttp_wt_wpt_expected_${PICOQUIC_WT_WPT_EXPECTED_TEST}
+                     COMMAND ${NODE_EXECUTABLE}
+                             ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/run-wpt.mjs
+                             list
+                             --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/expected/${PICOQUIC_WT_WPT_EXPECTED}.json)
+            set_tests_properties(picohttp_wt_wpt_expected_${PICOQUIC_WT_WPT_EXPECTED_TEST}
+                                 PROPERTIES LABELS wt_wpt)
+        endforeach()
+        add_test(NAME picohttp_wt_wpt_expected_reject_unknown
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/run-wpt.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/fixtures/expected-unknown-test.json)
+        set_tests_properties(picohttp_wt_wpt_expected_reject_unknown
+                             PROPERTIES LABELS wt_wpt WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_manifest
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs

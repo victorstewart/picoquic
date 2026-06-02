@@ -1,0 +1,6 @@
+{
+  "browser": "chrome",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": []
+}

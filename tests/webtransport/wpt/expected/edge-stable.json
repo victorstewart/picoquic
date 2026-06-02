@@ -1,0 +1,6 @@
+{
+  "browser": "edge",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": []
+}

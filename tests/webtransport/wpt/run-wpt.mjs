@@ -34,7 +34,7 @@ const EXPECTED_WPT_TESTS = [
 function usage() {
   console.error([
     "usage:",
-    "  node tests/webtransport/wpt/run-wpt.mjs list [--wpt-root <path>] [--json]",
+    "  node tests/webtransport/wpt/run-wpt.mjs list [--wpt-root <path>] [--expected <path>] [--json]",
     "  node tests/webtransport/wpt/run-wpt.mjs server-smoke [--baton-bin <path>] [--port <n>] [--web-root <path>]"
   ].join("\n"));
 }
@@ -185,18 +185,60 @@ function discoverTests(wptRoot) {
   return { source: webtransportRoot, tests: discovered };
 }
 
+function expectedEntryMatchesTest(entryTest, discoveredTest) {
+  if (entryTest.endsWith("*.js")) {
+    return matchesExpected(discoveredTest, entryTest);
+  }
+  return entryTest === discoveredTest;
+}
+
+function loadExpectedManifest(expectedPath, discoveredTests) {
+  const expected = JSON.parse(readFileSync(expectedPath, "utf8"));
+  if (expected === null || typeof expected !== "object" || Array.isArray(expected)) {
+    throw new Error(`expected manifest must be an object: ${expectedPath}`);
+  }
+  if (!Array.isArray(expected.expected)) {
+    throw new Error(`expected manifest must contain an expected array: ${expectedPath}`);
+  }
+
+  for (const [index, entry] of expected.expected.entries()) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`expected[${index}] must be an object in ${expectedPath}`);
+    }
+    if (typeof entry.test !== "string" || entry.test.length === 0) {
+      throw new Error(`expected[${index}].test must be a non-empty string in ${expectedPath}`);
+    }
+    if (typeof entry.status !== "string" || !["fail", "skip", "expected-fail"].includes(entry.status)) {
+      throw new Error(`expected[${index}].status must be fail, skip, or expected-fail in ${expectedPath}`);
+    }
+    if (!discoveredTests.some((test) => expectedEntryMatchesTest(entry.test, test))) {
+      throw new Error(`expected[${index}].test does not match the WPT subset: ${entry.test}`);
+    }
+  }
+
+  return expected;
+}
+
 async function commandList(args) {
   const wptRoot = takeOption(args, "--wpt-root", process.env.PICOQUIC_WPT_ROOT || "");
+  const expectedPath = takeOption(args, "--expected", "");
   const json = hasOption(args, "--json");
   if (args.length !== 0) {
     throw new Error(`unexpected list arguments: ${args.join(" ")}`);
   }
 
   const result = discoverTests(wptRoot);
+  if (expectedPath) {
+    result.expected = resolve(expectedPath);
+    result.expectedManifest = loadExpectedManifest(result.expected, result.tests);
+  }
   if (json) {
     console.log(JSON.stringify(result, null, 2));
   } else {
     console.log(`# source: ${result.source}`);
+    if (result.expected) {
+      console.log(`# expected: ${result.expected}`);
+    }
     for (const test of result.tests) {
       console.log(test);
     }

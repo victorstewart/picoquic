@@ -1,0 +1,10 @@
+{
+  "browser": "fixture",
+  "expected": [
+    {
+      "test": "not-in-webtransport-subset.https.any.js",
+      "status": "skip",
+      "reason": "Fixture used to verify stale WPT expected entries are rejected."
+    }
+  ]
+}
