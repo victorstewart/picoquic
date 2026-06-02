@@ -195,7 +195,7 @@ function certHash(certPath) {
 }
 
 function firefoxWtUrl(rawUrl) {
-  if (!FIREFOX_PROTOCOL_OPTIONAL) {
+  if (!FIREFOX_PROTOCOL_OPTIONAL || !EXPECT_OK) {
     return rawUrl;
   }
   const url = new URL(rawUrl);
@@ -209,7 +209,7 @@ function buildPageUrl(pageUrl, certificateHash) {
   url.searchParams.set("timeoutMs", String(TIMEOUT_MS));
   url.searchParams.set("url", WT_URL);
   url.searchParams.set("protocol", REQUESTED_PROTOCOL);
-  if (FIREFOX_PROTOCOL_OPTIONAL) {
+  if (FIREFOX_PROTOCOL_OPTIONAL && EXPECT_OK) {
     url.searchParams.set("requireProtocol", "0");
   }
   url.searchParams.set("certHash", certificateHash);

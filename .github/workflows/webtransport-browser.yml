@@ -90,6 +90,7 @@ jobs:
         env:
           CHROME_BIN: microsoft-edge
           PICOQUIC_WT_CHROME_HEADLESS: old
+          PICOQUIC_WT_CDP_TIMEOUT_MS: "60000"
         run: |
           npx -y node@22 tests/webtransport/browser/run-chrome.mjs
 
@@ -97,6 +98,7 @@ jobs:
         env:
           CHROME_BIN: microsoft-edge
           PICOQUIC_WT_CHROME_HEADLESS: old
+          PICOQUIC_WT_CDP_TIMEOUT_MS: "60000"
         run: |
           npx -y node@22 tests/webtransport/e2e/runners/run-browser.mjs --browser edge
 
