@@ -153,6 +153,22 @@ function assertScenarioResult(id, result, expect) {
       result.protocolConstructor.ok !== expect.protocolConstructorOk)) {
     throw new Error(`${id}: protocol constructor check failed`);
   }
+  if (expect.server) {
+    if (!result.server) {
+      throw new Error(`${id}: missing server summary`);
+    }
+    for (const [name, minimum] of Object.entries(expect.server)) {
+      if (name.endsWith("Min")) {
+        const actualName = name.slice(0, -3);
+        const actual = result.server[actualName];
+        if (typeof actual !== "number" || actual < minimum) {
+          throw new Error(`${id}: expected server.${actualName} >= ${minimum}, got ${actual}`);
+        }
+      } else if (result.server[name] !== minimum) {
+        throw new Error(`${id}: expected server.${name}=${JSON.stringify(minimum)}, got ${JSON.stringify(result.server[name])}`);
+      }
+    }
+  }
 }
 
 function runChild(command, args, env) {
@@ -213,6 +229,7 @@ async function runScenario(browser, scenario, vars) {
     PICOQUIC_WT_PROTOCOL: rendered.protocol || "devious-baton-00",
     PICOQUIC_WT_REQUIRE_DATAGRAM: rendered.requireDatagram === false ? "0" : "1",
     PICOQUIC_WT_USE_BYOB: rendered.useByob === false ? "0" : "1",
+    PICOQUIC_WT_INCLUDE_SERVER_SUMMARY: "1",
     PICOQUIC_WT_TIMEOUT_MS: String(rendered.timeoutMs || 30000),
     PICOQUIC_WT_PORT: String(vars.port)
   };

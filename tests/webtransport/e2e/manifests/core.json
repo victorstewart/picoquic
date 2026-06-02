@@ -36,7 +36,12 @@
         "sent": [252, 254, 0],
         "datagramsReceivedMin": 1,
         "datagramsSent": 1,
-        "protocolConstructorOk": true
+        "protocolConstructorOk": true,
+        "server": {
+          "connectAcceptedMin": 1,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
       }
     },
     {
@@ -71,7 +76,12 @@
         "sent": [252, 254, 0],
         "datagramsReceivedMin": 1,
         "datagramsSent": 1,
-        "protocolConstructorOk": true
+        "protocolConstructorOk": true,
+        "server": {
+          "connectAcceptedMin": 1,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
       }
     }
   ]

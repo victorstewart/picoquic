@@ -14,6 +14,8 @@ const PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
+const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
+const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const CDP_PORT = Number(process.env.PICOQUIC_WT_CDP_PORT || 9223);
 const CDP_TIMEOUT_MS = Number(process.env.PICOQUIC_WT_CDP_TIMEOUT_MS || 30000);
@@ -405,6 +407,22 @@ function assertProtocolConstructorResult(result) {
   }
 }
 
+function countMatches(text, pattern) {
+  const matches = text.match(pattern);
+  return matches ? matches.length : 0;
+}
+
+function summarizeServerOutput(output) {
+  return {
+    bytesCaptured: output.length,
+    waitingForPackets: output.includes("Waiting for packets"),
+    connectAccepted: countMatches(output, /Connect accepted on stream/g),
+    packetsReceived: countMatches(output, /Receiving packet type/g),
+    packetsSent: countMatches(output, /Sending packet type/g),
+    h3ControlFrames: countMatches(output, /H3 control frame/g)
+  };
+}
+
 async function main() {
   assertFile(BATON, "pico_baton");
 
@@ -423,15 +441,15 @@ async function main() {
     "-w", WEB_ROOT,
     "/baton"
   ];
-  if (process.env.PICOQUIC_WT_SERVER_LOG) {
-    const logTarget = process.env.PICOQUIC_WT_SERVER_LOG === "1" ?
-      "-" : process.env.PICOQUIC_WT_SERVER_LOG;
+  if (process.env.PICOQUIC_WT_SERVER_LOG || INCLUDE_SERVER_SUMMARY) {
+    const serverLog = process.env.PICOQUIC_WT_SERVER_LOG || "1";
+    const logTarget = serverLog === "1" ? "-" : serverLog;
     serverArgs.splice(serverArgs.length - 1, 0, "-l", logTarget, "-L");
   }
   const server = spawn(BATON, serverArgs, { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
   let serverOutput = "";
   function appendServerOutput(data) {
-    serverOutput = (serverOutput + data.toString()).slice(-32768);
+    serverOutput = (serverOutput + data.toString()).slice(-SERVER_OUTPUT_LIMIT);
   }
   server.stdout.on("data", appendServerOutput);
   server.stderr.on("data", appendServerOutput);
@@ -484,6 +502,9 @@ async function main() {
     assertHarnessResult(result);
     result.protocolConstructor = await readProtocolConstructorResult(cdp, certConfig.hash);
     assertProtocolConstructorResult(result.protocolConstructor);
+    if (INCLUDE_SERVER_SUMMARY) {
+      result.server = summarizeServerOutput(serverOutput);
+    }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     const output = serverOutput.trim();
