@@ -12,6 +12,10 @@ List the core scenarios:
 node tests/webtransport/e2e/runners/run-browser.mjs list
 ```
 
+Every scenario must declare a stable lowercase ID, title, `browser-baton`
+runner configuration, non-empty coverage tags, and an explicit `expect.ok`
+value. The runner rejects underspecified scenarios before launching a browser.
+
 Run the portable core scenario in Chrome:
 
 ```sh

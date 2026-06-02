@@ -12,6 +12,87 @@ const BROWSER_RUNNERS = {
   chrome: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
   safari: join(ROOT, "tests", "webtransport", "browser", "run-safari.mjs")
 };
+const SCENARIO_ID_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
+const SCENARIO_FIELDS = new Set([
+  "id",
+  "title",
+  "runner",
+  "wtUrl",
+  "protocol",
+  "requireDatagram",
+  "useByob",
+  "timeoutMs",
+  "coverage",
+  "expect"
+]);
+
+function isObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function requireString(value, name) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`invalid manifest field ${name}: expected non-empty string`);
+  }
+}
+
+function requireBoolean(value, name) {
+  if (typeof value !== "boolean") {
+    throw new Error(`invalid manifest field ${name}: expected boolean`);
+  }
+}
+
+function requirePositiveInteger(value, name) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`invalid manifest field ${name}: expected positive integer`);
+  }
+}
+
+function rejectUnknownFields(object, allowed, name) {
+  for (const field of Object.keys(object)) {
+    if (!allowed.has(field)) {
+      throw new Error(`invalid manifest field ${name}.${field}: unknown field`);
+    }
+  }
+}
+
+function validateScenario(scenario, path) {
+  if (!isObject(scenario)) {
+    throw new Error(`invalid scenario in ${path}: expected object`);
+  }
+  rejectUnknownFields(scenario, SCENARIO_FIELDS, "scenario");
+  requireString(scenario.id, "scenario.id");
+  if (!SCENARIO_ID_RE.test(scenario.id)) {
+    throw new Error(`invalid manifest field scenario.id: ${scenario.id}`);
+  }
+  requireString(scenario.title, `${scenario.id}.title`);
+  requireString(scenario.runner, `${scenario.id}.runner`);
+  if (scenario.runner !== "browser-baton") {
+    throw new Error(`invalid manifest field ${scenario.id}.runner: unsupported runner ${scenario.runner}`);
+  }
+  requireString(scenario.wtUrl, `${scenario.id}.wtUrl`);
+  if (Object.prototype.hasOwnProperty.call(scenario, "protocol")) {
+    requireString(scenario.protocol, `${scenario.id}.protocol`);
+  }
+  for (const field of ["requireDatagram", "useByob"]) {
+    if (Object.prototype.hasOwnProperty.call(scenario, field)) {
+      requireBoolean(scenario[field], `${scenario.id}.${field}`);
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "timeoutMs")) {
+    requirePositiveInteger(scenario.timeoutMs, `${scenario.id}.timeoutMs`);
+  }
+  if (!Array.isArray(scenario.coverage) || scenario.coverage.length === 0) {
+    throw new Error(`invalid manifest field ${scenario.id}.coverage: expected non-empty string array`);
+  }
+  for (const [index, tag] of scenario.coverage.entries()) {
+    requireString(tag, `${scenario.id}.coverage[${index}]`);
+  }
+  if (!isObject(scenario.expect)) {
+    throw new Error(`invalid manifest field ${scenario.id}.expect: expected object`);
+  }
+  requireBoolean(scenario.expect.ok, `${scenario.id}.expect.ok`);
+}
 
 function usage() {
   console.error([
@@ -53,9 +134,7 @@ function loadManifest(path) {
   }
   const scenarioIds = new Set();
   for (const scenario of manifest.scenarios) {
-    if (!scenario.id || scenario.runner !== "browser-baton" || !scenario.wtUrl) {
-      throw new Error(`invalid scenario in ${path}`);
-    }
+    validateScenario(scenario, path);
     if (scenarioIds.has(scenario.id)) {
       throw new Error(`duplicate scenario id in ${path}: ${scenario.id}`);
     }
