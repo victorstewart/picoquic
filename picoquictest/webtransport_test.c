@@ -3084,6 +3084,7 @@ static int picowt_baton_close_capsule_case(void)
         }
     }
 
+    picowt_release_capsule(&baton_ctx.capsule);
     picoquic_set_callback(cnx, NULL, NULL);
     if (h3_ctx != NULL) {
         h3zero_callback_delete_context(cnx, h3_ctx);
@@ -3136,6 +3137,7 @@ static int picowt_baton_control_fin_case(void)
         ret = -1;
     }
 
+    picowt_release_capsule(&baton_ctx.capsule);
     picoquic_set_callback(cnx, NULL, NULL);
     if (h3_ctx != NULL) {
         h3zero_callback_delete_context(cnx, h3_ctx);
@@ -3958,6 +3960,7 @@ static int picowt_baton_receive_drain_case(void)
         }
     }
 
+    picowt_release_capsule(&baton_ctx.capsule);
     picoquic_set_callback(cnx, NULL, NULL);
     if (h3_ctx != NULL) {
         h3zero_callback_delete_context(cnx, h3_ctx);
@@ -5075,6 +5078,7 @@ static int picowt_baton_flow_control_abort_case(void)
         }
     }
 
+    picowt_release_capsule(&baton_ctx.capsule);
     picoquic_set_callback(cnx, NULL, NULL);
     if (h3_ctx != NULL) {
         h3zero_callback_delete_context(cnx, h3_ctx);
@@ -5155,6 +5159,7 @@ static int picowt_baton_flow_control_disabled_case(void)
         }
     }
 
+    picowt_release_capsule(&baton_ctx.capsule);
     picoquic_set_callback(cnx, NULL, NULL);
     if (h3_ctx != NULL) {
         h3zero_callback_delete_context(cnx, h3_ctx);
