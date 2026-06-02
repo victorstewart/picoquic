@@ -175,6 +175,45 @@
       }
     },
     {
+      "id": "handshake.reject_unsupported_certificate_hash_algorithm",
+      "title": "Unsupported serverCertificateHashes algorithm does not establish",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "certificateHashAlgorithm": "sha-512",
+      "coverage": [
+        "constructor",
+        "serverCertificateHashes",
+        "certificate-hash-algorithm-reject",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "server": {
+          "connectAccepted": 0
+        }
+      }
+    },
+    {
       "id": "handshake.reject_bad_baton_query",
       "title": "Malformed baton endpoint parameters reject ready",
       "runner": "browser-baton",

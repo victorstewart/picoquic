@@ -19,6 +19,10 @@ Set `certificateHashMode` to `wrong` for negative certificate-hash scenarios;
 the default uses the generated server certificate hash. Wrong-hash scenarios
 also disable Chrome's certificate-error bypass so the browser actually enforces
 `serverCertificateHashes`.
+Set `certificateHashAlgorithm` when a scenario needs to pass a non-default
+algorithm into `serverCertificateHashes`; unsupported algorithms also disable
+Chrome's certificate-error bypass so the scenario proves that the browser does
+not silently establish a WebTransport session.
 Positive baton scenarios may also require browser-side constructor subtests with
 `protocolConstructorOk` and `urlConstructorOk`. The runners also record an
 `optionsConstructor` diagnostic for `allowPooling: true` combined with

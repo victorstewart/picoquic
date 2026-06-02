@@ -16,6 +16,7 @@ const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
+const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
 /* W3C WebTransport requires allowPooling+serverCertificateHashes to throw, but
  * Chrome 148.0.7778.181 constructed instead during local validation. Record the
  * diagnostic by default and let browser/version-specific lanes opt into gating.
@@ -191,6 +192,7 @@ function buildPageUrl(certificateHash) {
   url.searchParams.set("url", WT_URL);
   url.searchParams.set("protocol", PROTOCOL);
   url.searchParams.set("certHash", certificateHash);
+  url.searchParams.set("certHashAlg", CERT_HASH_ALG);
   if (!REQUIRE_DATAGRAM) {
     url.searchParams.set("requireDatagram", "0");
   }

@@ -22,6 +22,15 @@
       "evidence": "GitHub WebTransportBrowser run 26801130235, Firefox job 79007856552, failed baton smoke with WebTransportError: WebTransport connection rejected; browser=firefox 151.0.2, geckodriver=0.36.0, server log showed no accepted WebTransport CONNECT."
     },
     {
+      "scenario": "handshake.reject_unsupported_certificate_hash_algorithm",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "151.0.2",
+      "platform": "linux",
+      "reason": "Firefox CI currently uses WebDriver acceptInsecureCerts to exercise picoquic's WebTransport data path because serverCertificateHashes alone rejected the local self-signed endpoint before CONNECT. While that bypass is enabled, this lane cannot claim unsupported certificate-hash algorithm enforcement.",
+      "evidence": "Same certificate-validation constraint as handshake.reject_bad_certificate_hash: GitHub WebTransportBrowser run 26801130235, Firefox job 79007856552, failed before an accepted CONNECT when relying only on serverCertificateHashes."
+    },
+    {
       "scenario": "baton.core.padded-byob",
       "status": "pass",
       "category": "browser-missing",

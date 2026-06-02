@@ -27,6 +27,7 @@ const SCENARIO_FIELDS = new Set([
   "useByob",
   "timeoutMs",
   "certificateHashMode",
+  "certificateHashAlgorithm",
   "coverage",
   "expect"
 ]);
@@ -90,6 +91,9 @@ function validateScenario(scenario, path) {
   if (Object.prototype.hasOwnProperty.call(scenario, "certificateHashMode") &&
     !["generated", "wrong"].includes(scenario.certificateHashMode)) {
     throw new Error(`invalid manifest field ${scenario.id}.certificateHashMode: unsupported mode ${scenario.certificateHashMode}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "certificateHashAlgorithm")) {
+    requireString(scenario.certificateHashAlgorithm, `${scenario.id}.certificateHashAlgorithm`);
   }
   if (!Array.isArray(scenario.coverage) || scenario.coverage.length === 0) {
     throw new Error(`invalid manifest field ${scenario.id}.coverage: expected non-empty string array`);
@@ -478,8 +482,14 @@ async function runScenario(browser, scenario, vars) {
     PICOQUIC_WT_TIMEOUT_MS: String(rendered.timeoutMs || 30000),
     PICOQUIC_WT_PORT: String(vars.port)
   };
+  if (rendered.certificateHashAlgorithm) {
+    env.PICOQUIC_WT_CERT_HASH_ALG = rendered.certificateHashAlgorithm;
+  }
   if (rendered.certificateHashMode === "wrong") {
     env.PICOQUIC_WT_CERT_HASH = WRONG_CERT_HASH;
+    env.PICOQUIC_WT_IGNORE_CERT_ERRORS = "0";
+  } else if (rendered.certificateHashAlgorithm &&
+    rendered.certificateHashAlgorithm !== "sha-256") {
     env.PICOQUIC_WT_IGNORE_CERT_ERRORS = "0";
   }
   const run = await runChild(process.execPath, [runner], env);

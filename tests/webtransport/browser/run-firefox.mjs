@@ -16,6 +16,7 @@ const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
+const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
 /* Firefox 151.0.2 in GitHub Actions accepted invalid protocols constructor
  * inputs instead of throwing; see run 26801732536. Keep recording the
  * diagnostic, but let the Firefox expected-results manifest classify it as a
@@ -219,6 +220,7 @@ function buildPageUrl(pageUrl, certificateHash) {
     url.searchParams.set("requireProtocol", "0");
   }
   url.searchParams.set("certHash", certificateHash);
+  url.searchParams.set("certHashAlg", CERT_HASH_ALG);
   if (!REQUIRE_DATAGRAM) {
     url.searchParams.set("requireDatagram", "0");
   }
