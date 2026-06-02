@@ -3,6 +3,43 @@
   "description": "Portable WebTransport browser E2E scenarios backed by pico_baton.",
   "scenarios": [
     {
+      "id": "baton.core.padded-byob",
+      "title": "Baton stream/datagram/protocol exchange with default padding and BYOB readers",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": true,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "WT-Protocol",
+        "BYOB-reader",
+        "default-padded-baton-packet",
+        "incoming-unidirectional-stream",
+        "incoming-bidirectional-stream",
+        "outgoing-unidirectional-stream",
+        "outgoing-bidirectional-stream",
+        "datagram-send",
+        "datagram-receive"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1",
+        "protocol": "devious-baton-00",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": true,
+        "received": [251, 253, 255],
+        "sent": [252, 254, 0],
+        "datagramsReceivedMin": 1,
+        "datagramsSent": 1,
+        "protocolConstructorOk": true
+      }
+    },
+    {
       "id": "baton.core.compact-default-reader",
       "title": "Baton stream/datagram/protocol exchange with compact packets",
       "runner": "browser-baton",

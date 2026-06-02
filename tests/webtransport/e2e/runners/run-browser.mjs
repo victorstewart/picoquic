@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 
 const ROOT = resolve(new URL("../../../..", import.meta.url).pathname);
 const DEFAULT_MANIFEST = join(ROOT, "tests", "webtransport", "e2e", "manifests", "core.json");
+const DEFAULT_EXPECTED_DIR = join(ROOT, "tests", "webtransport", "e2e", "expected");
 const DEFAULT_PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const BROWSER_RUNNERS = {
   chrome: join(ROOT, "tests", "webtransport", "browser", "run-chrome.mjs"),
@@ -16,7 +17,7 @@ function usage() {
   console.error([
     "usage:",
     "  node tests/webtransport/e2e/runners/run-browser.mjs list [--manifest <path>] [--json]",
-    "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|safari> [--manifest <path>] [--scenario <id>] [--json]"
+    "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|safari> [--manifest <path>] [--expected <path>] [--no-expected] [--scenario <id>] [--json]"
   ].join("\n"));
 }
 
@@ -56,6 +57,27 @@ function loadManifest(path) {
     }
   }
   return manifest;
+}
+
+function defaultExpectedPath(browser) {
+  return join(DEFAULT_EXPECTED_DIR, `${browser}-stable.json`);
+}
+
+function loadExpected(path) {
+  if (!path || !existsSync(path)) {
+    return { path: "", entries: new Map() };
+  }
+
+  const expected = JSON.parse(readFileSync(path, "utf8"));
+  const entries = new Map();
+  for (const entry of expected.expected || []) {
+    if (!entry.scenario || !entry.status || !entry.category ||
+      !entry.reason || !entry.evidence) {
+      throw new Error(`invalid expected-result entry in ${path}`);
+    }
+    entries.set(entry.scenario, entry);
+  }
+  return { path, entries };
 }
 
 function renderTemplate(value, vars) {
@@ -160,6 +182,26 @@ function runChild(command, args, env) {
 }
 
 async function runScenario(browser, scenario, vars) {
+  const expectedEntry = vars.expected.entries.get(scenario.id);
+  if (expectedEntry && expectedEntry.status === "skip") {
+    return {
+      id: scenario.id,
+      title: scenario.title || "",
+      status: "skip",
+      coverage: scenario.coverage || [],
+      expected: {
+        category: expectedEntry.category,
+        browserVersion: expectedEntry.browserVersion || "",
+        platform: expectedEntry.platform || "",
+        reason: expectedEntry.reason,
+        evidence: expectedEntry.evidence
+      }
+    };
+  }
+  if (expectedEntry) {
+    throw new Error(`${scenario.id}: unsupported expected status ${expectedEntry.status}`);
+  }
+
   const runner = BROWSER_RUNNERS[browser];
   if (!runner) {
     throw new Error(`unsupported browser: ${browser}`);
@@ -217,6 +259,9 @@ async function commandRun(args) {
   const browser = takeOption(args, "--browser", process.env.PICOQUIC_WT_BROWSER || "");
   const manifestPath = resolve(takeOption(args, "--manifest", DEFAULT_MANIFEST));
   const scenarioId = takeOption(args, "--scenario", "");
+  const noExpected = hasOption(args, "--no-expected");
+  const expectedPath = noExpected ? "" : resolve(takeOption(args, "--expected",
+    browser ? defaultExpectedPath(browser) : ""));
   const json = hasOption(args, "--json");
   if (!browser) {
     throw new Error("missing --browser");
@@ -226,7 +271,8 @@ async function commandRun(args) {
   }
 
   const manifest = loadManifest(manifestPath);
-  const vars = { port: DEFAULT_PORT };
+  const expected = loadExpected(expectedPath);
+  const vars = { port: DEFAULT_PORT, expected };
   const scenarios = selectedScenarios(manifest, scenarioId);
   const results = [];
   for (const scenario of scenarios) {
@@ -237,6 +283,7 @@ async function commandRun(args) {
     browser,
     suite: manifest.suite || "",
     manifest: manifestPath,
+    expected: expected.path,
     scenarios: results
   };
   if (json) {
