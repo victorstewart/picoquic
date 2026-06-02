@@ -1103,6 +1103,141 @@
           "browserCloseReceived": true
         }
       }
+    },
+    {
+      "id": "baton.core.four-lane-compact-default-reader",
+      "title": "Baton stream/datagram/protocol exchange with four compact lanes",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=4&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "URL-constructor",
+        "constructor-options-observed",
+        "allowPooling-serverCertificateHashes-observed",
+        "ready",
+        "closed",
+        "Origin-header",
+        "origin-policy-allow",
+        "WT-Protocol",
+        "default-reader",
+        "four-lane-baton",
+        "many-concurrent-incoming-unidirectional-streams",
+        "many-concurrent-incoming-bidirectional-streams",
+        "many-concurrent-outgoing-unidirectional-streams",
+        "many-concurrent-outgoing-bidirectional-streams",
+        "stream-bad-chunk",
+        "unidirectional-stream-bad-chunk",
+        "bidirectional-stream-bad-chunk",
+        "datagram-send",
+        "datagram-bad-chunk",
+        "datagram-receive",
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=4&padding=0",
+        "protocol": "devious-baton-00",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "sequenceOrderMatters": false,
+        "received": [
+          251,
+          251,
+          251,
+          251,
+          253,
+          253,
+          253,
+          253,
+          255,
+          255,
+          255,
+          255
+        ],
+        "sent": [
+          252,
+          252,
+          252,
+          252,
+          254,
+          254,
+          254,
+          254,
+          0,
+          0,
+          0,
+          0
+        ],
+        "datagramsReceivedMin": 1,
+        "datagramsSent": 1,
+        "eventsInclude": [
+          "ready",
+          "received 251 on remote-uni",
+          "datagram sent",
+          "sent 252",
+          "datagram 252",
+          "received 253 on local-bidi",
+          "sent 254",
+          "received 255 on remote-bidi",
+          "sent 0",
+          "closed"
+        ],
+        "datagramWritableOk": true,
+        "datagramWritableTestsInclude": ["string-chunk"],
+        "streamWritableOk": true,
+        "streamWritableTestsInclude": [
+          "unidirectional-string-chunk",
+          "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
+        ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
+        "protocolConstructorOk": true,
+        "protocolConstructorTestsInclude": [
+          "valid-protocol",
+          "duplicate-protocol",
+          "empty-protocol",
+          "long-protocol",
+          "non-isomorphic-protocol"
+        ],
+        "urlConstructorOk": true,
+        "urlConstructorTestsInclude": [
+          "http-url",
+          "url-fragment",
+          "malformed-url"
+        ],
+        "optionsConstructorTestsInclude": [
+          "allow-pooling-with-certificate-hash"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
+          "zeroBatonReceivedMin": 4,
+          "closeSessionReceivedMin": 1,
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
+        }
+      }
     }
   ]
 }
