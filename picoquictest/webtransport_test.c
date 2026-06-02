@@ -2636,6 +2636,38 @@ static int picowt_webtransport_error_accessor_case(void)
     return ret;
 }
 
+static int picowt_webtransport_error_inverse_case(void)
+{
+    uint32_t app_error = 0xa5a5a5a5;
+    int ret = 0;
+
+    if (h3zero_webtransport_error_to_app(
+        H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST, NULL) != 0 ||
+        h3zero_webtransport_error_to_app(
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(0x1e), NULL) != 0 ||
+        h3zero_webtransport_error_to_app(
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_LAST, NULL) != 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (h3zero_webtransport_error_to_app(
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST + 0x1e,
+            &app_error) == 0 ||
+            app_error != 0xa5a5a5a5 ||
+            h3zero_webtransport_error_to_app(
+                H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST - 1,
+                &app_error) == 0 ||
+            app_error != 0xa5a5a5a5 ||
+            h3zero_webtransport_error_to_app(
+                H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_LAST + 1,
+                &app_error) == 0 ||
+            app_error != 0xa5a5a5a5)) {
+        ret = -1;
+    }
+
+    return ret;
+}
+
 static int picowt_receive_stream_error_case(
     uint64_t stream_id, picoquic_call_back_event_t event, uint64_t h3_error,
     int expect_app_error, uint32_t expected_app_error)
@@ -2704,6 +2736,9 @@ int picowt_receive_stream_error_test(void)
     uint32_t app_error = 0;
     int ret = picowt_webtransport_error_accessor_case();
 
+    if (ret == 0) {
+        ret = picowt_webtransport_error_inverse_case();
+    }
     if (ret == 0 && (h3zero_webtransport_error_to_app(
         H3ZERO_WEBTRANSPORT_APPLICATION_ERROR_FIRST, &app_error) != 0 ||
         app_error != 0 ||
