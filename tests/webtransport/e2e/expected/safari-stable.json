@@ -30,6 +30,20 @@
       }
     },
     {
+      "scenario": "handshake.reject_bad_certificate_hash",
+      "status": "pass",
+      "category": "browser-behavior",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 can reject a WebTransport endpoint with a wrong serverCertificateHashes value before pico_baton sends any response packet. The negative certificate-hash claim remains valid because no WebTransport CONNECT is accepted.",
+      "evidence": "GitHub WebTransportBrowser run 26849816465, Safari job 79178839032, failed only because handshake.reject_bad_certificate_hash observed server.packetsSent=0 while connectAccepted=0 and the browser rejected the WebTransport attempt.",
+      "expect": {
+        "server": {
+          "packetsSentMin": null
+        }
+      }
+    },
+    {
       "scenario": "datagrams.server-empty",
       "status": "skip",
       "category": "browser-bug",
