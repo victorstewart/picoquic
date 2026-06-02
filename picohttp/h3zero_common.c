@@ -2676,6 +2676,7 @@ typedef struct st_h3zero_prepare_datagram_ctx_t {
 	uint8_t buffer[8];
 	size_t application_length;
 	int application_ready;
+	int application_buffer_provided;
 } h3zero_prepare_datagram_ctx_t;
 
 uint8_t* h3zero_provide_datagram_buffer(void* context, size_t length, int ready_to_send)
@@ -2684,11 +2685,13 @@ uint8_t* h3zero_provide_datagram_buffer(void* context, size_t length, int ready_
 	h3zero_prepare_datagram_ctx_t* pdg_ctx = (h3zero_prepare_datagram_ctx_t*)context;
 	pdg_ctx->application_length = length;
 	pdg_ctx->application_ready = ready_to_send;
-	if (length > 0) {
-		if (length + pdg_ctx->stream_id_encoding_length <= pdg_ctx->picoquic_space) {
-			uint8_t* buffer = picoquic_provide_datagram_buffer(pdg_ctx->picoquic_context, length + pdg_ctx->stream_id_encoding_length);
-			if (buffer != NULL) {
-				ret_buffer = (uint8_t*)picoquic_frames_varint_encode(buffer, buffer + pdg_ctx->stream_id_encoding_length, pdg_ctx->quarter_stream_id);
+	if (pdg_ctx->stream_id_encoding_length <= pdg_ctx->picoquic_space &&
+		length <= pdg_ctx->picoquic_space - pdg_ctx->stream_id_encoding_length) {
+		uint8_t* buffer = picoquic_provide_datagram_buffer(pdg_ctx->picoquic_context, length + pdg_ctx->stream_id_encoding_length);
+		if (buffer != NULL) {
+			ret_buffer = (uint8_t*)picoquic_frames_varint_encode(buffer, buffer + pdg_ctx->stream_id_encoding_length, pdg_ctx->quarter_stream_id);
+			if (ret_buffer != NULL) {
+				pdg_ctx->application_buffer_provided = 1;
 			}
 		}
 	}
@@ -2727,7 +2730,7 @@ static int h3zero_callback_prepare_datagram_in_context(picoquic_cnx_t* cnx, void
 				prefix_ctx->function_call(cnx, (uint8_t *)&pdg_ctx, space - pdg_ctx.stream_id_encoding_length, picohttp_callback_provide_datagram, stream_ctx, prefix_ctx->function_ctx);
 				/* the application might have called the mark active API, so we use an OR here */
 				prefix_ctx->ready_to_send_datagrams |= pdg_ctx.application_ready;
-				if (pdg_ctx.application_length > 0) {
+				if (pdg_ctx.application_buffer_provided) {
 					h3_ctx->last_datagram_prefix = prefix_ctx->prefix;
 					data_sent = 1;
 				}

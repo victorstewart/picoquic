@@ -812,6 +812,122 @@ static int h3zero_wt_datagram_payload_callback(picoquic_cnx_t* UNUSED(cnx),
     return 0;
 }
 
+typedef struct st_h3zero_wt_datagram_send_test_ctx_t {
+    size_t payload_length;
+    uint8_t payload;
+    int nb_provide;
+    int nb_errors;
+} h3zero_wt_datagram_send_test_ctx_t;
+
+static int h3zero_wt_datagram_send_callback(picoquic_cnx_t* UNUSED(cnx),
+    uint8_t* bytes, size_t length, picohttp_call_back_event_t fin_or_event,
+    struct st_h3zero_stream_ctx_t* UNUSED(stream_ctx), void* path_app_ctx)
+{
+    h3zero_wt_datagram_send_test_ctx_t* ctx =
+        (h3zero_wt_datagram_send_test_ctx_t*)path_app_ctx;
+
+    if (fin_or_event != picohttp_callback_provide_datagram || ctx == NULL) {
+        if (ctx != NULL) {
+            ctx->nb_errors++;
+        }
+    }
+    else {
+        uint8_t* buffer = h3zero_provide_datagram_buffer(bytes,
+            ctx->payload_length, 0);
+        ctx->nb_provide++;
+        if (buffer == NULL || length < ctx->payload_length) {
+            ctx->nb_errors++;
+        }
+        else if (ctx->payload_length > 0) {
+            buffer[0] = ctx->payload;
+        }
+    }
+
+    return 0;
+}
+
+static int h3zero_wt_datagram_send_case(size_t payload_length)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    uint64_t simulated_time = 0;
+    const uint64_t session_id = 4;
+    h3zero_stream_ctx_t* session_ctx = NULL;
+    h3zero_wt_datagram_send_test_ctx_t test_ctx = {
+        payload_length, 0xd3, 0, 0
+    };
+    uint8_t frame[32];
+    uint8_t* frame_end = NULL;
+    const uint8_t* parsed = frame;
+    uint64_t frame_type = UINT64_MAX;
+    uint64_t h3_datagram_length = UINT64_MAX;
+    uint64_t quarter_stream_id = UINT64_MAX;
+    int more_data = 0;
+    int is_pure_ack = 1;
+    int frame_ret = 0;
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    if (ret == 0) {
+        cnx->remote_parameters.max_datagram_frame_size = PICOQUIC_MAX_PACKET_SIZE;
+        cnx->cnx_state = picoquic_state_ready;
+        session_ctx = h3zero_find_or_create_stream(cnx, session_id, h3_ctx,
+            1, 1);
+        if (session_ctx == NULL ||
+            h3zero_declare_stream_prefix(h3_ctx, session_id,
+                h3zero_wt_datagram_send_callback, &test_ctx) != 0) {
+            ret = -1;
+        }
+        else {
+            session_ctx->is_upgraded = 1;
+        }
+    }
+    if (ret == 0 &&
+        h3zero_set_datagram_ready(cnx, session_id) != 0) {
+        ret = -1;
+    }
+    if (ret == 0) {
+        frame_end = picoquic_format_ready_datagram_frame(cnx, cnx->path[0],
+            frame, frame + sizeof(frame), &more_data, &is_pure_ack,
+            &frame_ret);
+        if (frame_ret != 0 || frame_end == NULL || frame_end == frame ||
+            test_ctx.nb_provide != 1 || test_ctx.nb_errors != 0 ||
+            is_pure_ack || more_data) {
+            ret = -1;
+        }
+    }
+    if (ret == 0 &&
+        ((parsed = picoquic_frames_varint_decode(parsed, frame_end,
+            &frame_type)) == NULL ||
+        (parsed = picoquic_frames_varint_decode(parsed, frame_end,
+            &h3_datagram_length)) == NULL ||
+        (parsed = picoquic_frames_varint_decode(parsed, frame_end,
+            &quarter_stream_id)) == NULL ||
+        frame_type != picoquic_frame_type_datagram_l ||
+        h3_datagram_length != 1 + payload_length ||
+        quarter_stream_id != session_id / 4 ||
+        (size_t)(frame_end - parsed) != payload_length ||
+        (payload_length > 0 && parsed[0] != test_ctx.payload))) {
+        DBG_PRINTF("WT datagram send failed, payload=%zu, type=%" PRIu64 ", len=%" PRIu64 ", qsid=%" PRIu64 ", tail=%zu, provide=%d, errors=%d",
+            payload_length, frame_type, h3_datagram_length,
+            quarter_stream_id, (frame_end == NULL || parsed == NULL) ? 0 :
+            (size_t)(frame_end - parsed), test_ctx.nb_provide,
+            test_ctx.nb_errors);
+        ret = -1;
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 int h3zero_wt_datagram_payload_test(void)
 {
     picoquic_quic_t* quic = NULL;
@@ -866,6 +982,12 @@ int h3zero_wt_datagram_payload_test(void)
             test_ctx.nb_zero_length, test_ctx.nb_one_byte,
             test_ctx.nb_errors, test_ctx.byte_sum);
         ret = -1;
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_datagram_send_case(0);
+    }
+    if (ret == 0) {
+        ret = h3zero_wt_datagram_send_case(1);
     }
 
     if (cnx != NULL) {
