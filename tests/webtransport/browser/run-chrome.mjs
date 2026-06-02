@@ -15,6 +15,12 @@ const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const CDP_PORT = Number(process.env.PICOQUIC_WT_CDP_PORT || 9223);
+/* Chrome 148 x64 under Rosetta on Apple Silicon was observed to stay alive but
+ * never expose the DevTools endpoint with --headless=new. Keep the modern
+ * default, but let local/CI runs select --headless=old when that startup
+ * behavior is encountered.
+ */
+const CHROME_HEADLESS = process.env.PICOQUIC_WT_CHROME_HEADLESS || "new";
 const WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
 const PAGE_URL = process.env.PICOQUIC_WT_PAGE_URL ||
@@ -375,7 +381,7 @@ async function main() {
     await waitForServer(server);
 
     const chromeArgs = [
-      "--headless=new",
+      `--headless=${CHROME_HEADLESS}`,
       "--no-first-run",
       "--disable-background-networking",
       "--disable-dev-shm-usage",

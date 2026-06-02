@@ -66,8 +66,11 @@ result:
 node tests/webtransport/browser/run-chrome.mjs
 ```
 
-Set `CHROME_BIN=/path/to/chrome` if the browser is not on `PATH`. One manual
-command shape is:
+Set `CHROME_BIN=/path/to/chrome` if the browser is not on `PATH`. The runner
+uses `--headless=new` by default; set `PICOQUIC_WT_CHROME_HEADLESS=old` if a
+local Chrome build starts but never exposes the DevTools endpoint in new
+headless mode, as observed with Chrome 148 x64 under Rosetta on Apple Silicon.
+One manual command shape is:
 
 ```sh
 google-chrome --user-data-dir=/tmp/picoquic-wt-chrome --ignore-certificate-errors --origin-to-force-quic-on=localhost:4433 'https://localhost:4433/index.html?autorun=1'
