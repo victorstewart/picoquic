@@ -677,6 +677,8 @@ function summarizeServerOutput(output) {
     h3ControlFrames: countMatches(output, /H3 control frame/g),
     originMissing: countMatches(output, /Missing WebTransport CONNECT origin/g),
     originRejected: countMatches(output, /WebTransport CONNECT origin rejected/g),
+    batonParameterRejected: countMatches(output,
+      /Rejecting malformed baton WebTransport CONNECT parameters/g),
     closeSessionReceived: countMatches(output,
       /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
     emptyDatagramsReceived: countMatches(output,

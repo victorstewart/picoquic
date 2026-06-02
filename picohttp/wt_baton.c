@@ -944,7 +944,12 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             {
                 wt_baton_ctx_t path_params = { 0 };
                 ret = wt_baton_ctx_path_params(&path_params, bytes, length);
-                if (ret == 0 && stream_ctx->ps.stream_state.wt_protocol == NULL &&
+                if (ret != 0) {
+                    picoquic_log_app_message(cnx,
+                        "Rejecting malformed baton WebTransport CONNECT parameters on stream: %" PRIu64,
+                        stream_ctx->stream_id);
+                }
+                else if (stream_ctx->ps.stream_state.wt_protocol == NULL &&
                     picowt_select_wt_protocol(stream_ctx, PICOWT_BATON_ALPN_FILTER) != 0) {
                     if (!path_params.wt_protocol_optional) {
                         ret = -1;

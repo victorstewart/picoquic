@@ -506,6 +506,37 @@ int picowt_baton_uri_test(void)
     return ret;
 }
 
+static int picowt_baton_parameter_refusal_test(void)
+{
+    picoquic_quic_t* quic = NULL;
+    picoquic_cnx_t* cnx = NULL;
+    h3zero_callback_ctx_t* h3_ctx = NULL;
+    h3zero_stream_ctx_t stream_ctx = { 0 };
+    uint64_t simulated_time = 0;
+    const char bad_path[] = "/baton?version=1&baton=240";
+    int ret = h3zero_set_test_context(&quic, &cnx, &h3_ctx,
+        &simulated_time);
+
+    if (ret == 0) {
+        if (wt_baton_callback(cnx, (uint8_t*)bad_path, strlen(bad_path),
+            picohttp_callback_connect, &stream_ctx, NULL) == 0 ||
+            stream_ctx.path_callback_ctx != NULL ||
+            stream_ctx.path_callback != NULL) {
+            ret = -1;
+        }
+    }
+
+    if (cnx != NULL) {
+        picoquic_set_callback(cnx, NULL, NULL);
+    }
+    if (h3_ctx != NULL) {
+        h3zero_callback_delete_context(cnx, h3_ctx);
+    }
+    picoquic_test_delete_minimal_cnx(&quic, &cnx);
+
+    return ret;
+}
+
 int picowt_baton_compact_test(void)
 {
     wt_baton_ctx_t baton_ctx = { 0 };
@@ -517,6 +548,9 @@ int picowt_baton_compact_test(void)
     const uint8_t empty_client_datagram_path[] = "/baton?baton=33&padding=0&client_datagram=empty";
     const uint8_t bad_client_datagram_path[] = "/baton?baton=33&padding=0&client_datagram=bogus";
     const uint8_t bad_version_path[] = "/baton?version=1&baton=33&padding=0";
+    const uint8_t bad_baton_value_path[] = "/baton?baton=256&padding=0";
+    const uint8_t bad_count_zero_path[] = "/baton?baton=33&count=0&padding=0";
+    const uint8_t bad_count_excess_path[] = "/baton?baton=33&count=257&padding=0";
     const uint8_t too_large_path[] = "/baton?baton=33&padding=16384";
     int ret = wt_baton_ctx_path_params(&baton_ctx, compact_path, sizeof(compact_path) - 1);
 
@@ -568,9 +602,27 @@ int picowt_baton_compact_test(void)
         ret = -1;
     }
     if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_baton_value_path,
+            sizeof(bad_baton_value_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_count_zero_path,
+            sizeof(bad_count_zero_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_count_excess_path,
+            sizeof(bad_count_excess_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
         wt_baton_ctx_path_params(&baton_ctx, too_large_path,
             sizeof(too_large_path) - 1) == 0) {
         ret = -1;
+    }
+    if (ret == 0) {
+        ret = picowt_baton_parameter_refusal_test();
     }
     if (ret == 0) {
         ret = picowt_baton_test_one(29, "/baton?baton=240&padding=0",
