@@ -15,6 +15,46 @@ permissions:
   contents: read
 
 jobs:
+  wpt-adapter:
+    name: WPT adapter gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev openssl
+
+      - name: Build pico_baton
+        run: |
+          cmake -S . -B build -DPICOQUIC_FETCH_PTLS:BOOL=ON
+          cmake --build build -j$(nproc) --target pico_baton
+
+      - name: Validate WPT adapter manifests
+        run: |
+          npx -y node@22 tests/webtransport/wpt/run-wpt.mjs list --json
+          npx -y node@22 tests/webtransport/wpt/run-wpt.mjs list --expected tests/webtransport/wpt/expected/chrome-stable.json --json
+          npx -y node@22 tests/webtransport/wpt/run-wpt.mjs list --expected tests/webtransport/wpt/expected/edge-stable.json --json
+          npx -y node@22 tests/webtransport/wpt/run-wpt.mjs list --expected tests/webtransport/wpt/expected/firefox-stable.json --json
+          npx -y node@22 tests/webtransport/wpt/run-wpt.mjs list --expected tests/webtransport/wpt/expected/safari-stable.json --json
+
+      - name: Validate WPT invocation wiring
+        run: |
+          npx -y node@22 tests/webtransport/wpt/run-wpt.mjs run \
+            --wpt-root tests/webtransport/wpt/fixtures/fake-wpt \
+            --browser chrome \
+            --test constructor.https.sub.any.js \
+            --dry-run
+
+      - name: Smoke-test WPT pico_baton adapter
+        run: |
+          npx -y node@22 tests/webtransport/wpt/run-wpt.mjs server-smoke
+
   chrome:
     name: Chrome WebTransport smoke
     runs-on: ubuntu-latest
