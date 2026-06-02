@@ -42,6 +42,26 @@
       }
     },
     {
+      "scenario": "datagrams.optional-unreliable",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. The optional-unreliable scenario passed the stream and datagram data path with requireUnreliable disabled, but it inherits the same Firefox protocol-constructor, selected-protocol, close-capsule, and writable diagnostic caveats as the other positive Firefox baton scenarios.",
+      "evidence": "GitHub WebTransportBrowser run 26829426456, Firefox job 79106143959, failed only because the scenario URL assertion expected no protocol=optional query parameter; the logged Firefox baton smoke on the same run showed Firefox 151.0.3 completed the baton exchange with datagramsReceived=[252], datagramsSent=1, protocol='', protocolConstructor.ok=false, and the documented Firefox diagnostics.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&protocol=optional",
+        "protocol": "",
+        "protocolConstructorOk": false,
+        "streamWritableOk": null,
+        "streamWritableTestsInclude": ["unidirectional-string-chunk"],
+        "server": {
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": null
+        }
+      }
+    },
+    {
       "scenario": "baton.core.compact-default-reader",
       "status": "pass",
       "category": "browser-missing",
