@@ -457,7 +457,8 @@
         "bidirectional-stream-bad-chunk",
         "datagram-send",
         "datagram-bad-chunk",
-        "datagram-receive"
+        "datagram-receive",
+        "new-stream-after-close"
       ],
       "expect": {
         "ok": true,
@@ -488,6 +489,11 @@
         "streamWritableTestsInclude": [
           "unidirectional-string-chunk",
           "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
         ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
@@ -540,7 +546,8 @@
         "outgoing-bidirectional-stream",
         "datagram-send",
         "datagram-receive",
-        "datagram-available-without-requireUnreliable"
+        "datagram-available-without-requireUnreliable",
+        "new-stream-after-close"
       ],
       "expect": {
         "ok": true,
@@ -571,6 +578,11 @@
         "streamWritableTestsInclude": [
           "unidirectional-string-chunk",
           "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
         ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
@@ -628,7 +640,8 @@
         "bidirectional-stream-bad-chunk",
         "datagram-send",
         "datagram-bad-chunk",
-        "datagram-receive"
+        "datagram-receive",
+        "new-stream-after-close"
       ],
       "expect": {
         "ok": true,
@@ -659,6 +672,11 @@
         "streamWritableTestsInclude": [
           "unidirectional-string-chunk",
           "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
         ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
@@ -719,7 +737,8 @@
         "bidirectional-stream-bad-chunk",
         "datagram-send",
         "datagram-bad-chunk",
-        "datagram-receive"
+        "datagram-receive",
+        "new-stream-after-close"
       ],
       "expect": {
         "ok": true,
@@ -750,6 +769,11 @@
         "streamWritableTestsInclude": [
           "unidirectional-string-chunk",
           "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
         ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [
@@ -809,7 +833,8 @@
         "bidirectional-stream-bad-chunk",
         "datagram-send",
         "datagram-bad-chunk",
-        "datagram-receive"
+        "datagram-receive",
+        "new-stream-after-close"
       ],
       "expect": {
         "ok": true,
@@ -841,6 +866,11 @@
         "streamWritableTestsInclude": [
           "unidirectional-string-chunk",
           "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
         ],
         "protocolConstructorOk": true,
         "protocolConstructorTestsInclude": [

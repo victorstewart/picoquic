@@ -404,6 +404,14 @@ function assertScenarioResult(id, result, expect) {
     assertDiagnosticTestsInclude(id, "streamWritable", result.streamWritable,
       expect.streamWritableTestsInclude);
   }
+  if (hasExpectedValue(expect, "postCloseOk") &&
+    (!result.postClose || result.postClose.ok !== expect.postCloseOk)) {
+    throw new Error(`${id}: post-close check failed`);
+  }
+  if (expect.postCloseTestsInclude) {
+    assertDiagnosticTestsInclude(id, "postClose", result.postClose,
+      expect.postCloseTestsInclude);
+  }
   if (expect.server) {
     if (!result.server) {
       throw new Error(`${id}: missing server summary`);

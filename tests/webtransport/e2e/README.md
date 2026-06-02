@@ -48,6 +48,10 @@ scenarios where each expected byte must arrive exactly once, but cross-stream
 arrival order is intentionally not constrained.
 Use `datagramWritableTestsInclude` and `streamWritableTestsInclude` to require
 the exact bad-chunk diagnostic subtests that ran.
+Use `postCloseOk` and `postCloseTestsInclude` on positive scenarios to require
+browser-observable session termination behavior, such as rejecting new
+bidirectional and unidirectional stream creation after `transport.closed`
+settles.
 Use `protocolConstructorTestsInclude`, `urlConstructorTestsInclude`, and
 `optionsConstructorTestsInclude` the same way for constructor diagnostics.
 Use `eventsInclude` for required browser-observable state-machine events such

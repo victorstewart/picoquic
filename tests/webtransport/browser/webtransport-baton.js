@@ -646,6 +646,43 @@
     return result;
   }
 
+  async function runPostCloseTests(transport) {
+    var result = {
+      ok: false,
+      tests: []
+    };
+
+    function record(name, ok, detail) {
+      result.tests.push({
+        name: name,
+        ok: ok,
+        detail: detail || ""
+      });
+    }
+
+    async function expectRejects(name, operation) {
+      try {
+        await withTimeout(Promise.resolve(operation()), 3000);
+        record(name, false, "operation resolved");
+      } catch (error) {
+        var text = errorText(error);
+        record(name, text.indexOf("timeout after") < 0, text);
+      }
+    }
+
+    await expectRejects("create-bidirectional-stream", function () {
+      return transport.createBidirectionalStream();
+    });
+    await expectRejects("create-unidirectional-stream", function () {
+      return transport.createUnidirectionalStream();
+    });
+
+    result.ok = result.tests.every(function (entry) {
+      return entry.ok;
+    });
+    return result;
+  }
+
   function withTimeout(promise, timeoutMs, onTimeout) {
     var timer = 0;
     var timeout = new Promise(function (_, reject) {
@@ -681,6 +718,7 @@
       datagramsReceived: [],
       datagramsSent: 0,
       protocol: "",
+      postClose: null,
       events: []
     };
     window.__picoquicWebTransportProgress = result;
@@ -691,6 +729,7 @@
     var finalZeroWritesPending = 0;
     var finalZeroSyntheticSent = 0;
     var transportClosed = false;
+    var postCloseStarted = false;
     var resolveDone;
     var rejectDone;
     var done = new Promise(function (resolve, reject) {
@@ -780,10 +819,29 @@
 
     function maybeDone() {
       if (!finished && sentZero && transportClosed && datagramRequirementMet()) {
-        finished = true;
-        result.ok = true;
-        result.closedMs = nowMs() - result.startedMs;
-        resolveDone(result);
+        finishAfterClosed();
+      }
+    }
+
+    async function finishAfterClosed() {
+      if (postCloseStarted) {
+        return;
+      }
+      postCloseStarted = true;
+      try {
+        result.postClose = await runPostCloseTests(transport);
+        if (!result.postClose.ok) {
+          throw new Error("post-close tests failed: " +
+            JSON.stringify(result.postClose));
+        }
+        if (!finished) {
+          finished = true;
+          result.ok = true;
+          result.closedMs = nowMs() - result.startedMs;
+          resolveDone(result);
+        }
+      } catch (error) {
+        fail(error, false);
       }
     }
 
