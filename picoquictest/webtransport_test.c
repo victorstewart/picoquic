@@ -3454,6 +3454,12 @@ int picowt_close_message_test(void)
                     ret = -1;
                 }
             }
+            if (ret == 0 &&
+                (picowt_send_close_session_message(cnx, control_stream_ctx,
+                    0, NULL) == 0 ||
+                    queued == NULL || queued->next_stream_data != NULL)) {
+                ret = -1;
+            }
         }
     }
     if (ret == 0) {
