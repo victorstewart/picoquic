@@ -26,6 +26,13 @@ const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY ==
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const SAFARI_DRIVER_PORT = Number(process.env.PICOQUIC_WT_SAFARI_DRIVER_PORT || 9444);
+/* Safari 26.4 on the macos-26 GitHub image can take longer than 10s for
+ * safaridriver's /status endpoint to become reachable after a previous Safari
+ * smoke run; see WebTransportBrowser run 26802796720. This is WebDriver
+ * startup hardening only, before any WebTransport traffic is attempted.
+ */
+const SAFARI_DRIVER_READY_MS =
+  Number(process.env.PICOQUIC_WT_SAFARI_DRIVER_READY_MS || 30000);
 const HARNESS_PORT = Number(process.env.PICOQUIC_WT_HARNESS_PORT || 8080);
 const WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
@@ -288,7 +295,7 @@ function waitForServer(child) {
 }
 
 async function waitForDriver(endpoint, childOutput) {
-  const deadline = Date.now() + 10000;
+  const deadline = Date.now() + SAFARI_DRIVER_READY_MS;
   while (Date.now() < deadline) {
     try {
       const response = await fetch(`${endpoint}/status`);
