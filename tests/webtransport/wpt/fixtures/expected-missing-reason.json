@@ -1,0 +1,11 @@
+{
+  "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": [
+    {
+      "test": "constructor.https.sub.any.js",
+      "status": "skip"
+    }
+  ]
+}

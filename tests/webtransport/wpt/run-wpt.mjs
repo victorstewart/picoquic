@@ -254,9 +254,9 @@ function selectTests(discoveredTests, selectors) {
   return selected;
 }
 
-function requireNonEmptyString(object, name, expectedPath) {
+function requireNonEmptyString(object, name, expectedPath, owner = "expected manifest") {
   if (typeof object[name] !== "string" || object[name].length === 0) {
-    throw new Error(`expected manifest must contain a non-empty ${name}: ${expectedPath}`);
+    throw new Error(`${owner} must contain a non-empty ${name}: ${expectedPath}`);
   }
 }
 
@@ -272,6 +272,7 @@ function loadExpectedManifest(expectedPath, discoveredTests) {
     throw new Error(`expected manifest must contain an expected array: ${expectedPath}`);
   }
 
+  const expectedTests = new Map();
   for (const [index, entry] of expected.expected.entries()) {
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error(`expected[${index}] must be an object in ${expectedPath}`);
@@ -282,8 +283,16 @@ function loadExpectedManifest(expectedPath, discoveredTests) {
     if (typeof entry.status !== "string" || !["fail", "skip", "expected-fail"].includes(entry.status)) {
       throw new Error(`expected[${index}].status must be fail, skip, or expected-fail in ${expectedPath}`);
     }
-    if (!discoveredTests.some((test) => expectedEntryMatchesTest(entry.test, test))) {
+    requireNonEmptyString(entry, "reason", expectedPath, `expected[${index}]`);
+    const matchedTests = discoveredTests.filter((test) => expectedEntryMatchesTest(entry.test, test));
+    if (matchedTests.length === 0) {
       throw new Error(`expected[${index}].test does not match the WPT subset: ${entry.test}`);
+    }
+    for (const test of matchedTests) {
+      if (expectedTests.has(test)) {
+        throw new Error(`expected[${index}].test duplicates expected[${expectedTests.get(test)}].test for ${test} in ${expectedPath}`);
+      }
+      expectedTests.set(test, index);
     }
   }
 

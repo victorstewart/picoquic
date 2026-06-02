@@ -1,5 +1,7 @@
 {
   "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
   "expected": [
     {
       "test": "not-in-webtransport-subset.https.any.js",
