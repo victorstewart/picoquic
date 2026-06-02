@@ -112,23 +112,12 @@
     },
     {
       "scenario": "baton.core.two-lane-compact-default-reader",
-      "status": "pass",
+      "status": "skip",
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not claim selected WT-Protocol exposure. The two-lane compact scenario should still complete the concurrent WebTransport stream/datagram data path, but it inherits the Firefox protocol-constructor, selected-protocol, close-capsule, and writable diagnostic caveats as the other positive Firefox baton scenarios.",
-      "evidence": "GitHub WebTransportBrowser run 26830637957 passed Firefox after the standalone smoke stopped gating on the already documented bidirectional bad-chunk diagnostic. Earlier Firefox positive-path evidence is recorded on baton.core.compact-default-reader and datagrams.optional-unreliable; local Chrome 148.0.7778.216 established the two-lane expected baton sequence before this manifest entry was added.",
-      "expect": {
-        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=2&padding=0&protocol=optional",
-        "protocol": "",
-        "protocolConstructorOk": false,
-        "streamWritableOk": null,
-        "streamWritableTestsInclude": ["unidirectional-string-chunk"],
-        "server": {
-          "closeSessionReceivedMin": 0,
-          "writableBadChunkCloseReceived": null
-        }
-      }
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not claim selected WT-Protocol exposure. On the two-lane compact endpoint, Firefox completed one full stream/datagram baton lane but did not deliver the second concurrent server-opened lane before the harness timeout, so this lane does not currently claim concurrent two-lane browser E2E conformance for Firefox.",
+      "evidence": "GitHub WebTransportBrowser run 26833011127, Firefox job 79119269606, logged url=https://127.0.0.1:4433/baton?version=0&baton=251&count=2&padding=0&protocol=optional with received=[251,253,255], sent=[252,254,0], datagramsReceived=[252], closeSessionReceived=1, and timeout after 30000 ms while pico_baton was still waiting for the second lane. Chrome and Edge passed the same two-lane scenario in that run."
     }
   ]
 }

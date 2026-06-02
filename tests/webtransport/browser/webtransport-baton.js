@@ -772,7 +772,25 @@
       var writer = writable.getWriter();
       try {
         await writer.ready;
-        await writer.write(makeBatonPacket(baton, 0));
+        try {
+          await writer.write(makeBatonPacket(baton, 0));
+        } catch (error) {
+          if (baton === 0 && isNetworkError(error) && datagramRequirementMet()) {
+            /* Safari 26.4 in GitHub Actions run 26833011127 delivered the
+             * final zero baton to pico_baton, observed transport.closed, and
+             * then rejected the still-pending writer.write() with NetworkError
+             * because the server closed the completed WebTransport session.
+             */
+            result.sent.push(baton);
+            note("sent " + baton);
+            sentZero = true;
+            transport.closed.then(markClosed, function (closeError) {
+              fail(closeError, false);
+            });
+            return;
+          }
+          throw error;
+        }
         result.sent.push(baton);
         note("sent " + baton);
         if (baton === 0) {

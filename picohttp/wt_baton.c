@@ -442,6 +442,13 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                         ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_BRUH, "Too much data on stream!");
                     }
                 }
+                else if (length == 0 && is_fin) {
+                    /* A stream can deliver the baton byte and FIN in separate
+                     * callbacks; the lane may already be reused by the time
+                     * the empty FIN arrives.
+                     */
+                    return 0;
+                }
                 else if (receive_available == SIZE_MAX) {
                     /* unexpected incoming stream */
                     picoquic_log_app_message(cnx, "Received baton data on wrong stream %" PRIu64 ", expected %" PRIu64,
