@@ -14,6 +14,8 @@ const PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
+const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
+const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
@@ -348,6 +350,12 @@ function equalArray(actual, expected) {
 }
 
 function assertHarnessResult(result) {
+  if (!EXPECT_OK) {
+    if (!result || result.ok !== false || !result.error) {
+      throw new Error(`browser harness unexpectedly succeeded: ${JSON.stringify(result)}`);
+    }
+    return;
+  }
   if (!result || result.ok !== true) {
     throw new Error(`browser harness failed: ${JSON.stringify(result)}`);
   }
@@ -499,11 +507,13 @@ async function main() {
     await cdp.send("Page.navigate", { url: targetUrl });
     await waitForHarness(cdp);
     const result = await readHarnessResult(cdp);
-    assertHarnessResult(result);
-    result.protocolConstructor = await readProtocolConstructorResult(cdp, certConfig.hash);
-    assertProtocolConstructorResult(result.protocolConstructor);
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);
+    }
+    assertHarnessResult(result);
+    if (RUN_PROTOCOL_CONSTRUCTOR && EXPECT_OK) {
+      result.protocolConstructor = await readProtocolConstructorResult(cdp, certConfig.hash);
+      assertProtocolConstructorResult(result.protocolConstructor);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

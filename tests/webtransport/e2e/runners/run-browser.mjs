@@ -148,6 +148,10 @@ function assertScenarioResult(id, result, expect) {
       result.datagramsReceived.length < expect.datagramsReceivedMin)) {
     throw new Error(`${id}: expected at least ${expect.datagramsReceivedMin} datagrams, got ${JSON.stringify(result.datagramsReceived)}`);
   }
+  if (expect.errorIncludes !== undefined &&
+    (!result.error || !result.error.includes(expect.errorIncludes))) {
+    throw new Error(`${id}: expected error containing ${JSON.stringify(expect.errorIncludes)}, got ${JSON.stringify(result.error)}`);
+  }
   if (expect.protocolConstructorOk !== undefined &&
     (!result.protocolConstructor ||
       result.protocolConstructor.ok !== expect.protocolConstructorOk)) {
@@ -229,6 +233,8 @@ async function runScenario(browser, scenario, vars) {
     PICOQUIC_WT_PROTOCOL: rendered.protocol || "devious-baton-00",
     PICOQUIC_WT_REQUIRE_DATAGRAM: rendered.requireDatagram === false ? "0" : "1",
     PICOQUIC_WT_USE_BYOB: rendered.useByob === false ? "0" : "1",
+    PICOQUIC_WT_EXPECT_OK: rendered.expect && rendered.expect.ok === false ? "0" : "1",
+    PICOQUIC_WT_PROTOCOL_CONSTRUCTOR: rendered.expect && rendered.expect.ok === false ? "0" : "1",
     PICOQUIC_WT_INCLUDE_SERVER_SUMMARY: "1",
     PICOQUIC_WT_TIMEOUT_MS: String(rendered.timeoutMs || 30000),
     PICOQUIC_WT_PORT: String(vars.port)
