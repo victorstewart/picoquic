@@ -885,6 +885,27 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/expected/safari-stable.json)
         set_tests_properties(picohttp_wt_e2e_expected_safari_file
                              PROPERTIES LABELS wt_browser)
+        add_test(NAME picohttp_wt_e2e_expected_reject_missing_metadata
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-missing-metadata.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_missing_metadata
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_expected_reject_duplicate
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-duplicate-scenario.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_duplicate
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_expected_reject_missing_reason
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-missing-reason.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_missing_reason
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_expected_safari
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs

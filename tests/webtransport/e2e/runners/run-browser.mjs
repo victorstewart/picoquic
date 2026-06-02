@@ -176,10 +176,19 @@ function manifestScenarioIds(manifest) {
   return new Set(manifest.scenarios.map((scenario) => scenario.id));
 }
 
-function validateExpectedEntry(entry, path) {
-  if (!entry.scenario || !entry.status || !entry.category ||
-    !entry.reason || !entry.evidence) {
-    throw new Error(`invalid expected-result entry in ${path}`);
+function requireExpectedString(object, name, path, owner = "expected-results file") {
+  if (typeof object[name] !== "string" || object[name].length === 0) {
+    throw new Error(`${owner} must contain a non-empty ${name}: ${path}`);
+  }
+}
+
+function validateExpectedEntry(entry, path, index) {
+  if (!isObject(entry)) {
+    throw new Error(`expected[${index}] must be an object in ${path}`);
+  }
+  for (const field of ["scenario", "status", "category", "browserVersion",
+    "platform", "reason", "evidence"]) {
+    requireExpectedString(entry, field, path, `expected[${index}]`);
   }
   if (!EXPECTED_STATUSES.has(entry.status)) {
     throw new Error(`invalid expected-result status in ${path}: ${entry.status}`);
@@ -199,13 +208,19 @@ function loadExpected(path, manifest) {
   }
 
   const expected = JSON.parse(readFileSync(path, "utf8"));
-  if (!expected || !Array.isArray(expected.expected)) {
+  if (!isObject(expected)) {
+    throw new Error(`expected-results file must be an object: ${path}`);
+  }
+  requireExpectedString(expected, "browser", path);
+  requireExpectedString(expected, "channel", path);
+  requireExpectedString(expected, "platform", path);
+  if (!Array.isArray(expected.expected)) {
     throw new Error(`expected-results file has no expected array: ${path}`);
   }
   const entries = new Map();
   const scenarioIds = manifestScenarioIds(manifest);
-  for (const entry of expected.expected || []) {
-    validateExpectedEntry(entry, path);
+  for (const [index, entry] of expected.expected.entries()) {
+    validateExpectedEntry(entry, path, index);
     if (!scenarioIds.has(entry.scenario)) {
       throw new Error(`expected-result entry references unknown scenario in ${path}: ${entry.scenario}`);
     }

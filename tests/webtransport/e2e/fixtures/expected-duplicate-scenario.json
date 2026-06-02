@@ -1,0 +1,25 @@
+{
+  "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": [
+    {
+      "scenario": "baton.core.padded-byob",
+      "status": "skip",
+      "category": "fixture",
+      "browserVersion": "0.0",
+      "platform": "linux",
+      "reason": "Fixture used to verify duplicate browser E2E expected scenarios are rejected.",
+      "evidence": "Synthetic fixture."
+    },
+    {
+      "scenario": "baton.core.padded-byob",
+      "status": "skip",
+      "category": "fixture",
+      "browserVersion": "0.0",
+      "platform": "linux",
+      "reason": "Fixture used to verify duplicate browser E2E expected scenarios are rejected.",
+      "evidence": "Synthetic fixture."
+    }
+  ]
+}
