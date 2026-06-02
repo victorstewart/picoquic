@@ -300,7 +300,19 @@
           "bidirectional-string-chunk"
         ],
         "protocolConstructorOk": true,
+        "protocolConstructorTestsInclude": [
+          "valid-protocol",
+          "duplicate-protocol",
+          "empty-protocol",
+          "long-protocol",
+          "non-isomorphic-protocol"
+        ],
         "urlConstructorOk": true,
+        "urlConstructorTestsInclude": [
+          "http-url",
+          "url-fragment",
+          "malformed-url"
+        ],
         "server": {
           "connectAcceptedMin": 1,
           "packetsReceivedMin": 1,
@@ -369,7 +381,19 @@
           "bidirectional-string-chunk"
         ],
         "protocolConstructorOk": true,
+        "protocolConstructorTestsInclude": [
+          "valid-protocol",
+          "duplicate-protocol",
+          "empty-protocol",
+          "long-protocol",
+          "non-isomorphic-protocol"
+        ],
         "urlConstructorOk": true,
+        "urlConstructorTestsInclude": [
+          "http-url",
+          "url-fragment",
+          "malformed-url"
+        ],
         "server": {
           "connectAcceptedMin": 1,
           "packetsReceivedMin": 1,

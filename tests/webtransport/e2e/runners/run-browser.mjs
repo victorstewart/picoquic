@@ -337,10 +337,18 @@ function assertScenarioResult(id, result, expect) {
       result.protocolConstructor.ok !== expect.protocolConstructorOk)) {
     throw new Error(`${id}: protocol constructor check failed`);
   }
+  if (expect.protocolConstructorTestsInclude) {
+    assertDiagnosticTestsInclude(id, "protocolConstructor", result.protocolConstructor,
+      expect.protocolConstructorTestsInclude);
+  }
   if (expect.urlConstructorOk !== undefined &&
     (!result.urlConstructor ||
       result.urlConstructor.ok !== expect.urlConstructorOk)) {
     throw new Error(`${id}: URL constructor check failed`);
+  }
+  if (expect.urlConstructorTestsInclude) {
+    assertDiagnosticTestsInclude(id, "urlConstructor", result.urlConstructor,
+      expect.urlConstructorTestsInclude);
   }
   if (expect.optionsConstructorOk !== undefined &&
     (!result.optionsConstructor ||
