@@ -2175,6 +2175,21 @@ int picowt_zero_rtt_rules_test(void)
         received.wt_initial_max_streams_bidi = 4;
         ret = picowt_zero_rtt_settings_case(&remembered, &received, H3ZERO_SETTINGS_ERROR);
     }
+    if (ret == 0) {
+        received = remembered;
+        received.webtransport_enabled = 0;
+        ret = picowt_zero_rtt_settings_case(&remembered, &received, H3ZERO_SETTINGS_ERROR);
+    }
+    if (ret == 0) {
+        received = remembered;
+        received.enable_connect_protocol = 0;
+        ret = picowt_zero_rtt_settings_case(&remembered, &received, H3ZERO_SETTINGS_ERROR);
+    }
+    if (ret == 0) {
+        received = remembered;
+        received.h3_datagram = 0;
+        ret = picowt_zero_rtt_settings_case(&remembered, &received, H3ZERO_SETTINGS_ERROR);
+    }
 
     return ret;
 }

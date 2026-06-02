@@ -4265,6 +4265,84 @@ static int h3zero_settings_malformed_length_test(void)
     return ret;
 }
 
+static int h3zero_settings_invalid_boolean_test(void)
+{
+    static const uint64_t boolean_settings[] = {
+        h3zero_settings_enable_connect_protocol,
+        h3zero_setting_h3_datagram,
+        h3zero_settings_wt_enabled
+    };
+    uint8_t buffer[64];
+    h3zero_settings_t decoded;
+    int ret = 0;
+
+    for (size_t i = 0; ret == 0 &&
+        i < sizeof(boolean_settings) / sizeof(boolean_settings[0]); i++) {
+        uint8_t* bytes = buffer + 2;
+        uint8_t* bytes_max = buffer + sizeof(buffer);
+
+        buffer[0] = h3zero_frame_settings;
+        bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+            boolean_settings[i], 2);
+        if (bytes == NULL || bytes - (buffer + 2) >= 64) {
+            ret = -1;
+        }
+        else {
+            buffer[1] = (uint8_t)(bytes - (buffer + 2));
+            if (h3zero_settings_decode(buffer, bytes, &decoded) != NULL) {
+                ret = -1;
+            }
+        }
+    }
+
+    return ret;
+}
+
+static int h3zero_settings_duplicate_key_test(void)
+{
+    static const uint64_t duplicate_settings[] = {
+        h3zero_setting_header_table_size,
+        h3zero_qpack_blocked_streams,
+        h3zero_settings_enable_connect_protocol,
+        h3zero_setting_h3_datagram,
+        h3zero_settings_wt_enabled,
+        h3zero_settings_wt_initial_max_data,
+        h3zero_settings_wt_initial_max_streams_uni,
+        h3zero_settings_wt_initial_max_streams_bidi,
+        h3zero_settings_webtransport_max_sessions,
+        h3zero_settings_webtransport_max_sessions_old,
+        h3zero_settings_enable_webtransport
+    };
+    uint8_t buffer[128];
+    h3zero_settings_t decoded;
+    int ret = 0;
+
+    for (size_t i = 0; ret == 0 &&
+        i < sizeof(duplicate_settings) / sizeof(duplicate_settings[0]); i++) {
+        uint8_t* bytes = buffer + 2;
+        uint8_t* bytes_max = buffer + sizeof(buffer);
+
+        buffer[0] = h3zero_frame_settings;
+        bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+            duplicate_settings[i], 1);
+        if (bytes != NULL) {
+            bytes = h3zero_settings_test_component_encode(bytes, bytes_max,
+                duplicate_settings[i], 1);
+        }
+        if (bytes == NULL || bytes - (buffer + 2) >= 64) {
+            ret = -1;
+        }
+        else {
+            buffer[1] = (uint8_t)(bytes - (buffer + 2));
+            if (h3zero_settings_decode(buffer, bytes, &decoded) != NULL) {
+                ret = -1;
+            }
+        }
+    }
+
+    return ret;
+}
+
 int h3zero_settings_test(void)
 {
     int ret = h3zero_settings_decode_test(h3zero_default_setting_frame + 1, h3zero_default_setting_frame_size - 1, &default_setting_expected, 1);
@@ -4298,6 +4376,12 @@ int h3zero_settings_test(void)
     }
     if (ret == 0) {
         ret = h3zero_settings_malformed_length_test();
+    }
+    if (ret == 0) {
+        ret = h3zero_settings_invalid_boolean_test();
+    }
+    if (ret == 0) {
+        ret = h3zero_settings_duplicate_key_test();
     }
 
     return ret;

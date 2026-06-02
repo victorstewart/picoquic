@@ -176,7 +176,10 @@ static int h3zero_settings_validate_webtransport_0rtt(
 	 * decoded legacy compatibility SETTINGS.
 	 */
 	return (remembered != NULL && received != NULL &&
-		(remembered->webtransport_max_sessions > received->webtransport_max_sessions ||
+		((remembered->webtransport_enabled != 0 && received->webtransport_enabled == 0) ||
+			(remembered->enable_connect_protocol != 0 && received->enable_connect_protocol == 0) ||
+			(remembered->h3_datagram != 0 && received->h3_datagram == 0) ||
+			remembered->webtransport_max_sessions > received->webtransport_max_sessions ||
 			remembered->wt_initial_max_data > received->wt_initial_max_data ||
 			remembered->wt_initial_max_streams_uni > received->wt_initial_max_streams_uni ||
 			remembered->wt_initial_max_streams_bidi > received->wt_initial_max_streams_bidi));
@@ -3012,14 +3015,54 @@ uint8_t* h3zero_settings_encode(uint8_t* bytes, const uint8_t* bytes_max, const 
 	return bytes;
 }
 
+static uint32_t h3zero_settings_seen_mask(uint64_t component_key)
+{
+	switch (component_key) {
+	case h3zero_setting_header_table_size:
+		return 1u << 0;
+	case h3zero_qpack_blocked_streams:
+		return 1u << 1;
+	case h3zero_settings_enable_connect_protocol:
+		return 1u << 2;
+	case h3zero_setting_h3_datagram:
+		return 1u << 3;
+	case h3zero_settings_wt_enabled:
+		return 1u << 4;
+	case h3zero_settings_wt_initial_max_data:
+		return 1u << 5;
+	case h3zero_settings_wt_initial_max_streams_uni:
+		return 1u << 6;
+	case h3zero_settings_wt_initial_max_streams_bidi:
+		return 1u << 7;
+	case h3zero_settings_webtransport_max_sessions:
+		return 1u << 8;
+	case h3zero_settings_webtransport_max_sessions_old:
+		return 1u << 9;
+	case h3zero_settings_enable_webtransport:
+		return 1u << 10;
+	default:
+		return 0;
+	}
+}
+
 const uint8_t* h3zero_settings_components_decode(const uint8_t* bytes, const uint8_t* bytes_max, h3zero_settings_t* settings)
 {
 	uint64_t component_key;
 	uint64_t component_value;
+	uint32_t settings_seen = 0;
+
 	while (bytes != NULL &&
 		bytes < bytes_max &&
 		(bytes = picoquic_frames_varint_decode(bytes, bytes_max, &component_key)) != NULL &&
 		(bytes = picoquic_frames_varint_decode(bytes, bytes_max, &component_value)) != NULL) {
+		uint32_t seen_mask = h3zero_settings_seen_mask(component_key);
+		if (seen_mask != 0) {
+			if ((settings_seen & seen_mask) != 0) {
+				bytes = NULL;
+				break;
+			}
+			settings_seen |= seen_mask;
+		}
 		switch (component_key) {
 		case h3zero_setting_header_table_size:
 			settings->table_size = component_value;
@@ -3028,13 +3071,28 @@ const uint8_t* h3zero_settings_components_decode(const uint8_t* bytes, const uin
 			settings->blocked_streams = component_value;
 			break;
 		case h3zero_settings_enable_connect_protocol:
-			settings->enable_connect_protocol = (unsigned int)component_value;
+			if (component_value > 1) {
+				bytes = NULL;
+			}
+			else {
+				settings->enable_connect_protocol = (unsigned int)component_value;
+			}
 			break;
 		case h3zero_setting_h3_datagram:
-			settings->h3_datagram = (unsigned int)component_value;
+			if (component_value > 1) {
+				bytes = NULL;
+			}
+			else {
+				settings->h3_datagram = (unsigned int)component_value;
+			}
 			break;
 		case h3zero_settings_wt_enabled:
-			settings->webtransport_enabled = component_value;
+			if (component_value > 1) {
+				bytes = NULL;
+			}
+			else {
+				settings->webtransport_enabled = component_value;
+			}
 			break;
 		case h3zero_settings_wt_initial_max_data:
 			settings->wt_initial_max_data = component_value;
