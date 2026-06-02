@@ -544,6 +544,7 @@
     };
     var url = options.url || defaultTarget();
     var transport = null;
+    var closedPromise = null;
     var datagramWriter = null;
 
     function record(target, name, ok, detail) {
@@ -581,7 +582,7 @@
     try {
       transport = new WebTransport(url, buildTransportOptions(options));
       try {
-        transport.closed.catch(function () {});
+        closedPromise = transport.closed.then(function () {}, function () {});
       } catch (_) {}
       await transport.ready;
 
@@ -631,6 +632,11 @@
         try {
           transport.close({ closeCode: 0, reason: "writable-bad-chunk-test" });
         } catch (_) {}
+        if (closedPromise) {
+          try {
+            await withTimeout(closedPromise, 3000);
+          } catch (_) {}
+        }
       }
     }
 

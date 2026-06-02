@@ -33,6 +33,10 @@ Use `datagramWritableOk` on positive scenarios that must prove
 the main scenario still successfully sends the expected baton datagram.
 Use `streamWritableOk` the same way for outgoing unidirectional and
 bidirectional stream writers.
+Positive scenarios also assert server-side close-session evidence from the
+diagnostic `transport.close({ closeCode: 0, reason: "writable-bad-chunk-test" })`
+path through `server.closeSessionReceivedMin` and
+`server.writableBadChunkCloseReceived`.
 
 Run the portable core scenario in Chrome:
 

@@ -539,7 +539,11 @@ function summarizeServerOutput(output) {
     connectAccepted: countMatches(output, /Connect accepted on stream/g),
     packetsReceived: countMatches(output, /Receiving packet type/g),
     packetsSent: countMatches(output, /Sending packet type/g),
-    h3ControlFrames: countMatches(output, /H3 control frame/g)
+    h3ControlFrames: countMatches(output, /H3 control frame/g),
+    closeSessionReceived: countMatches(output,
+      /Received web transport session capsule, type: 0x[0-9a-f]+ \(close session\)/g),
+    writableBadChunkCloseReceived:
+      output.includes("error: 0 (writable-bad-chunk-test)")
   };
 }
 
@@ -640,6 +644,9 @@ async function main() {
       assertDatagramWritableResult(result.datagramWritable);
       result.streamWritable = writableBadChunk.streamWritable;
       assertStreamWritableResult(result.streamWritable);
+    }
+    if (INCLUDE_SERVER_SUMMARY) {
+      result.server = summarizeServerOutput(serverOutput);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

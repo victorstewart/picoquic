@@ -287,7 +287,9 @@
         "server": {
           "connectAcceptedMin": 1,
           "packetsReceivedMin": 1,
-          "packetsSentMin": 1
+          "packetsSentMin": 1,
+          "closeSessionReceivedMin": 1,
+          "writableBadChunkCloseReceived": true
         }
       }
     },
@@ -337,7 +339,9 @@
         "server": {
           "connectAcceptedMin": 1,
           "packetsReceivedMin": 1,
-          "packetsSentMin": 1
+          "packetsSentMin": 1,
+          "closeSessionReceivedMin": 1,
+          "writableBadChunkCloseReceived": true
         }
       }
     }
