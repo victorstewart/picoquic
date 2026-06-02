@@ -2489,7 +2489,7 @@ static int picowt_receive_stream_error_callback(picoquic_cnx_t* UNUSED(cnx),
 }
 
 static int picowt_receive_stream_error_case(
-    picoquic_call_back_event_t event, uint64_t h3_error,
+    uint64_t stream_id, picoquic_call_back_event_t event, uint64_t h3_error,
     int expect_app_error, uint32_t expected_app_error)
 {
     picoquic_quic_t* quic = NULL;
@@ -2498,7 +2498,6 @@ static int picowt_receive_stream_error_case(
     h3zero_stream_ctx_t* stream_ctx = NULL;
     picoquic_stream_head_t* stream = NULL;
     uint64_t simulated_time = 0;
-    const uint64_t stream_id = 8;
     picowt_receive_stream_error_test_ctx_t test_ctx = {
         event == picoquic_callback_stream_reset ?
         picohttp_callback_reset : picohttp_callback_stop_sending,
@@ -2571,24 +2570,41 @@ int picowt_receive_stream_error_test(void)
     }
     if (ret == 0) {
         ret = picowt_receive_stream_error_case(
+            8,
             picoquic_callback_stream_reset,
             H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(0), 1, 0);
     }
     if (ret == 0) {
         ret = picowt_receive_stream_error_case(
+            8,
             picoquic_callback_stop_sending,
             H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(0x1e), 1, 0x1e);
     }
     if (ret == 0) {
         ret = picowt_receive_stream_error_case(
+            8,
             picoquic_callback_stream_reset,
             H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(UINT32_MAX), 1,
             UINT32_MAX);
     }
     if (ret == 0) {
         ret = picowt_receive_stream_error_case(
+            8,
             picoquic_callback_stop_sending,
             H3ZERO_WEBTRANSPORT_BUFFERED_STREAM_REJECTED, 0, 0);
+    }
+    if (ret == 0) {
+        ret = picowt_receive_stream_error_case(
+            2,
+            picoquic_callback_stream_reset,
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(0x2a), 1, 0x2a);
+    }
+    if (ret == 0) {
+        ret = picowt_receive_stream_error_case(
+            3,
+            picoquic_callback_stop_sending,
+            H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(UINT32_MAX), 1,
+            UINT32_MAX);
     }
 
     return ret;
