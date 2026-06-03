@@ -832,7 +832,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         return ret;
     }
 
-    int wt_baton_ctx_path_params(wt_baton_ctx_t * baton_ctx, const uint8_t * path, size_t path_length)
+    int wt_baton_ctx_path_params_ex(wt_baton_ctx_t * baton_ctx, const uint8_t * path, size_t path_length,
+        const wt_baton_app_ctx_t* app_ctx)
     {
         int ret = 0;
         size_t query_offset = h3zero_query_offset(path, path_length);
@@ -975,14 +976,29 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             baton_ctx->stream_test_size = 0;
             baton_ctx->stream_test_count = 1;
         }
+        if (ret == 0 && app_ctx != NULL &&
+            app_ctx->stream_test_mode != wt_baton_stream_test_none) {
+            if (stream_mode_length == 0) {
+                baton_ctx->stream_test_mode = app_ctx->stream_test_mode;
+            }
+            else if (baton_ctx->stream_test_mode != app_ctx->stream_test_mode) {
+                ret = -1;
+            }
+        }
 
         return ret;
+    }
+
+    int wt_baton_ctx_path_params(wt_baton_ctx_t * baton_ctx, const uint8_t * path, size_t path_length)
+    {
+        return wt_baton_ctx_path_params_ex(baton_ctx, path, path_length, NULL);
     }
 
     /* Accept an incoming connection */
     int wt_baton_accept(picoquic_cnx_t * cnx,
         uint8_t * path, size_t path_length,
-        struct st_h3zero_stream_ctx_t* stream_ctx)
+        struct st_h3zero_stream_ctx_t* stream_ctx,
+        void* path_app_ctx)
     {
         int ret = 0;
         h3zero_callback_ctx_t* h3_ctx = (h3zero_callback_ctx_t*)picoquic_get_callback_context(cnx);
@@ -996,7 +1012,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
 
             /* init the global parameters */
             if (path != NULL && path_length > 0) {
-                ret = wt_baton_ctx_path_params(baton_ctx, path, path_length);
+                ret = wt_baton_ctx_path_params_ex(baton_ctx, path, path_length,
+                    (const wt_baton_app_ctx_t*)path_app_ctx);
             }
 
             if (ret == 0) {
@@ -1270,10 +1287,11 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             /* The baton endpoint requires a WT-Protocol value. If the app has
              * not preselected one, choose it from WT-Available-Protocols and
              * refuse the CONNECT when there is no supported value.
-             */
+            */
             {
                 wt_baton_ctx_t path_params = { 0 };
-                ret = wt_baton_ctx_path_params(&path_params, bytes, length);
+                ret = wt_baton_ctx_path_params_ex(&path_params, bytes, length,
+                    (const wt_baton_app_ctx_t*)path_app_ctx);
                 if (ret != 0) {
                     picoquic_log_app_message(cnx,
                         "Rejecting malformed baton WebTransport CONNECT parameters on stream: %" PRIu64,
@@ -1298,7 +1316,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 }
             }
             if (ret == 0) {
-                ret = wt_baton_accept(cnx, bytes, length, stream_ctx);
+                ret = wt_baton_accept(cnx, bytes, length, stream_ctx, path_app_ctx);
             }
             break;
         case picohttp_callback_connect_refused:

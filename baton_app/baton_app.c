@@ -432,6 +432,18 @@ static char const* wt_baton_reject_400_path = "/baton-reject-400";
 static char const* wt_baton_reject_403_path = "/baton-reject-403";
 static char const* wt_baton_reject_429_path = "/baton-reject-429";
 static char const* wt_baton_reject_500_path = "/baton-reject-500";
+static char const* wt_baton_stream_echo_bidi_path = "/wt/stream/echo-bidi";
+static char const* wt_baton_stream_echo_uni_path = "/wt/stream/echo-uni";
+static char const* wt_baton_stream_large_bidi_path = "/wt/stream/large-bidi";
+static char const* wt_baton_stream_large_uni_path = "/wt/stream/large-uni";
+static char const* wt_baton_stream_fin_empty_bidi_path = "/wt/stream/fin-empty-bidi";
+static char const* wt_baton_stream_fin_empty_uni_path = "/wt/stream/fin-empty-uni";
+static char const* wt_baton_stream_server_open_uni_path = "/wt/stream/server-open-uni";
+static char const* wt_baton_stream_server_open_bidi_path = "/wt/stream/server-open-bidi";
+static wt_baton_app_ctx_t wt_baton_stream_client_bidi_ctx = { 0, wt_baton_stream_test_client_bidi_echo };
+static wt_baton_app_ctx_t wt_baton_stream_client_uni_ctx = { 0, wt_baton_stream_test_client_uni_reply };
+static wt_baton_app_ctx_t wt_baton_stream_server_uni_ctx = { 0, wt_baton_stream_test_server_uni };
+static wt_baton_app_ctx_t wt_baton_stream_server_bidi_ctx = { 0, wt_baton_stream_test_server_bidi };
 
 static int wt_baton_origin_validator_deny_all(
     const uint8_t* UNUSED(origin), size_t UNUSED(origin_length),
@@ -444,7 +456,20 @@ static int wt_baton_origin_validator_deny_all(
 int wt_baton_server(char const* path, picoquic_quic_config_t* config)
 {
     int ret = 0;
-    picohttp_server_path_item_t path_item_list[6] = { { 0 } };
+    picohttp_server_path_item_t path_item_list[14] = { { 0 } };
+    const struct st_wt_baton_stream_path_t {
+        char const* path;
+        wt_baton_app_ctx_t* ctx;
+    } stream_path_list[] = {
+        { wt_baton_stream_echo_bidi_path, &wt_baton_stream_client_bidi_ctx },
+        { wt_baton_stream_echo_uni_path, &wt_baton_stream_client_uni_ctx },
+        { wt_baton_stream_large_bidi_path, &wt_baton_stream_client_bidi_ctx },
+        { wt_baton_stream_large_uni_path, &wt_baton_stream_client_uni_ctx },
+        { wt_baton_stream_fin_empty_bidi_path, &wt_baton_stream_client_bidi_ctx },
+        { wt_baton_stream_fin_empty_uni_path, &wt_baton_stream_client_uni_ctx },
+        { wt_baton_stream_server_open_uni_path, &wt_baton_stream_server_uni_ctx },
+        { wt_baton_stream_server_open_bidi_path, &wt_baton_stream_server_bidi_ctx }
+    };
 
     /* Start: start the QUIC process with cert and key files */
     picoquic_quic_t* qserver = NULL;
@@ -491,8 +516,15 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
     path_item_list[5].path = wt_baton_reject_500_path;
     path_item_list[5].path_length = strlen(wt_baton_reject_500_path);
     path_item_list[5].connect_error_status = 500;
+    for (size_t i = 0; i < sizeof(stream_path_list) / sizeof(stream_path_list[0]); i++) {
+        size_t path_index = 6 + i;
+        path_item_list[path_index] = path_item_list[0];
+        path_item_list[path_index].path = stream_path_list[i].path;
+        path_item_list[path_index].path_length = strlen(stream_path_list[i].path);
+        path_item_list[path_index].path_app_ctx = stream_path_list[i].ctx;
+    }
     picoquic_file_param.path_table = path_item_list;
-    picoquic_file_param.path_table_nb = 6;
+    picoquic_file_param.path_table_nb = sizeof(path_item_list) / sizeof(path_item_list[0]);
 
     /* Setup the server context */
     if (ret == 0) {

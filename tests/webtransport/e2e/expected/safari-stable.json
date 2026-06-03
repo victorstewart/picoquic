@@ -259,6 +259,21 @@
           "streamTestFinReceivedMin": 0
         }
       }
+    },
+    {
+      "scenario": "streams.endpoint-server-open-bidi-zero",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI completed the browser-visible server-opened zero-byte bidirectional stream row, but the server did not observe the browser reply FIN in the equivalent C201 path. Keep the dedicated endpoint active while not claiming the server-observable reply-FIN counter for Safari stable.",
+      "evidence": "Same data path as streams.server-open-bidi-zero: WebTransportBrowser run 26911316618, Safari job 79389755583, failed only because server.streamTestFinReceived was 0 instead of 1, and run 26913123737 passed that expected-result classification.",
+      "expect": {
+        "server": {
+          "streamTestFinReceived": null,
+          "streamTestFinReceivedMin": 0
+        }
+      }
     }
   ]
 }

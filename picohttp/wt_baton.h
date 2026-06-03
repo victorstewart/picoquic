@@ -179,6 +179,7 @@ extern "C" {
 
     typedef struct st_wt_baton_app_ctx_t {
         int nb_turns_required;
+        wt_baton_stream_test_mode_enum stream_test_mode;
     } wt_baton_app_ctx_t;
 
     int wt_baton_prepare_context(picoquic_cnx_t* cnx, wt_baton_ctx_t* baton_ctx,
@@ -186,10 +187,13 @@ extern "C" {
         const char* server_name, const char* path);
 
     int wt_baton_ctx_path_params(wt_baton_ctx_t* baton_ctx, const uint8_t* path, size_t path_length);
+    int wt_baton_ctx_path_params_ex(wt_baton_ctx_t* baton_ctx, const uint8_t* path, size_t path_length,
+        const wt_baton_app_ctx_t* app_ctx);
 
     int wt_baton_accept(picoquic_cnx_t* cnx,
         uint8_t* bytes, size_t length,
-        struct st_h3zero_stream_ctx_t* stream_ctx);
+        struct st_h3zero_stream_ctx_t* stream_ctx,
+        void* path_app_ctx);
 
     h3zero_stream_ctx_t* wt_baton_create_stream(picoquic_cnx_t* cnx, int is_bidir, wt_baton_ctx_t* baton_ctx);
     h3zero_stream_ctx_t* wt_baton_find_stream(wt_baton_ctx_t* ctx, uint64_t stream_id);

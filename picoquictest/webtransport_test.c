@@ -77,7 +77,8 @@ int h3zero_process_h3_server_data(picoquic_cnx_t* cnx,
     h3zero_stream_ctx_t* stream_ctx);
 
 wt_baton_app_ctx_t baton_test_ctx = {
-    15
+    15,
+    wt_baton_stream_test_none
 };
 
 static int wt_baton_bad_alpn_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
@@ -556,6 +557,9 @@ int picowt_baton_compact_test(void)
     const uint8_t bad_count_zero_path[] = "/baton?baton=33&count=0&padding=0";
     const uint8_t bad_count_excess_path[] = "/baton?baton=33&count=257&padding=0";
     const uint8_t too_large_path[] = "/baton?baton=33&padding=16384";
+    const uint8_t stream_endpoint_path[] = "/wt/stream/echo-bidi?stream_size=7&stream_count=2";
+    const uint8_t bad_stream_endpoint_path[] = "/wt/stream/echo-bidi?stream=server-bidi&stream_size=0";
+    wt_baton_app_ctx_t stream_endpoint_ctx = { 0, wt_baton_stream_test_client_bidi_echo };
     int ret = wt_baton_ctx_path_params(&baton_ctx, compact_path, sizeof(compact_path) - 1);
 
     if (ret == 0 &&
@@ -646,6 +650,19 @@ int picowt_baton_compact_test(void)
     if (ret == 0 &&
         wt_baton_ctx_path_params(&baton_ctx, too_large_path,
             sizeof(too_large_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        (wt_baton_ctx_path_params_ex(&baton_ctx, stream_endpoint_path,
+            sizeof(stream_endpoint_path) - 1, &stream_endpoint_ctx) != 0 ||
+            baton_ctx.stream_test_mode != wt_baton_stream_test_client_bidi_echo ||
+            baton_ctx.stream_test_size != 7 ||
+            baton_ctx.stream_test_count != 2)) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params_ex(&baton_ctx, bad_stream_endpoint_path,
+            sizeof(bad_stream_endpoint_path) - 1, &stream_endpoint_ctx) == 0) {
         ret = -1;
     }
     if (ret == 0) {

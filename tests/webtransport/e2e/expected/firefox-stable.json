@@ -584,6 +584,185 @@
       "platform": "linux",
       "reason": "Firefox 151.0.3 in GitHub Actions does not currently claim concurrent multi-lane browser E2E conformance. The two-lane compact row already timed out after one complete lane, so the stricter sixteen-lane row is present for browsers that pass it but not claimed in the Firefox lane.",
       "evidence": "GitHub WebTransportBrowser run 26833011127, Firefox job 79119269606, timed out on baton.core.two-lane-compact-default-reader after one complete lane. The existing four-lane skip records the same concurrency limitation for the stricter four-lane row; sixteen lanes exercise the same server/browser stream scheduling behavior at a higher count."
+    },
+    {
+      "scenario": "streams.endpoint-echo-bidi",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the dedicated bidirectional stream endpoint on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same selected-protocol constraint as the C201 stream rows: GitHub WebTransportBrowser run 26913123737 passed Firefox after the stream-mode compatibility runner appended protocol=optional to C201 stream paths, and run-firefox.mjs applies the same compatibility endpoint rule to stream-mode rows.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/stream/echo-bidi?stream_size=64&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "streams.endpoint-echo-uni",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the dedicated unidirectional stream endpoint on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same selected-protocol constraint as streams.endpoint-echo-bidi and the C201 client-uni-reply rows; the runner compatibility rule appends protocol=optional for Firefox stream-mode rows.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/stream/echo-uni?stream_size=64&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "streams.endpoint-large-bidi-10mb",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the dedicated 10MB bidirectional stream endpoint on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same data path as streams.large-bidi-echo-10mb, which passed in Firefox in WebTransportBrowser run 26913123737 with protocol=optional compatibility.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/stream/large-bidi?stream_size=10485760&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "streams.endpoint-large-uni-10mb",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the dedicated 10MB unidirectional stream endpoint on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same data path as streams.large-uni-reply-10mb, which passed in Firefox in WebTransportBrowser run 26913123737 with protocol=optional compatibility.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/stream/large-uni?stream_size=10485760&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "streams.endpoint-fin-empty-bidi",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the dedicated zero-byte bidirectional FIN endpoint on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same data path as streams.fin-empty-bidi, which passed in Firefox in WebTransportBrowser run 26913123737 with protocol=optional compatibility.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/stream/fin-empty-bidi?stream_size=0&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "streams.endpoint-fin-empty-uni",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not expose the incoming zero-byte unidirectional reply as a successful readable completion. Keep the dedicated row active to prove the server receives and sends the zero-byte FIN, but do not claim Firefox stable browser-side completion for this FIN-only unidirectional reply path.",
+      "evidence": "Same data path as streams.fin-empty-uni, which WebTransportBrowser run 26908158085 showed fails browser-readable completion while preserving server FIN/byte assertions; run 26913123737 passed that expected-result classification.",
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:4433/wt/stream/fin-empty-uni?stream_size=0&stream_count=1&protocol=optional",
+        "protocol": "",
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "ready",
+          "stream sent 0"
+        ],
+        "eventsExclude": [
+          "stream received 0 on client-uni-reply-0",
+          "closed"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
+          "streamTestBytesReceived": 0,
+          "streamTestBytesSent": 0,
+          "streamTestFinReceived": 1,
+          "streamTestFinSent": 1
+        }
+      }
+    },
+    {
+      "scenario": "streams.endpoint-server-open-uni-zero",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the dedicated server-opened zero-byte unidirectional stream endpoint on the Firefox data path and preserve the server FIN assertion, but do not claim browser-readable completion for this Firefox stable path.",
+      "evidence": "Same data path as streams.server-open-uni-zero, which WebTransportBrowser run 26910534966 showed reports WebTransportError before delivering the server-opened stream while the server proves optional endpoint acceptance and a zero-byte FIN; run 26913123737 passed that expected-result classification.",
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:4433/wt/stream/server-open-uni?stream_size=0&stream_count=1&protocol=optional",
+        "protocol": "",
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "connecting"
+        ],
+        "eventsExclude": [
+          "ready",
+          "stream received 0 on server-uni-0",
+          "closed"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
+          "streamTestFinReceived": null,
+          "streamTestFinReceivedMin": 0
+        }
+      }
+    },
+    {
+      "scenario": "streams.endpoint-server-open-bidi-zero",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the dedicated server-opened zero-byte bidirectional stream endpoint on the Firefox data path and preserve the server FIN assertion, but do not claim browser-readable completion for this Firefox stable path.",
+      "evidence": "Same data path as streams.server-open-bidi-zero, which WebTransportBrowser runs 26911316618 and 26912514984 showed reports WebTransportError before delivering the server-opened stream while preserving server-opened FIN evidence; run 26913123737 passed that expected-result classification.",
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:4433/wt/stream/server-open-bidi?stream_size=0&stream_count=1&protocol=optional",
+        "protocol": "",
+        "streamFinSent": 0,
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "connecting"
+        ],
+        "eventsExclude": [
+          "ready",
+          "stream sent 0 on server-bidi-0-reply",
+          "stream received 0 on server-bidi-0",
+          "closed"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
+          "streamTestFinReceived": null,
+          "streamTestFinReceivedMin": 0
+        }
+      }
     }
   ]
 }
