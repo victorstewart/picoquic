@@ -944,6 +944,7 @@
       datagramReceiveMin: options.datagramReceiveMin || 0,
       datagramSendMode: options.datagramSendMode || "baton",
       datagramSendSize: options.datagramSendSize || 0,
+      datagramSendCount: options.datagramSendCount || 1,
       startedMs: nowMs(),
       readyMs: 0,
       closedMs: 0,
@@ -1317,20 +1318,23 @@
         var datagramWriter = datagramWritable.getWriter();
         try {
           await datagramWriter.ready;
-          if (options.datagramSendMode === "empty") {
-            await datagramWriter.write(new Uint8Array(0));
-            note("datagram sent length 0");
-          } else if (options.datagramSendMode === "length") {
-            await datagramWriter.write(makeSizedDatagram(options.datagramSendSize || 1));
-            note("datagram sent length " + (options.datagramSendSize || 1));
-          } else {
-            await datagramWriter.write(makeBatonPacket(42, 0));
-            note("datagram sent");
+          var datagramSendCount = Math.max(1, Math.floor(options.datagramSendCount || 1));
+          for (var i = 0; i < datagramSendCount; i++) {
+            if (options.datagramSendMode === "empty") {
+              await datagramWriter.write(new Uint8Array(0));
+              note("datagram sent length 0");
+            } else if (options.datagramSendMode === "length") {
+              await datagramWriter.write(makeSizedDatagram(options.datagramSendSize || 1));
+              note("datagram sent length " + (options.datagramSendSize || 1));
+            } else {
+              await datagramWriter.write(makeBatonPacket(42, 0));
+              note("datagram sent");
+            }
+            result.datagramsSent++;
           }
         } finally {
           datagramWriter.releaseLock();
         }
-        result.datagramsSent = 1;
       }
 
       return await withTimeout(done, timeoutMs, function () {
@@ -1375,6 +1379,7 @@
       datagramReceiveMin: Number(search.get("datagramReceiveMin")) || 0,
       datagramSendMode: search.get("datagramSendMode") || "baton",
       datagramSendSize: Number(search.get("datagramSendSize")) || 0,
+      datagramSendCount: Number(search.get("datagramSendCount")) || 1,
       useByob: search.get("useByob") !== "0",
       onProgress: render
     };
@@ -1406,6 +1411,7 @@
         datagramReceiveMin: options.datagramReceiveMin || 0,
         datagramSendMode: options.datagramSendMode || "baton",
         datagramSendSize: options.datagramSendSize || 0,
+        datagramSendCount: options.datagramSendCount || 1,
         received: [],
         sent: [],
         datagramsReceived: [],

@@ -53,6 +53,15 @@
       "evidence": "GitHub WebTransportBrowser run 26842019982, Safari job 79151393623, timed out in datagrams.server-empty with datagramLengths=[] after pico_baton logged `datagram, length: 1: 00`."
     },
     {
+      "scenario": "datagrams.server-repeat-large",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI delivered only a partial repeated 1200-byte server datagram sequence before reporting a network error, so this lane does not claim large repeated server datagram delivery.",
+      "evidence": "GitHub WebTransportBrowser run 26863007007, Safari job 79220574211, failed datagrams.server-repeat-large after receiving four 1200-byte datagrams with datagramReceiveMin=16, then reported NetworkError. Chrome and Edge passed the same repeated-datagram batch in that run."
+    },
+    {
       "scenario": "datagrams.client-empty",
       "status": "pass",
       "category": "browser-bug",

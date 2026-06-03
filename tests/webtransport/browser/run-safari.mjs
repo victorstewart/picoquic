@@ -19,6 +19,7 @@ const DATAGRAM_RECEIVE_MODE = process.env.PICOQUIC_WT_DATAGRAM_RECEIVE_MODE || "
 const DATAGRAM_RECEIVE_MIN = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_RECEIVE_MIN");
 const DATAGRAM_SEND_MODE = process.env.PICOQUIC_WT_DATAGRAM_SEND_MODE || "baton";
 const DATAGRAM_SEND_SIZE = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_SEND_SIZE");
+const DATAGRAM_SEND_COUNT = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_SEND_COUNT");
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
 const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
@@ -268,6 +269,9 @@ function buildPageUrl(pageUrl, certificateHash) {
   }
   if (DATAGRAM_SEND_SIZE !== null) {
     url.searchParams.set("datagramSendSize", String(DATAGRAM_SEND_SIZE));
+  }
+  if (DATAGRAM_SEND_COUNT !== null) {
+    url.searchParams.set("datagramSendCount", String(DATAGRAM_SEND_COUNT));
   }
   return url.href;
 }

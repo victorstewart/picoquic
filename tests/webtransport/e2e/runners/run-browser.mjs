@@ -43,6 +43,7 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "datagramReceiveMode",
   "datagramSendMode",
   "datagramSendSize",
+  "datagramSendCount",
   "received",
   "sent",
   "datagramsReceived",
@@ -104,6 +105,7 @@ const EXPECT_COUNTER_FIELDS = new Set([
   "closedMs",
   "datagramsSent",
   "datagramSendSize",
+  "datagramSendCount",
   "datagramLengthsMin",
   "datagramLength",
   "datagramsReceivedMin"
@@ -165,6 +167,7 @@ const SCENARIO_FIELDS = new Set([
   "datagramReceiveMode",
   "datagramSendMode",
   "datagramSendSize",
+  "datagramSendCount",
   "timeoutMs",
   "certificateHashMode",
   "certificateHashAlgorithm",
@@ -331,6 +334,9 @@ function validateScenario(scenario, path) {
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "datagramSendSize")) {
     requirePositiveInteger(scenario.datagramSendSize, `${scenario.id}.datagramSendSize`);
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "datagramSendCount")) {
+    requirePositiveInteger(scenario.datagramSendCount, `${scenario.id}.datagramSendCount`);
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "timeoutMs")) {
     requirePositiveInteger(scenario.timeoutMs, `${scenario.id}.timeoutMs`);
@@ -616,6 +622,10 @@ function assertScenarioResult(id, result, expect) {
     (result.datagramSendSize || 0) !== expect.datagramSendSize) {
     throw new Error(`${id}: expected datagramSendSize=${JSON.stringify(expect.datagramSendSize)}, got ${JSON.stringify(result.datagramSendSize || 0)}`);
   }
+  if (hasExpectedValue(expect, "datagramSendCount") &&
+    (result.datagramSendCount || 1) !== expect.datagramSendCount) {
+    throw new Error(`${id}: expected datagramSendCount=${JSON.stringify(expect.datagramSendCount)}, got ${JSON.stringify(result.datagramSendCount || 1)}`);
+  }
   if (expect.received) {
     assertArrayEquals(id, "received", result.received, expect.received,
       sequenceOrderMatters);
@@ -876,6 +886,9 @@ async function runScenario(browser, scenario, vars) {
   }
   if (Number.isInteger(rendered.datagramSendSize)) {
     env.PICOQUIC_WT_DATAGRAM_SEND_SIZE = String(rendered.datagramSendSize);
+  }
+  if (Number.isInteger(rendered.datagramSendCount)) {
+    env.PICOQUIC_WT_DATAGRAM_SEND_COUNT = String(rendered.datagramSendCount);
   }
   if (Number.isInteger(scenarioExpect.datagramLengthsMin)) {
     env.PICOQUIC_WT_DATAGRAM_RECEIVE_MIN =

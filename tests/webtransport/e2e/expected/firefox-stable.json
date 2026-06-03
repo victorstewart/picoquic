@@ -227,37 +227,21 @@
     },
     {
       "scenario": "datagrams.server-repeat-one",
-      "status": "pass",
+      "status": "skip",
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the repeated exact-size server datagram scenario on the Firefox data path while not claiming selected WT-Protocol exposure.",
-      "evidence": "Same selected-protocol constraint as datagrams.optional-unreliable, datagrams.server-empty, datagrams.client-empty, and the single exact-size server datagram rows: GitHub WebTransportBrowser runs 26829426456, 26842292496, and 26862466420 showed Firefox completes the stream/datagram data path through protocol=optional but does not expose a selected WT-Protocol value in this lane.",
-      "expect": {
-        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=16&protocol=optional",
-        "protocol": "",
-        "server": {
-          "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1
-        }
-      }
+      "reason": "Firefox 151.0.3 in GitHub Actions delivered only a partial repeated one-byte server datagram sequence to the JavaScript readable stream, so this lane does not claim repeated server datagram delivery.",
+      "evidence": "GitHub WebTransportBrowser run 26863007007, Firefox job 79220574196, failed datagrams.server-repeat-one after receiving ten 1-byte datagrams with datagramReceiveMin=16, then timed out after 3000 ms. Chrome and Edge passed the same repeated-datagram batch in that run."
     },
     {
       "scenario": "datagrams.server-repeat-large",
-      "status": "pass",
+      "status": "skip",
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the repeated exact-size server datagram scenario on the Firefox data path while not claiming selected WT-Protocol exposure.",
-      "evidence": "Same selected-protocol constraint as datagrams.optional-unreliable, datagrams.server-empty, datagrams.client-empty, and the single exact-size server datagram rows: GitHub WebTransportBrowser runs 26829426456, 26842292496, and 26862466420 showed Firefox completes the stream/datagram data path through protocol=optional but does not expose a selected WT-Protocol value in this lane.",
-      "expect": {
-        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&datagram_size=1200&datagram_count=16&protocol=optional",
-        "protocol": "",
-        "server": {
-          "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1
-        }
-      }
+      "reason": "Firefox 151.0.3 in GitHub Actions does not currently claim repeated server datagram delivery. The one-byte repeated row delivered only ten of sixteen datagrams before timeout, so the stricter large repeated row remains unclaimed in this lane.",
+      "evidence": "GitHub WebTransportBrowser run 26863007007, Firefox job 79220574196, failed datagrams.server-repeat-one with datagramLengths=[1,1,1,1,1,1,1,1,1,1] and datagramReceiveMin=16 before the large repeated row could run. Chrome and Edge passed both repeated rows in that run."
     },
     {
       "scenario": "datagrams.client-sized-one",
@@ -284,6 +268,32 @@
       "platform": "linux",
       "reason": "Firefox 151.0.3 in GitHub Actions did not produce a server-observable 1200-byte browser-to-server WebTransport datagram, so this lane does not claim large client datagram delivery.",
       "evidence": "GitHub WebTransportBrowser run 26862208348, Firefox job 79218182758, failed datagrams.client-sized-large with server.sizedDatagramsReceived=0 after Chrome, Edge, and Safari passed the same exact-size datagram batch."
+    },
+    {
+      "scenario": "datagrams.client-repeat-one",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the repeated one-byte client datagram scenario on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same selected-protocol constraint as datagrams.optional-unreliable, datagrams.client-empty, and datagrams.client-sized-one: GitHub WebTransportBrowser runs 26829426456, 26842292496, and 26862466420 showed Firefox completes the stream/datagram data path through protocol=optional but does not expose a selected WT-Protocol value in this lane.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&client_datagram_size=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "datagrams.client-repeat-large",
+      "status": "skip",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions did not produce a server-observable single 1200-byte browser-to-server WebTransport datagram, so this lane does not claim repeated large client datagram delivery.",
+      "evidence": "GitHub WebTransportBrowser run 26862208348, Firefox job 79218182758, failed datagrams.client-sized-large with server.sizedDatagramsReceived=0 after Chrome, Edge, and Safari passed the same exact-size datagram batch. The repeated large row depends on the same browser-to-server 1200-byte delivery behavior."
     },
     {
       "scenario": "baton.core.short-padded-default-reader",
