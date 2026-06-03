@@ -943,6 +943,17 @@ function serverOutputHasStreamTestSummary(output) {
     summary.streamTestFinSent >= expected.finSent;
 }
 
+function mergeStreamTestSummary(summary, streamSummary) {
+  if (!streamSummary) {
+    return summary;
+  }
+  for (const name of ["streamTestBytesReceived", "streamTestBytesSent",
+    "streamTestFinReceived", "streamTestFinSent"]) {
+    summary[name] = Math.max(summary[name] || 0, streamSummary[name] || 0);
+  }
+  return summary;
+}
+
 async function main() {
   assertFile(BATON, "pico_baton");
 
@@ -1005,12 +1016,15 @@ async function main() {
     await waitForHarness(endpoint, sessionId);
     const result = await readHarnessResult(endpoint, sessionId);
     result.browser = browserCapabilities;
+    let streamServerSummary = null;
     if (INCLUDE_SERVER_SUMMARY && STREAM_MODE !== "baton") {
       await waitForServerOutput(serverOutputHasStreamTestSummary,
         () => serverOutput);
+      streamServerSummary = summarizeServerOutput(serverOutput);
     }
     if (INCLUDE_SERVER_SUMMARY) {
-      result.server = summarizeServerOutput(serverOutput);
+      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput),
+        streamServerSummary);
     }
     assertHarnessResult(result);
     if (RUN_PROTOCOL_CONSTRUCTOR && EXPECT_OK) {
@@ -1044,11 +1058,8 @@ async function main() {
       }
     }
     if (INCLUDE_SERVER_SUMMARY) {
-      if (STREAM_MODE !== "baton") {
-        await waitForServerOutput(serverOutputHasStreamTestSummary,
-          () => serverOutput);
-      }
-      result.server = summarizeServerOutput(serverOutput);
+      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput),
+        streamServerSummary);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
