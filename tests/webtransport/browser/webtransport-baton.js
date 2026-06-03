@@ -80,10 +80,16 @@
 
   function makeStreamError(message, code) {
     if (typeof WebTransportError === "function") {
-      return new WebTransportError(message, {
+      var init = {
+        message: message,
         source: "stream",
         streamErrorCode: code
-      });
+      };
+      try {
+        return new WebTransportError(init);
+      } catch (e) {
+        return new WebTransportError(message, init);
+      }
     }
     return new Error(message);
   }
