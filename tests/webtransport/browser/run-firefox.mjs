@@ -49,6 +49,7 @@ const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_
 const REQUIRE_STREAM_WRITABLE = process.env.PICOQUIC_WT_STREAM_WRITABLE_REQUIRED !== "0";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
+const SERVER_STREAM_TRACE_LIMIT = 65536;
 const SERVER_SUMMARY_WAIT_MS = Number(process.env.PICOQUIC_WT_SERVER_SUMMARY_WAIT_MS || 2000);
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const GECKO_DRIVER_PORT = Number(process.env.PICOQUIC_WT_GECKO_DRIVER_PORT || 9445);
@@ -783,6 +784,39 @@ function mergeStreamTestSummary(summary, streamSummary) {
   return summary;
 }
 
+function makeServerOutputRecorder() {
+  let output = "";
+  let streamTrace = "";
+  let lineBuffer = "";
+
+  return {
+    append(data) {
+      const text = data.toString();
+      output = (output + text).slice(-SERVER_OUTPUT_LIMIT);
+
+      if (STREAM_MODE === "baton") {
+        return;
+      }
+      lineBuffer += text;
+      const lines = lineBuffer.split(/\r?\n/);
+      lineBuffer = lines.pop() || "";
+      for (const line of lines) {
+        if (line.includes("WebTransport stream test ")) {
+          streamTrace = (streamTrace + line + "\n").slice(-SERVER_STREAM_TRACE_LIMIT);
+        }
+      }
+    },
+    output() {
+      return output;
+    },
+    streamTrace() {
+      const pending = lineBuffer.includes("WebTransport stream test ") ?
+        `${lineBuffer}\n` : "";
+      return streamTrace + pending;
+    }
+  };
+}
+
 async function main() {
   assertFile(BATON, "pico_baton");
 
@@ -808,12 +842,9 @@ async function main() {
     serverArgs.splice(serverArgs.length - 1, 0, "-l", logTarget, "-L");
   }
   const server = spawn(BATON, serverArgs, { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
-  let serverOutput = "";
-  function appendServerOutput(data) {
-    serverOutput = (serverOutput + data.toString()).slice(-SERVER_OUTPUT_LIMIT);
-  }
-  server.stdout.on("data", appendServerOutput);
-  server.stderr.on("data", appendServerOutput);
+  const serverOutput = makeServerOutputRecorder();
+  server.stdout.on("data", (data) => serverOutput.append(data));
+  server.stderr.on("data", (data) => serverOutput.append(data));
 
   const driverEnv = {
     ...process.env,
@@ -852,11 +883,11 @@ async function main() {
     let streamServerSummary = null;
     if (INCLUDE_SERVER_SUMMARY && STREAM_MODE !== "baton") {
       await waitForServerOutput(serverOutputHasStreamTestSummary,
-        () => serverOutput);
-      streamServerSummary = summarizeServerOutput(serverOutput);
+        () => serverOutput.streamTrace());
+      streamServerSummary = summarizeServerOutput(serverOutput.streamTrace());
     }
     if (INCLUDE_SERVER_SUMMARY) {
-      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput),
+      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput.output()),
         streamServerSummary);
     }
     assertHarnessResult(result);
@@ -890,12 +921,16 @@ async function main() {
         });
     }
     if (INCLUDE_SERVER_SUMMARY) {
-      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput),
+      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput.output()),
         streamServerSummary);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
-    const output = serverOutput.trim();
+    const output = [
+      serverOutput.output().trim(),
+      serverOutput.streamTrace().trim() ?
+        `server stream trace:\n${serverOutput.streamTrace().trim()}` : ""
+    ].filter(Boolean).join("\n");
     const driverText = driverOutput.trim();
     const context = `page url: ${targetUrl}\nwt url: ${WT_URL}`;
     const details = [
