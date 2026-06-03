@@ -261,6 +261,10 @@ function requireNonEmptyString(object, name, expectedPath, owner = "expected man
 }
 
 function loadExpectedManifest(expectedPath, discoveredTests) {
+  if (!existsSync(expectedPath)) {
+    throw new Error(`expected manifest not found: ${expectedPath}`);
+  }
+
   const expected = JSON.parse(readFileSync(expectedPath, "utf8"));
   if (expected === null || typeof expected !== "object" || Array.isArray(expected)) {
     throw new Error(`expected manifest must be an object: ${expectedPath}`);
