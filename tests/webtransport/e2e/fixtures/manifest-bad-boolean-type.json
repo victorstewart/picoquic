@@ -1,0 +1,18 @@
+{
+  "suite": "fixture",
+  "description": "Fixture used to verify E2E scenario boolean assertions reject malformed values.",
+  "scenarios": [
+    {
+      "id": "fixture.bad-boolean-type",
+      "title": "Malformed scenario boolean fixture",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251",
+      "coverage": [
+        "fixture"
+      ],
+      "expect": {
+        "ok": "false"
+      }
+    }
+  ]
+}

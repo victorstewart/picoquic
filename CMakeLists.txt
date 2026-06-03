@@ -910,6 +910,13 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --manifest ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/manifest-server-bad-counter-type.json)
         set_tests_properties(picohttp_wt_e2e_manifest_reject_server_bad_counter_type
                              PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_manifest_reject_bad_boolean_type
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --manifest ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/manifest-bad-boolean-type.json)
+        set_tests_properties(picohttp_wt_e2e_manifest_reject_bad_boolean_type
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_expected_chrome
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
@@ -979,6 +986,20 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          list
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-server-bad-boolean-type.json)
         set_tests_properties(picohttp_wt_e2e_expected_reject_server_bad_boolean_type
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_expected_reject_bad_counter_type
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-bad-counter-type.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_bad_counter_type
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_expected_reject_bad_array_type
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-bad-array-type.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_bad_array_type
                              PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_expected_reject_missing_metadata
                  COMMAND ${NODE_EXECUTABLE}

@@ -1,0 +1,21 @@
+{
+  "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": [
+    {
+      "scenario": "baton.core.padded-byob",
+      "status": "pass",
+      "category": "fixture",
+      "browserVersion": "0.0",
+      "platform": "linux",
+      "reason": "Fixture used to verify E2E expected array assertions reject malformed values.",
+      "evidence": "Synthetic fixture.",
+      "expect": {
+        "eventsInclude": [
+          1
+        ]
+      }
+    }
+  ]
+}

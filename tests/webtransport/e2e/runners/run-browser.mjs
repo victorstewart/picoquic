@@ -71,6 +71,56 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "server",
   "sequenceOrderMatters"
 ]);
+const EXPECT_BOOLEAN_FIELDS = new Set([
+  "ok",
+  "requireDatagram",
+  "constructorRequireUnreliable",
+  "useByob",
+  "protocolConstructorOk",
+  "urlConstructorOk",
+  "optionsConstructorOk",
+  "datagramWritableOk",
+  "streamWritableOk",
+  "postCloseOk",
+  "postCloseDatagramOk",
+  "closeSessionOk",
+  "sessionDiagnosticsOk",
+  "sequenceOrderMatters"
+]);
+const EXPECT_STRING_FIELDS = new Set([
+  "url",
+  "protocol",
+  "errorIncludes"
+]);
+const EXPECT_MODE_FIELDS = new Set([
+  "datagramReceiveMode",
+  "datagramSendMode"
+]);
+const EXPECT_COUNTER_FIELDS = new Set([
+  "readyMs",
+  "closedMs",
+  "datagramsSent",
+  "datagramsReceivedMin"
+]);
+const EXPECT_NUMBER_ARRAY_FIELDS = new Set([
+  "received",
+  "sent",
+  "datagramsReceived",
+  "datagramLengths"
+]);
+const EXPECT_STRING_ARRAY_FIELDS = new Set([
+  "eventsInclude",
+  "eventsExclude",
+  "protocolConstructorTestsInclude",
+  "urlConstructorTestsInclude",
+  "optionsConstructorTestsInclude",
+  "datagramWritableTestsInclude",
+  "streamWritableTestsInclude",
+  "postCloseTestsInclude",
+  "postCloseDatagramTestsInclude",
+  "closeSessionTestsInclude",
+  "sessionDiagnosticsTestsInclude"
+]);
 const EXPECT_SERVER_COUNTER_FIELD_NAMES = [
   "packetsReceived",
   "packetsSent",
@@ -147,6 +197,39 @@ function requireBooleanOrNull(value, name, path) {
   }
 }
 
+function requireStringValue(value, name, path, allowEmpty = false) {
+  if (typeof value !== "string" || (!allowEmpty && value.length === 0)) {
+    throw new Error(`invalid manifest field ${name}: expected string in ${path}`);
+  }
+}
+
+function requireStringArray(value, name, path) {
+  if (!Array.isArray(value)) {
+    throw new Error(`invalid manifest field ${name}: expected string array in ${path}`);
+  }
+  for (const [index, entry] of value.entries()) {
+    requireStringValue(entry, `${name}[${index}]`, path);
+  }
+}
+
+function requireNonNegativeIntegerArray(value, name, path) {
+  if (!Array.isArray(value)) {
+    throw new Error(`invalid manifest field ${name}: expected non-negative integer array in ${path}`);
+  }
+  for (const [index, entry] of value.entries()) {
+    requireNonNegativeIntegerOrNull(entry, `${name}[${index}]`, path);
+    if (entry === null) {
+      throw new Error(`invalid manifest field ${name}[${index}]: expected non-negative integer in ${path}`);
+    }
+  }
+}
+
+function requireDatagramMode(value, name, path) {
+  if (!["baton", "empty"].includes(value)) {
+    throw new Error(`invalid manifest field ${name}: unsupported mode ${value} in ${path}`);
+  }
+}
+
 function rejectUnknownFields(object, allowed, name) {
   for (const field of Object.keys(object)) {
     if (!allowed.has(field)) {
@@ -172,10 +255,37 @@ function validateServerExpectation(server, path, name) {
 }
 
 function validateScenarioExpect(expect, path, scenarioId) {
-  rejectUnknownFields(expect, EXPECT_OVERRIDE_FIELDS, `${scenarioId}.expect`);
-  requireBoolean(expect.ok, `${scenarioId}.expect.ok`);
-  if (Object.prototype.hasOwnProperty.call(expect, "server")) {
-    validateServerExpectation(expect.server, path, `${scenarioId}.expect.server`);
+  validateExpectation(expect, path, `${scenarioId}.expect`, true, false);
+}
+
+function validateExpectation(expect, path, name, requireOk, allowNull) {
+  rejectUnknownFields(expect, EXPECT_OVERRIDE_FIELDS, name);
+  if (requireOk) {
+    requireBoolean(expect.ok, `${name}.ok`);
+  }
+  for (const [field, value] of Object.entries(expect)) {
+    const fieldName = `${name}.${field}`;
+    if (field === "server") {
+      validateServerExpectation(value, path, fieldName);
+    } else if (field === "ok") {
+      requireBoolean(value, fieldName);
+    } else if (value === null && allowNull) {
+      continue;
+    } else if (EXPECT_BOOLEAN_FIELDS.has(field)) {
+      requireBoolean(value, fieldName);
+    } else if (EXPECT_STRING_FIELDS.has(field)) {
+      requireStringValue(value, fieldName, path, field === "protocol");
+    } else if (EXPECT_MODE_FIELDS.has(field)) {
+      requireDatagramMode(value, fieldName, path);
+    } else if (EXPECT_COUNTER_FIELDS.has(field)) {
+      requireNonNegativeIntegerOrNull(value, fieldName, path);
+    } else if (EXPECT_NUMBER_ARRAY_FIELDS.has(field)) {
+      requireNonNegativeIntegerArray(value, fieldName, path);
+    } else if (EXPECT_STRING_ARRAY_FIELDS.has(field)) {
+      requireStringArray(value, fieldName, path);
+    } else {
+      throw new Error(`invalid manifest field ${fieldName}: no value validator`);
+    }
   }
 }
 
@@ -311,11 +421,8 @@ function validateExpectedEntry(entry, path, index) {
     if (!isObject(entry.expect) || Object.keys(entry.expect).length === 0) {
       throw new Error(`expected-result pass entry has no expect overrides in ${path}: ${entry.scenario}`);
     }
-    rejectUnknownFields(entry.expect, EXPECT_OVERRIDE_FIELDS, `expected[${index}].expect`);
-    if (Object.prototype.hasOwnProperty.call(entry.expect, "server")) {
-      validateServerExpectation(entry.expect.server, path,
-        `expected[${index}].expect.server`);
-    }
+    validateExpectation(entry.expect, path, `expected[${index}].expect`,
+      false, true);
   } else if (Object.prototype.hasOwnProperty.call(entry, "expect")) {
     throw new Error(`expected-result skip entry must not include expect in ${path}: ${entry.scenario}`);
   }
