@@ -157,6 +157,8 @@ jobs:
 
       - name: Set up geckodriver
         uses: browser-actions/setup-geckodriver@latest
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: |
