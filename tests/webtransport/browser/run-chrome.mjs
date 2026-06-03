@@ -40,6 +40,7 @@ const EXPECT_ORDERED = process.env.PICOQUIC_WT_EXPECT_ORDERED !== "0";
 const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_REQUIRED === "1";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
+const SERVER_SUMMARY_TRACE_LIMIT = 131072;
 const SERVER_STREAM_TRACE_LIMIT = 65536;
 const SERVER_SUMMARY_WAIT_MS = Number(process.env.PICOQUIC_WT_SERVER_SUMMARY_WAIT_MS || 2000);
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
@@ -803,10 +804,31 @@ function mergeStreamTestSummary(summary, streamSummary) {
   return summary;
 }
 
+function isServerSummaryLine(line) {
+  return line.includes("Waiting for packets") ||
+    line.includes("Connect accepted on stream") ||
+    line.includes("Accepting optional-protocol WebTransport CONNECT") ||
+    line.includes("H3 control frame") ||
+    line.includes("Missing WebTransport CONNECT origin") ||
+    line.includes("WebTransport CONNECT origin rejected") ||
+    line.includes("Rejecting malformed baton WebTransport CONNECT parameters") ||
+    line.includes("Received web transport session capsule") ||
+    line.includes("Received empty WebTransport datagram on stream") ||
+    line.includes("Received baton WebTransport datagram on stream") ||
+    line.includes("Received sized WebTransport datagram on stream") ||
+    line.includes("All ZERO baton on stream") ||
+    line.includes("WebTransport stream test ") ||
+    line.includes("error: 0 (writable-bad-chunk-test)") ||
+    line.includes("error: 2a (browser-close-test)");
+}
+
 function makeServerOutputRecorder() {
   let output = "";
+  let summaryTrace = "";
   let streamTrace = "";
   let lineBuffer = "";
+  let packetReceivedCaptured = false;
+  let packetSentCaptured = false;
 
   return {
     append(data) {
@@ -820,6 +842,18 @@ function makeServerOutputRecorder() {
       const lines = lineBuffer.split(/\r?\n/);
       lineBuffer = lines.pop() || "";
       for (const line of lines) {
+        let keepSummaryLine = isServerSummaryLine(line);
+        if (!keepSummaryLine && line.includes("Receiving packet type")) {
+          keepSummaryLine = !packetReceivedCaptured;
+          packetReceivedCaptured = true;
+        }
+        if (!keepSummaryLine && line.includes("Sending packet type")) {
+          keepSummaryLine = !packetSentCaptured;
+          packetSentCaptured = true;
+        }
+        if (keepSummaryLine) {
+          summaryTrace = (summaryTrace + line + "\n").slice(-SERVER_SUMMARY_TRACE_LIMIT);
+        }
         if (line.includes("WebTransport stream test ")) {
           streamTrace = (streamTrace + line + "\n").slice(-SERVER_STREAM_TRACE_LIMIT);
         }
@@ -827,6 +861,12 @@ function makeServerOutputRecorder() {
     },
     output() {
       return output;
+    },
+    summaryTrace() {
+      const pending = isServerSummaryLine(lineBuffer) ||
+        lineBuffer.includes("Receiving packet type") ||
+        lineBuffer.includes("Sending packet type") ? `${lineBuffer}\n` : "";
+      return summaryTrace + pending;
     },
     streamTrace() {
       const pending = lineBuffer.includes("WebTransport stream test ") ?
@@ -924,7 +964,7 @@ async function main() {
       streamServerSummary = summarizeServerOutput(serverOutput.streamTrace());
     }
     if (INCLUDE_SERVER_SUMMARY) {
-      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput.output()),
+      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput.summaryTrace()),
         streamServerSummary);
     }
     assertHarnessResult(result);
@@ -949,19 +989,21 @@ async function main() {
          * received pico_baton's close-capsule log. The Chrome rerun job
          * 79138790636 reproduced it. Keep the server assertion, but wait
          * briefly for the expected trace line before summarizing.
-         */
+        */
         await waitForServerOutput(serverOutputHasBrowserClose,
-          () => serverOutput.output());
+          () => serverOutput.summaryTrace());
       }
     }
     if (INCLUDE_SERVER_SUMMARY) {
-      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput.output()),
+      result.server = mergeStreamTestSummary(summarizeServerOutput(serverOutput.summaryTrace()),
         streamServerSummary);
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     const output = [
       serverOutput.output().trim(),
+      serverOutput.summaryTrace().trim() ?
+        `server summary trace:\n${serverOutput.summaryTrace().trim()}` : "",
       serverOutput.streamTrace().trim() ?
         `server stream trace:\n${serverOutput.streamTrace().trim()}` : ""
     ].filter(Boolean).join("\n");
