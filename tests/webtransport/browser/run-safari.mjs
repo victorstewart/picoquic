@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { createHash, X509Certificate } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
+import { createServer as createTcpServer } from "node:net";
 import { tmpdir } from "node:os";
 import { extname, join, resolve, sep } from "node:path";
 
@@ -40,7 +41,13 @@ const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY ==
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
 const SERVER_SUMMARY_WAIT_MS = Number(process.env.PICOQUIC_WT_SERVER_SUMMARY_WAIT_MS || 2000);
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
-const SAFARI_DRIVER_PORT = Number(process.env.PICOQUIC_WT_SAFARI_DRIVER_PORT || 9444);
+/* Safari 26.4 on macos-26 GitHub run 26897744754 stalled while polling
+ * safaridriver /status on the fixed port immediately after a standalone Safari
+ * smoke. Use a fresh ephemeral WebDriver port by default; keep the env override
+ * for local debugging and CI bisects.
+ */
+const SAFARI_DRIVER_PORT =
+  parseOptionalPortEnv("PICOQUIC_WT_SAFARI_DRIVER_PORT");
 /* Safari 26.4 on the macos-26 GitHub image can take longer than 10s for
  * safaridriver's /status endpoint to become reachable after a previous Safari
  * smoke run; see WebTransportBrowser run 26802796720. This is WebDriver
@@ -100,6 +107,36 @@ function parseOptionalIntegerEnv(name) {
     throw new Error(`${name} must be a non-negative integer`);
   }
   return parsed;
+}
+
+function parseOptionalPortEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
+    throw new Error(`${name} must be a TCP port number`);
+  }
+  return parsed;
+}
+
+function unusedTcpPort() {
+  return new Promise((resolvePort, rejectPort) => {
+    const probe = createTcpServer();
+    probe.unref();
+    probe.once("error", rejectPort);
+    probe.listen(0, "127.0.0.1", () => {
+      const address = probe.address();
+      probe.close(() => {
+        if (!address || typeof address !== "object") {
+          rejectPort(new Error("could not allocate an unused TCP port"));
+          return;
+        }
+        resolvePort(address.port);
+      });
+    });
+  });
 }
 
 function equalExpectedBatonArray(actual, expected) {
@@ -862,7 +899,8 @@ async function main() {
   server.stdout.on("data", appendServerOutput);
   server.stderr.on("data", appendServerOutput);
 
-  const driver = spawn(safariDriver, ["-p", String(SAFARI_DRIVER_PORT)], {
+  const safariDriverPort = SAFARI_DRIVER_PORT || await unusedTcpPort();
+  const driver = spawn(safariDriver, ["-p", String(safariDriverPort)], {
     stdio: ["ignore", "pipe", "pipe"]
   });
   let driverOutput = "";
@@ -872,7 +910,7 @@ async function main() {
   driver.stdout.on("data", appendDriverOutput);
   driver.stderr.on("data", appendDriverOutput);
 
-  const endpoint = `http://127.0.0.1:${SAFARI_DRIVER_PORT}`;
+  const endpoint = `http://127.0.0.1:${safariDriverPort}`;
   let sessionId = "";
   let browserCapabilities = {};
   try {
