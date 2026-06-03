@@ -19,6 +19,9 @@ const DATAGRAM_RECEIVE_MIN = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_RECEI
 const DATAGRAM_SEND_MODE = process.env.PICOQUIC_WT_DATAGRAM_SEND_MODE || "baton";
 const DATAGRAM_SEND_SIZE = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_SEND_SIZE");
 const DATAGRAM_SEND_COUNT = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_SEND_COUNT");
+const STREAM_MODE = process.env.PICOQUIC_WT_STREAM_MODE || "baton";
+const STREAM_SIZE = parseOptionalIntegerEnv("PICOQUIC_WT_STREAM_SIZE") || 0;
+const STREAM_COUNT = parseOptionalIntegerEnv("PICOQUIC_WT_STREAM_COUNT") || 1;
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
 const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
@@ -304,6 +307,11 @@ function buildPageUrl(pageUrl, certificateHash) {
   if (DATAGRAM_SEND_COUNT !== null) {
     url.searchParams.set("datagramSendCount", String(DATAGRAM_SEND_COUNT));
   }
+  if (STREAM_MODE !== "baton") {
+    url.searchParams.set("streamMode", STREAM_MODE);
+    url.searchParams.set("streamSize", String(STREAM_SIZE));
+    url.searchParams.set("streamCount", String(STREAM_COUNT));
+  }
   return url.href;
 }
 
@@ -565,6 +573,23 @@ function assertHarnessResult(result) {
       expected: DATAGRAM_SEND_MODE
     })}`);
   }
+  if ((result.streamMode || "baton") !== STREAM_MODE) {
+    throw new Error(`unexpected stream mode: ${JSON.stringify({
+      streamMode: result.streamMode,
+      expected: STREAM_MODE
+    })}`);
+  }
+  if (STREAM_MODE !== "baton") {
+    if (result.streamSize !== STREAM_SIZE || result.streamCount !== STREAM_COUNT) {
+      throw new Error(`unexpected stream parameters: ${JSON.stringify({
+        streamSize: result.streamSize,
+        streamCount: result.streamCount,
+        expectedSize: STREAM_SIZE,
+        expectedCount: STREAM_COUNT
+      })}`);
+    }
+    return;
+  }
   if (!equalExpectedBatonArray(result.received, EXPECT_RECEIVED)) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
   }
@@ -676,6 +701,14 @@ function summarizeServerOutput(output) {
     datagramBytesReceived: sumMatches(output,
       /Received (?:baton|sized) WebTransport datagram on stream: [0-9]+, length: ([0-9]+)/g),
     zeroBatonReceived: countMatches(output, /All ZERO baton on stream/g),
+    streamTestFinReceived: countMatches(output,
+      /WebTransport stream test received FIN on stream/g),
+    streamTestFinSent: countMatches(output,
+      /WebTransport stream test sent FIN on stream/g),
+    streamTestBytesReceived: sumMatches(output,
+      /WebTransport stream test received FIN on stream: [0-9]+, bytes: ([0-9]+)/g),
+    streamTestBytesSent: sumMatches(output,
+      /WebTransport stream test sent FIN on stream: [0-9]+, bytes: ([0-9]+)/g),
     writableBadChunkCloseReceived:
       output.includes("error: 0 (writable-bad-chunk-test)"),
     browserCloseReceived:

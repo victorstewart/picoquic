@@ -44,6 +44,13 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "datagramSendMode",
   "datagramSendSize",
   "datagramSendCount",
+  "streamMode",
+  "streamSize",
+  "streamCount",
+  "streamBytesSent",
+  "streamBytesReceived",
+  "streamFinSent",
+  "streamFinReceived",
   "received",
   "sent",
   "datagramsReceived",
@@ -108,7 +115,13 @@ const EXPECT_COUNTER_FIELDS = new Set([
   "datagramSendCount",
   "datagramLengthsMin",
   "datagramLength",
-  "datagramsReceivedMin"
+  "datagramsReceivedMin",
+  "streamSize",
+  "streamCount",
+  "streamBytesSent",
+  "streamBytesReceived",
+  "streamFinSent",
+  "streamFinReceived"
 ]);
 const EXPECT_NUMBER_ARRAY_FIELDS = new Set([
   "received",
@@ -141,7 +154,11 @@ const EXPECT_SERVER_COUNTER_FIELD_NAMES = [
   "batonDatagramsReceived",
   "sizedDatagramsReceived",
   "datagramBytesReceived",
-  "zeroBatonReceived"
+  "zeroBatonReceived",
+  "streamTestFinReceived",
+  "streamTestFinSent",
+  "streamTestBytesReceived",
+  "streamTestBytesSent"
 ];
 const EXPECT_SERVER_COUNTER_FIELDS =
   new Set(EXPECT_SERVER_COUNTER_FIELD_NAMES);
@@ -168,6 +185,9 @@ const SCENARIO_FIELDS = new Set([
   "datagramSendMode",
   "datagramSendSize",
   "datagramSendCount",
+  "streamMode",
+  "streamSize",
+  "streamCount",
   "timeoutMs",
   "certificateHashMode",
   "certificateHashAlgorithm",
@@ -242,6 +262,13 @@ function requireDatagramMode(value, name, path) {
   }
 }
 
+function requireStreamMode(value, name, path) {
+  if (!["baton", "client-bidi-echo", "client-uni-reply",
+    "server-uni", "server-bidi"].includes(value)) {
+    throw new Error(`invalid manifest field ${name}: unsupported mode ${value} in ${path}`);
+  }
+}
+
 function rejectUnknownFields(object, allowed, name) {
   for (const field of Object.keys(object)) {
     if (!allowed.has(field)) {
@@ -289,6 +316,8 @@ function validateExpectation(expect, path, name, requireOk, allowNull) {
       requireStringValue(value, fieldName, path, field === "protocol");
     } else if (EXPECT_MODE_FIELDS.has(field)) {
       requireDatagramMode(value, fieldName, path);
+    } else if (field === "streamMode") {
+      requireStreamMode(value, fieldName, path);
     } else if (EXPECT_COUNTER_FIELDS.has(field)) {
       requireNonNegativeIntegerOrNull(value, fieldName, path);
     } else if (EXPECT_NUMBER_ARRAY_FIELDS.has(field)) {
@@ -337,6 +366,18 @@ function validateScenario(scenario, path) {
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "datagramSendCount")) {
     requirePositiveInteger(scenario.datagramSendCount, `${scenario.id}.datagramSendCount`);
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "streamMode")) {
+    requireStreamMode(scenario.streamMode, `${scenario.id}.streamMode`, path);
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "streamSize")) {
+    requireNonNegativeIntegerOrNull(scenario.streamSize, `${scenario.id}.streamSize`, path);
+    if (scenario.streamSize === null) {
+      throw new Error(`invalid manifest field ${scenario.id}.streamSize: expected non-negative integer in ${path}`);
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "streamCount")) {
+    requirePositiveInteger(scenario.streamCount, `${scenario.id}.streamCount`);
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "timeoutMs")) {
     requirePositiveInteger(scenario.timeoutMs, `${scenario.id}.timeoutMs`);
@@ -626,6 +667,16 @@ function assertScenarioResult(id, result, expect) {
     (result.datagramSendCount || 1) !== expect.datagramSendCount) {
     throw new Error(`${id}: expected datagramSendCount=${JSON.stringify(expect.datagramSendCount)}, got ${JSON.stringify(result.datagramSendCount || 1)}`);
   }
+  if (hasExpectedValue(expect, "streamMode") &&
+    (result.streamMode || "baton") !== expect.streamMode) {
+    throw new Error(`${id}: expected streamMode=${JSON.stringify(expect.streamMode)}, got ${JSON.stringify(result.streamMode || "baton")}`);
+  }
+  for (const name of ["streamSize", "streamCount", "streamBytesSent",
+    "streamBytesReceived", "streamFinSent", "streamFinReceived"]) {
+    if (hasExpectedValue(expect, name) && result[name] !== expect[name]) {
+      throw new Error(`${id}: expected ${name}=${JSON.stringify(expect[name])}, got ${JSON.stringify(result[name])}`);
+    }
+  }
   if (expect.received) {
     assertArrayEquals(id, "received", result.received, expect.received,
       sequenceOrderMatters);
@@ -875,6 +926,9 @@ async function runScenario(browser, scenario, vars) {
     PICOQUIC_WT_USE_BYOB: rendered.useByob === false ? "0" : "1",
     PICOQUIC_WT_DATAGRAM_RECEIVE_MODE: rendered.datagramReceiveMode || "baton",
     PICOQUIC_WT_DATAGRAM_SEND_MODE: rendered.datagramSendMode || "baton",
+    PICOQUIC_WT_STREAM_MODE: rendered.streamMode || "baton",
+    PICOQUIC_WT_STREAM_SIZE: String(rendered.streamSize || 0),
+    PICOQUIC_WT_STREAM_COUNT: String(rendered.streamCount || 1),
     PICOQUIC_WT_EXPECT_OK: scenarioExpect.ok === false ? "0" : "1",
     PICOQUIC_WT_PROTOCOL_CONSTRUCTOR: scenarioExpect.ok === false ? "0" : "1",
     PICOQUIC_WT_INCLUDE_SERVER_SUMMARY: "1",

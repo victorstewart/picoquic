@@ -53,6 +53,8 @@ extern "C" {
 #define WT_BATON_DEFAULT_PADDING 0x3fff
 #define WT_BATON_MAX_DATAGRAM_SIZE 1536
 #define WT_BATON_MAX_DATAGRAM_COUNT 1000
+#define WT_BATON_MAX_STREAM_TEST_SIZE 10485760
+#define WT_BATON_MAX_STREAM_TEST_COUNT 64
     /* WT Protocol */
 #define PICOWT_BATON_ALPN "devious-baton-00"
 #define PICOWT_BATON_ALPN_AVAILABLE "wrong-end-baton, devious-baton-00"
@@ -94,6 +96,26 @@ extern "C" {
         uint8_t nb_receive_buffer_bytes;
         uint8_t baton_received;
     } wt_baton_incoming_t;
+
+    typedef enum {
+        wt_baton_stream_test_none = 0,
+        wt_baton_stream_test_client_bidi_echo,
+        wt_baton_stream_test_client_uni_reply,
+        wt_baton_stream_test_server_uni,
+        wt_baton_stream_test_server_bidi
+    } wt_baton_stream_test_mode_enum;
+
+    typedef struct st_wt_baton_stream_test_t {
+        uint64_t stream_id;
+        uint64_t bytes_received;
+        uint64_t bytes_sent;
+        unsigned int is_bidir : 1;
+        unsigned int is_local : 1;
+        unsigned int fin_received : 1;
+        unsigned int fin_sent : 1;
+        unsigned int reply_started : 1;
+        unsigned int is_active : 1;
+    } wt_baton_stream_test_t;
 
     typedef struct st_wt_baton_ctx_t {
         picoquic_cnx_t* cnx;
@@ -142,6 +164,16 @@ extern "C" {
         uint8_t baton_datagram_send_next;
         uint64_t nb_baton_bytes_received;
         uint64_t nb_baton_bytes_sent;
+        /* Stream matrix test mode. */
+        wt_baton_stream_test_mode_enum stream_test_mode;
+        uint64_t stream_test_size;
+        uint64_t stream_test_count;
+        uint64_t stream_test_opened;
+        uint64_t stream_test_fin_received;
+        uint64_t stream_test_fin_sent;
+        uint64_t stream_test_bytes_received;
+        uint64_t stream_test_bytes_sent;
+        wt_baton_stream_test_t stream_tests[WT_BATON_MAX_STREAM_TEST_COUNT * 2];
         char wt_protocol[256];
     } wt_baton_ctx_t;
 

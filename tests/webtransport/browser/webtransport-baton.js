@@ -928,6 +928,225 @@
     });
   }
 
+  function makeStreamPayload(offset, length) {
+    var chunk = new Uint8Array(length);
+    for (var i = 0; i < chunk.length; i++) {
+      chunk[i] = (offset + i) & 0xff;
+    }
+    return chunk;
+  }
+
+  function verifyStreamPayload(chunk, offset) {
+    for (var i = 0; i < chunk.byteLength; i++) {
+      if (chunk[i] !== ((offset + i) & 0xff)) {
+        throw new Error("stream byte mismatch at " + (offset + i));
+      }
+    }
+  }
+
+  async function writeStreamPayload(writable, size, result, note) {
+    var writer = writable.getWriter();
+    var offset = 0;
+    try {
+      await writer.ready;
+      while (offset < size) {
+        var chunkLength = Math.min(READ_BUFFER_SIZE, size - offset);
+        await writer.write(makeStreamPayload(offset, chunkLength));
+        offset += chunkLength;
+        result.streamBytesSent += chunkLength;
+      }
+      await writer.close();
+      result.streamFinSent += 1;
+      note("stream sent " + size);
+    } finally {
+      writer.releaseLock();
+    }
+  }
+
+  async function readStreamPayload(readable, expectedSize, result, note, label) {
+    var reader = readable.getReader();
+    var offset = 0;
+    try {
+      while (true) {
+        var read = await reader.read();
+        if (read.done) {
+          if (offset !== expectedSize) {
+            throw new Error("expected " + expectedSize +
+              " stream bytes on " + label + ", got " + offset);
+          }
+          result.streamBytesReceived += offset;
+          result.streamFinReceived += 1;
+          note("stream received " + offset + " on " + label);
+          return offset;
+        }
+        if (offset + read.value.byteLength > expectedSize) {
+          throw new Error("too many stream bytes on " + label);
+        }
+        verifyStreamPayload(read.value, offset);
+        offset += read.value.byteLength;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  async function runStreamTest(options) {
+    if (typeof WebTransport !== "function") {
+      throw new Error("WebTransport is unavailable");
+    }
+
+    var result = {
+      ok: false,
+      url: options.url,
+      requireDatagram: options.requireDatagram !== false,
+      constructorRequireUnreliable: options.requireDatagram !== false,
+      useByob: options.useByob !== false,
+      streamMode: options.streamMode || "",
+      streamSize: options.streamSize || 0,
+      streamCount: options.streamCount || 1,
+      streamBytesSent: 0,
+      streamBytesReceived: 0,
+      streamFinSent: 0,
+      streamFinReceived: 0,
+      protocol: "",
+      readyMs: 0,
+      closedMs: 0,
+      startedMs: nowMs(),
+      events: []
+    };
+    window.__picoquicWebTransportProgress = result;
+    var timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
+    var transport = null;
+    var closedPromise = null;
+
+    function note(event) {
+      result.events.push({ t: nowMs() - result.startedMs, event: event });
+      window.__picoquicWebTransportProgress = result;
+      if (options.onProgress) {
+        options.onProgress(result);
+      }
+    }
+
+    async function readIncomingUni(reader, label) {
+      var incoming = await reader.read();
+      if (incoming.done) {
+        throw new Error("incoming unidirectional stream ended before " + label);
+      }
+      return readStreamPayload(incoming.value, result.streamSize, result,
+        note, label);
+    }
+
+    async function readIncomingBidi(reader, label) {
+      var incoming = await reader.read();
+      if (incoming.done) {
+        throw new Error("incoming bidirectional stream ended before " + label);
+      }
+      var read = readStreamPayload(incoming.value.readable,
+        result.streamSize, result, note, label);
+      var writer = incoming.value.writable.getWriter();
+      try {
+        await writer.ready;
+        await writer.close();
+        result.streamFinSent += 1;
+        note("stream sent 0 on " + label + "-reply");
+      } finally {
+        writer.releaseLock();
+      }
+      return read;
+    }
+
+    try {
+      note("connecting");
+      transport = new WebTransport(options.url, buildTransportOptions(options));
+      closedPromise = transport.closed.then(function () {
+        return { ok: true, detail: "" };
+      }, function (error) {
+        return { ok: false, detail: errorText(error) };
+      });
+      await transport.ready;
+      result.readyMs = nowMs() - result.startedMs;
+      result.protocol = transport.protocol || "";
+      if (options.requireProtocol !== false &&
+        options.protocol && result.protocol !== options.protocol) {
+        throw new Error("unexpected WebTransport protocol '" + result.protocol + "'");
+      }
+      result.sessionDiagnostics = await runSessionDiagnostics(transport);
+      if (!result.sessionDiagnostics.ok) {
+        throw new Error("session diagnostics failed: " +
+          JSON.stringify(result.sessionDiagnostics));
+      }
+      note("ready");
+
+      if (result.streamMode === "client-bidi-echo") {
+        for (var bidiIndex = 0; bidiIndex < result.streamCount; bidiIndex++) {
+          var bidiStream = await transport.createBidirectionalStream();
+          var readEcho = readStreamPayload(bidiStream.readable,
+            result.streamSize, result, note, "client-bidi-" + bidiIndex);
+          await writeStreamPayload(bidiStream.writable, result.streamSize,
+            result, note);
+          await readEcho;
+        }
+      } else if (result.streamMode === "client-uni-reply") {
+        var uniReader = transport.incomingUnidirectionalStreams.getReader();
+        try {
+          for (var uniIndex = 0; uniIndex < result.streamCount; uniIndex++) {
+            var writable = await transport.createUnidirectionalStream();
+            await writeStreamPayload(writable, result.streamSize, result, note);
+            await readIncomingUni(uniReader, "client-uni-reply-" + uniIndex);
+          }
+        } finally {
+          uniReader.releaseLock();
+        }
+      } else if (result.streamMode === "server-uni") {
+        var serverUniReader = transport.incomingUnidirectionalStreams.getReader();
+        try {
+          for (var serverUniIndex = 0; serverUniIndex < result.streamCount;
+            serverUniIndex++) {
+            await readIncomingUni(serverUniReader,
+              "server-uni-" + serverUniIndex);
+          }
+        } finally {
+          serverUniReader.releaseLock();
+        }
+      } else if (result.streamMode === "server-bidi") {
+        var serverBidiReader = transport.incomingBidirectionalStreams.getReader();
+        try {
+          for (var serverBidiIndex = 0; serverBidiIndex < result.streamCount;
+            serverBidiIndex++) {
+            await readIncomingBidi(serverBidiReader,
+              "server-bidi-" + serverBidiIndex);
+          }
+        } finally {
+          serverBidiReader.releaseLock();
+        }
+      } else {
+        throw new Error("unsupported stream mode " + result.streamMode);
+      }
+
+      transport.close({ closeCode: 0, reason: "stream-test" });
+      var closed = await withTimeout(closedPromise, 3000);
+      if (!closed.ok) {
+        throw new Error(closed.detail);
+      }
+      result.closedMs = nowMs() - result.startedMs;
+      result.ok = true;
+      note("closed");
+      return result;
+    } catch (error) {
+      if (!result.error) {
+        result.error = errorText(error);
+        note("error " + result.error);
+      }
+      throw error;
+    } finally {
+      if (transport) {
+        try {
+          transport.close({ closeCode: 0, reason: "stream-test" });
+        } catch (_) {}
+      }
+    }
+  }
+
   async function runBatonTest(options) {
     if (typeof WebTransport !== "function") {
       throw new Error("WebTransport is unavailable");
@@ -1390,6 +1609,9 @@
       datagramSendMode: search.get("datagramSendMode") || "baton",
       datagramSendSize: Number(search.get("datagramSendSize")) || 0,
       datagramSendCount: Number(search.get("datagramSendCount")) || 1,
+      streamMode: search.get("streamMode") || "baton",
+      streamSize: Number(search.get("streamSize")) || 0,
+      streamCount: Number(search.get("streamCount")) || 1,
       useByob: search.get("useByob") !== "0",
       onProgress: render
     };
@@ -1404,7 +1626,8 @@
     setText("state", "running");
 
     try {
-      var result = await runBatonTest(options);
+      var result = options.streamMode && options.streamMode !== "baton" ?
+        await runStreamTest(options) : await runBatonTest(options);
       render(result);
       root.dataset.result = "pass";
       setText("state", "pass");
@@ -1422,6 +1645,13 @@
         datagramSendMode: options.datagramSendMode || "baton",
         datagramSendSize: options.datagramSendSize || 0,
         datagramSendCount: options.datagramSendCount || 1,
+        streamMode: options.streamMode || "baton",
+        streamSize: options.streamSize || 0,
+        streamCount: options.streamCount || 1,
+        streamBytesSent: 0,
+        streamBytesReceived: 0,
+        streamFinSent: 0,
+        streamFinReceived: 0,
         received: [],
         sent: [],
         datagramsReceived: [],
@@ -1470,7 +1700,8 @@
     runCloseSessionTests: runCloseSessionTests,
     runPostCloseDatagramTests: runPostCloseDatagramTests,
     runSessionDiagnostics: runSessionDiagnostics,
-    runBatonTest: runBatonTest
+    runBatonTest: runBatonTest,
+    runStreamTest: runStreamTest
   };
 
   if (document.readyState === "loading") {
