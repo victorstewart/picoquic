@@ -4309,11 +4309,12 @@
         "streamSize": 1048576,
         "streamCount": 1,
         "streamBytesSent": 0,
-        "streamBytesReceived": 0,
+        "streamBytesReceivedMin": 1,
         "streamFinSent": 0,
         "streamFinReceived": 0,
         "eventsInclude": [
           "ready",
+          "stream read before cancel bidi",
           "stream canceled incoming bidi",
           "closed"
         ],
@@ -4363,11 +4364,12 @@
         "streamSize": 1048576,
         "streamCount": 1,
         "streamBytesSent": 0,
-        "streamBytesReceived": 0,
+        "streamBytesReceivedMin": 1,
         "streamFinSent": 0,
         "streamFinReceived": 0,
         "eventsInclude": [
           "ready",
+          "stream read before cancel uni",
           "stream canceled incoming uni",
           "closed"
         ],

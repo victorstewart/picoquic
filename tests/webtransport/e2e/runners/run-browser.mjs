@@ -49,6 +49,7 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "streamCount",
   "streamBytesSent",
   "streamBytesReceived",
+  "streamBytesReceivedMin",
   "streamFinSent",
   "streamFinReceived",
   "received",
@@ -121,6 +122,7 @@ const EXPECT_COUNTER_FIELDS = new Set([
   "streamCount",
   "streamBytesSent",
   "streamBytesReceived",
+  "streamBytesReceivedMin",
   "streamFinSent",
   "streamFinReceived"
 ]);
@@ -707,6 +709,11 @@ function assertScenarioResult(id, result, expect) {
     if (hasExpectedValue(expect, name) && result[name] !== expect[name]) {
       throw new Error(`${id}: expected ${name}=${JSON.stringify(expect[name])}, got ${JSON.stringify(result[name])}`);
     }
+  }
+  if (hasExpectedValue(expect, "streamBytesReceivedMin") &&
+    (typeof result.streamBytesReceived !== "number" ||
+      result.streamBytesReceived < expect.streamBytesReceivedMin)) {
+    throw new Error(`${id}: expected streamBytesReceived >= ${expect.streamBytesReceivedMin}, got ${JSON.stringify(result.streamBytesReceived)}`);
   }
   if (expect.received) {
     assertArrayEquals(id, "received", result.received, expect.received,

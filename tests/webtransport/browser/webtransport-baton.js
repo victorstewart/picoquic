@@ -944,6 +944,12 @@
     });
   }
 
+  function delayMs(timeoutMs) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, timeoutMs);
+    });
+  }
+
   function makeStreamPayload(offset, length) {
     var chunk = new Uint8Array(length);
     for (var i = 0; i < chunk.length; i++) {
@@ -1043,6 +1049,16 @@
       }
     }
 
+    async function readChunkBeforeCancel(reader, result, note, label) {
+      var read = await withTimeout(reader.read(), 3000);
+      if (read.done) {
+        throw new Error("incoming " + label + " stream ended before cancel");
+      }
+      var length = read.value && read.value.byteLength ? read.value.byteLength : 0;
+      result.streamBytesReceived += length;
+      note("stream read before cancel " + label);
+    }
+
     async function readIncomingUni(reader, label) {
       var incoming = await reader.read();
       if (incoming.done) {
@@ -1101,6 +1117,7 @@
           await abortBidiWriter.write(new Uint8Array([123]));
           result.streamBytesSent += 1;
           note("stream wrote abort-bidi");
+          await delayMs(100);
           await abortBidiWriter.abort(makeStreamError("browser-abort-bidi", 123));
           note("stream aborted bidi");
         } finally {
@@ -1114,6 +1131,7 @@
           await abortUniWriter.write(new Uint8Array([123]));
           result.streamBytesSent += 1;
           note("stream wrote abort-uni");
+          await delayMs(100);
           await abortUniWriter.abort(makeStreamError("browser-abort-uni", 123));
           note("stream aborted uni");
         } finally {
@@ -1128,6 +1146,7 @@
           }
           var cancelBidiReadable = cancelBidiIncoming.value.readable.getReader();
           try {
+            await readChunkBeforeCancel(cancelBidiReadable, result, note, "bidi");
             await cancelBidiReadable.cancel(makeStreamError("browser-cancel-bidi", 123));
             note("stream canceled incoming bidi");
           } finally {
@@ -1145,6 +1164,7 @@
           }
           var cancelUniReadable = cancelUniIncoming.value.getReader();
           try {
+            await readChunkBeforeCancel(cancelUniReadable, result, note, "uni");
             await cancelUniReadable.cancel(makeStreamError("browser-cancel-uni", 123));
             note("stream canceled incoming uni");
           } finally {
