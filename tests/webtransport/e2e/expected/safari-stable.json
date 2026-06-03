@@ -62,6 +62,15 @@
       "evidence": "GitHub WebTransportBrowser run 26863007007, Safari job 79220574211, failed datagrams.server-repeat-large after receiving four 1200-byte datagrams with datagramReceiveMin=16, then reported NetworkError. Chrome and Edge passed the same repeated-datagram batch in that run."
     },
     {
+      "scenario": "datagrams.client-repeat-large",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI wrote and delivered only part of the repeated 1200-byte browser-to-server datagram sequence before reporting a network error, so this lane does not claim large repeated client datagram delivery.",
+      "evidence": "GitHub WebTransportBrowser run 26863452355, Safari job 79221931481, failed datagrams.client-repeat-large after datagramsSent=10, server.sizedDatagramsReceived=10, server.datagramBytesReceived=12000, and NetworkError with datagramSendCount=16."
+    },
+    {
       "scenario": "datagrams.client-empty",
       "status": "pass",
       "category": "browser-bug",

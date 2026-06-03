@@ -11,6 +11,24 @@
       "platform": "linux",
       "reason": "Edge stable acknowledges an HTTP Datagram containing only the Quarter Stream ID, but does not expose the resulting zero-length WebTransport datagram to the JavaScript readable stream.",
       "evidence": "GitHub WebTransportBrowser run 26842019982, Edge job 79151393609, timed out in datagrams.server-empty with datagramLengths=[] after pico_baton logged `datagram, length: 1: 00`."
+    },
+    {
+      "scenario": "datagrams.client-repeat-one",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "148.0.3967.83",
+      "platform": "linux",
+      "reason": "Edge stable accepted the repeated one-byte browser datagram scenario far enough for pico_baton to observe one sized datagram, but did not complete sixteen browser-to-server datagram writes before the harness timeout.",
+      "evidence": "GitHub WebTransportBrowser run 26863452355, Edge job 79221931483, timed out in core E2E on the repeated one-byte client datagram row after pico_baton logged one `Received sized WebTransport datagram ... length: 1` and then remained waiting."
+    },
+    {
+      "scenario": "datagrams.client-repeat-large",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "148.0.3967.83",
+      "platform": "linux",
+      "reason": "Edge stable does not currently claim repeated browser-to-server datagram delivery. The one-byte repeated row delivered only one server-observable datagram before timeout, so the stricter large repeated row remains unclaimed in this lane.",
+      "evidence": "GitHub WebTransportBrowser run 26863452355, Edge job 79221931483, timed out on datagrams.client-repeat-one before datagrams.client-repeat-large could run. The large row depends on the same repeated browser-to-server datagram write behavior."
     }
   ]
 }
