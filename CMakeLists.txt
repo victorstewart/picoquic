@@ -917,6 +917,20 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/expected/safari-stable.json)
         set_tests_properties(picohttp_wt_e2e_expected_safari_file
                              PROPERTIES LABELS wt_browser)
+        add_test(NAME picohttp_wt_e2e_expected_reject_unknown_results_field
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-unknown-results-field.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_unknown_results_field
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_expected_reject_unknown_entry_field
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-unknown-entry-field.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_unknown_entry_field
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_expected_reject_missing_metadata
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs

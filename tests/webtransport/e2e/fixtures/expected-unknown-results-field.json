@@ -1,0 +1,7 @@
+{
+  "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
+  "notes": "Fixture used to verify unknown E2E expected-results fields are rejected.",
+  "expected": []
+}

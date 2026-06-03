@@ -19,6 +19,17 @@ const BROWSER_RUNNERS = {
 };
 const SCENARIO_ID_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 const EXPECTED_STATUSES = new Set(["skip", "pass"]);
+const EXPECTED_RESULT_FIELDS = new Set(["browser", "channel", "platform", "expected"]);
+const EXPECTED_ENTRY_FIELDS = new Set([
+  "scenario",
+  "status",
+  "category",
+  "browserVersion",
+  "platform",
+  "reason",
+  "evidence",
+  "expect"
+]);
 const SCENARIO_FIELDS = new Set([
   "id",
   "title",
@@ -186,6 +197,7 @@ function validateExpectedEntry(entry, path, index) {
   if (!isObject(entry)) {
     throw new Error(`expected[${index}] must be an object in ${path}`);
   }
+  rejectUnknownFields(entry, EXPECTED_ENTRY_FIELDS, `expected[${index}]`);
   for (const field of ["scenario", "status", "category", "browserVersion",
     "platform", "reason", "evidence"]) {
     requireExpectedString(entry, field, path, `expected[${index}]`);
@@ -214,6 +226,7 @@ function loadExpected(path, manifest) {
   if (!isObject(expected)) {
     throw new Error(`expected-results file must be an object: ${path}`);
   }
+  rejectUnknownFields(expected, EXPECTED_RESULT_FIELDS, "expected-results");
   requireExpectedString(expected, "browser", path);
   requireExpectedString(expected, "channel", path);
   requireExpectedString(expected, "platform", path);

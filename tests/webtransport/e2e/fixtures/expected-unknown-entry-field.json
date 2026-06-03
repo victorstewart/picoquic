@@ -1,0 +1,17 @@
+{
+  "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": [
+    {
+      "scenario": "baton.core.padded-byob",
+      "status": "skip",
+      "category": "fixture",
+      "browserVersion": "0.0",
+      "platform": "linux",
+      "reason": "Fixture used to verify unknown E2E expected-entry fields are rejected.",
+      "evidence": "Synthetic fixture.",
+      "bug": "https://example.invalid/fixture"
+    }
+  ]
+}
