@@ -244,6 +244,40 @@
       "evidence": "GitHub WebTransportBrowser run 26863007007, Firefox job 79220574196, failed datagrams.server-repeat-one with datagramLengths=[1,1,1,1,1,1,1,1,1,1] and datagramReceiveMin=16 before the large repeated row could run. Chrome and Edge passed both repeated rows in that run."
     },
     {
+      "scenario": "datagrams.server-lossy-one",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the loss-tolerant server datagram scenario on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "GitHub WebTransportBrowser run 26899009323, Firefox job 79345920041, reached datagrams.server-lossy-one and failed only because the scenario URL expected no protocol=optional query parameter.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=64&lossy=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "datagrams.server-burst-one",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the 1000-attempt burst server datagram scenario on the Firefox data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same selected-protocol constraint as datagrams.server-lossy-one: GitHub WebTransportBrowser run 26899009323, Firefox job 79345920041, showed the Firefox compatibility runner appends protocol=optional to the new C198 server datagram rows.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=1000&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
       "scenario": "datagrams.client-sized-one",
       "status": "pass",
       "category": "browser-missing",

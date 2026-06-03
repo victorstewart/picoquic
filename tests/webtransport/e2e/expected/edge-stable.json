@@ -13,6 +13,15 @@
       "evidence": "GitHub WebTransportBrowser run 26842019982, Edge job 79151393609, timed out in datagrams.server-empty with datagramLengths=[] after pico_baton logged `datagram, length: 1: 00`."
     },
     {
+      "scenario": "datagrams.server-repeat-large",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "148.0.3967.83",
+      "platform": "linux",
+      "reason": "Edge stable delivered only a partial repeated 1200-byte server datagram sequence before reporting the WebTransport session closed, so this lane does not claim large repeated server datagram delivery.",
+      "evidence": "GitHub WebTransportBrowser run 26899009323, Edge job 79345920128, failed datagrams.server-repeat-large after receiving eleven 1200-byte datagrams with datagramReceiveMin=16, then reported WebTransportError: The session is closed. Chrome passed the same browser run."
+    },
+    {
       "scenario": "datagrams.client-repeat-one",
       "status": "skip",
       "category": "browser-bug",

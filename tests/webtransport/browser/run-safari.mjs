@@ -48,13 +48,14 @@ const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
  */
 const SAFARI_DRIVER_PORT =
   parseOptionalPortEnv("PICOQUIC_WT_SAFARI_DRIVER_PORT");
-/* Safari 26.4 on the macos-26 GitHub image can take longer than 10s for
+/* Safari 26.4 on the macos-26 GitHub image can take longer than 30s for
  * safaridriver's /status endpoint to become reachable after a previous Safari
- * smoke run; see WebTransportBrowser run 26802796720. This is WebDriver
- * startup hardening only, before any WebTransport traffic is attempted.
+ * smoke run; see WebTransportBrowser runs 26802796720 and 26899009323. This is
+ * WebDriver startup hardening only, before any WebTransport traffic is
+ * attempted.
  */
 const SAFARI_DRIVER_READY_MS =
-  Number(process.env.PICOQUIC_WT_SAFARI_DRIVER_READY_MS || 30000);
+  Number(process.env.PICOQUIC_WT_SAFARI_DRIVER_READY_MS || 90000);
 const HARNESS_PORT = Number(process.env.PICOQUIC_WT_HARNESS_PORT || 8080);
 const WT_URL = process.env.PICOQUIC_WT_URL ||
   `https://localhost:${PORT}/baton?version=0&baton=251&count=1`;
