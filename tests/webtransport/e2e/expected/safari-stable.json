@@ -195,10 +195,11 @@
       "category": "browser-bug",
       "browserVersion": "26.4",
       "platform": "macOS",
-      "reason": "Safari stable throws NotSupportedError for allowPooling with serverCertificateHashes, matching the W3C constructor requirement, but Safari 26.4 CI has not emitted an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path.",
-      "evidence": "Same positive-path caveat as baton.core.compact-default-reader: GitHub run 26796690452 recorded optionsConstructor.ok=true and run 26798507855 showed server.closeSessionReceived stayed 0 after diagnostics. Run 26830997543 passed Safari core E2E including the medium-padded positive data path before this two-lane scenario was added.",
+      "reason": "Safari stable throws NotSupportedError for allowPooling with serverCertificateHashes, matching the W3C constructor requirement, and Safari 26.4 CI has not emitted an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path. Safari 26.4 also completed the two-lane server exchange but exposed only one terminal zero send event in this row, so this lane does not claim strict terminal-zero event cardinality for two concurrent compact baton lanes.",
+      "evidence": "Same positive-path caveat as baton.core.compact-default-reader: GitHub run 26796690452 recorded optionsConstructor.ok=true and run 26798507855 showed server.closeSessionReceived stayed 0 after diagnostics. Run 26908158085, Safari job 79378650076, failed baton.core.two-lane-compact-default-reader only because the browser result sent=[252,252,254,254,0] instead of [252,252,254,254,0,0], while the server trace proved All ZERO baton on two streams.",
       "expect": {
         "optionsConstructorOk": true,
+        "sent": [252, 252, 254, 254, 0],
         "server": {
           "closeSessionReceivedMin": 0,
           "writableBadChunkCloseReceived": false

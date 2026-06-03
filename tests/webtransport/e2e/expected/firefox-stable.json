@@ -470,14 +470,29 @@
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the zero-byte unidirectional FIN/reply row on the Firefox data path while not claiming selected WT-Protocol exposure.",
-      "evidence": "Same selected-protocol constraint as streams.large-bidi-echo-10mb: GitHub WebTransportBrowser run 26904158856, Firefox job 79364305271, showed the Firefox compatibility runner appends protocol=optional to the new C201 stream rows.",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not expose the incoming zero-byte unidirectional reply as a successful readable completion. Keep the row active to prove the server receives and sends the zero-byte FIN, but do not claim Firefox stable browser-side completion for this FIN-only unidirectional reply path.",
+      "evidence": "GitHub WebTransportBrowser run 26908158085, Firefox job 79378650235, reached streams.fin-empty-uni through protocol=optional, sent the zero-byte browser unidirectional stream, and then reported WebTransportError: remote WebTransport close. The server summary still proved connectAccepted=1, optionalProtocolAccepted=1, streamTestFinReceived=1, streamTestFinSent=1, and zero bytes both directions.",
       "expect": {
+        "ok": false,
         "url": "https://127.0.0.1:4433/baton?version=0&stream=client-uni-reply&stream_size=0&stream_count=1&protocol=optional",
         "protocol": "",
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "ready",
+          "stream sent 0"
+        ],
+        "eventsExclude": [
+          "stream received 0 on client-uni-reply-0",
+          "closed"
+        ],
+        "errorIncludes": "WebTransportError",
         "server": {
           "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1
+          "optionalProtocolAcceptedMin": 1,
+          "streamTestBytesReceived": 0,
+          "streamTestBytesSent": 0,
+          "streamTestFinReceived": 1,
+          "streamTestFinSent": 1
         }
       }
     },
