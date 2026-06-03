@@ -552,7 +552,9 @@
         "errorIncludes": "WebTransportError",
         "server": {
           "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1
+          "optionalProtocolAcceptedMin": 1,
+          "streamTestFinReceived": null,
+          "streamTestFinReceivedMin": 0
         }
       }
     },

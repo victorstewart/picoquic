@@ -216,9 +216,14 @@
       "category": "browser-bug",
       "browserVersion": "26.4",
       "platform": "macOS",
-      "reason": "Safari 26.4 CI delivered the loss-tolerant 1000-attempt server datagram burst row but reported the client stream sent-baton values in a different order, [252,0,254]. Keep this stress row active while not claiming strict sent-baton ordering for Safari on the burst path.",
-      "evidence": "GitHub WebTransportBrowser run 26904158856, Safari job 79364305456, failed datagrams.server-burst-one only because the sent array was [252,0,254] instead of [252,254,0]; the scenario already carries datagram-loss-tolerated and datagram-ordering-not-assumed coverage.",
+      "reason": "Safari 26.4 CI delivered the loss-tolerant 1000-attempt server datagram burst row but reported the client stream sent-baton values as [252,0,254] in one run and [252,0] in another. Keep this stress row active while not claiming strict sent-baton ordering or complete browser-visible terminal baton delivery for Safari on the lossy burst path.",
+      "evidence": "GitHub WebTransportBrowser run 26904158856, Safari job 79364305456, failed datagrams.server-burst-one only because the sent array was [252,0,254] instead of [252,254,0]. Run 26912514984, Safari job 79393979295, later delivered the same loss-tolerant row with sent=[252,0]. The scenario already carries datagram-loss-tolerated and datagram-ordering-not-assumed coverage.",
       "expect": {
+        "sent": null,
+        "sentVariants": [
+          [252, 254, 0],
+          [252, 0]
+        ],
         "sequenceOrderMatters": false
       }
     },
