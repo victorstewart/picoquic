@@ -239,6 +239,21 @@
       "platform": "macOS",
       "reason": "Safari 26.4 CI passes compact one-lane and two-lane browser data paths, but the stricter four-lane compact scenario timed out before delivering all lanes. The sixteen-lane row is present for browsers that pass it, but Safari stable does not claim this higher-concurrency stream behavior yet.",
       "evidence": "GitHub WebTransportBrowser run 26847131054, Safari job 79169550184, timed out after 30000 ms on baton.core.four-lane-compact-default-reader with partial multi-lane server progress. The sixteen-lane row exercises the same concurrent server-opened and browser-opened stream behavior at a higher count."
+    },
+    {
+      "scenario": "streams.server-open-bidi-zero",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI completed the browser-visible server-opened zero-byte bidirectional stream row, but the server did not observe the browser reply FIN in this run. Keep the row active while not claiming the server-observable reply-FIN counter for Safari stable.",
+      "evidence": "GitHub WebTransportBrowser run 26911316618, Safari job 79389755583, failed streams.server-open-bidi-zero only because server.streamTestFinReceived was 0 instead of 1. Earlier checks in the same row had already passed, and the manifest still preserves server.streamTestFinSent=1 for the server-opened FIN.",
+      "expect": {
+        "server": {
+          "streamTestFinReceived": null,
+          "streamTestFinReceivedMin": 0
+        }
+      }
     }
   ]
 }
