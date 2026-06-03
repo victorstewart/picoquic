@@ -804,14 +804,26 @@
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the STOP/cancel row on the data path while not claiming selected WT-Protocol exposure.",
-      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737 and 26914421909.",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. It reads the incoming bidirectional stream and accepts ReadableStream.cancel(), but does not close the WebTransport session through the expected STOP_SENDING mapping, so keep the data-path evidence while not claiming successful STOP/cancel behavior for this Firefox stable path.",
+      "evidence": "WebTransportBrowser run 26916189865, Firefox job 79406303211, showed Firefox 151.0.3 reached reset.browser-cancel-incoming-bidi, reported events 'ready', 'stream read before cancel bidi', and 'stream canceled incoming bidi', then timed out waiting for transport.closed; the server summary showed optionalProtocolAccepted=1, streamTestBytesSent=1048576, streamBytesReceived=1383 in the browser result, but stopSendingReceived=0 and stopSendingAppError123=0.",
       "expect": {
+        "ok": false,
         "url": "https://127.0.0.1:4433/wt/reset/browser-cancel-incoming-bidi?stream_size=1048576&stream_count=1&protocol=optional",
         "protocol": "",
+        "eventsInclude": [
+          "ready",
+          "stream read before cancel bidi",
+          "stream canceled incoming bidi"
+        ],
+        "eventsExclude": [
+          "closed"
+        ],
+        "errorIncludes": "timeout after 3000 ms",
         "server": {
           "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1
+          "optionalProtocolAcceptedMin": 1,
+          "stopSendingReceivedMin": null,
+          "stopSendingAppError123Min": null
         }
       }
     },
@@ -821,14 +833,26 @@
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the STOP/cancel row on the data path while not claiming selected WT-Protocol exposure.",
-      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737 and 26914421909.",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Treat the incoming unidirectional cancel row as the same Firefox stable incoming ReadableStream.cancel browser gap as the bidirectional row until a later browser version proves STOP_SENDING propagation.",
+      "evidence": "Same incoming Firefox ReadableStream.cancel path as reset.browser-cancel-incoming-bidi. WebTransportBrowser run 26916189865, Firefox job 79406303211, proved the bidirectional incoming-cancel row read stream data and accepted cancel but did not produce transport.closed or server STOP_SENDING; this unidirectional row is classified with the same browser-version caveat so the C203 incoming-cancel family remains batched.",
       "expect": {
+        "ok": false,
         "url": "https://127.0.0.1:4433/wt/reset/browser-cancel-incoming-uni?stream_size=1048576&stream_count=1&protocol=optional",
         "protocol": "",
+        "eventsInclude": [
+          "ready",
+          "stream read before cancel uni",
+          "stream canceled incoming uni"
+        ],
+        "eventsExclude": [
+          "closed"
+        ],
+        "errorIncludes": "timeout after 3000 ms",
         "server": {
           "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1
+          "optionalProtocolAcceptedMin": 1,
+          "stopSendingReceivedMin": null,
+          "stopSendingAppError123Min": null
         }
       }
     }
