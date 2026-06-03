@@ -154,6 +154,7 @@ static const picoquic_test_def_t test_table[] = {
     { "picowt_connect_fin_lifecycle", picowt_connect_fin_lifecycle_test },
     { "picowt_baton_origin", picowt_baton_origin_test },
     { "picowt_baton_origin_policy", picowt_baton_origin_policy_test },
+    { "picowt_baton_reject_status", picowt_baton_reject_status_test },
     { "picowt_baton_settings", picowt_baton_settings_test },
     { "picowt_baton_alpn", picowt_baton_alpn_test },
     { "picowt_protocol_select", picowt_protocol_select_test },

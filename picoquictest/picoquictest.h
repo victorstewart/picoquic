@@ -711,6 +711,7 @@ int picowt_connect_reset_lifecycle_test(void);
 int picowt_connect_fin_lifecycle_test(void);
 int picowt_baton_origin_test(void);
 int picowt_baton_origin_policy_test(void);
+int picowt_baton_reject_status_test(void);
 int picowt_baton_settings_test(void);
 int picowt_baton_alpn_test(void);
 int picowt_protocol_select_test(void);

@@ -428,6 +428,10 @@ int baton_client_loop_cb(picoquic_quic_t* UNUSED(quic), picoquic_packet_loop_cb_
 char const* baton_ticket_store = "baton_ticket_store.bin";
 char const* baton_token_store = "baton_token_store.bin";
 static char const* wt_baton_origin_deny_path = "/baton-origin-deny";
+static char const* wt_baton_reject_400_path = "/baton-reject-400";
+static char const* wt_baton_reject_403_path = "/baton-reject-403";
+static char const* wt_baton_reject_429_path = "/baton-reject-429";
+static char const* wt_baton_reject_500_path = "/baton-reject-500";
 
 static int wt_baton_origin_validator_deny_all(
     const uint8_t* UNUSED(origin), size_t UNUSED(origin_length),
@@ -440,7 +444,7 @@ static int wt_baton_origin_validator_deny_all(
 int wt_baton_server(char const* path, picoquic_quic_config_t* config)
 {
     int ret = 0;
-    picohttp_server_path_item_t path_item_list[2] = { { 0 } };
+    picohttp_server_path_item_t path_item_list[6] = { { 0 } };
 
     /* Start: start the QUIC process with cert and key files */
     picoquic_quic_t* qserver = NULL;
@@ -471,8 +475,24 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
     path_item_list[1].path = wt_baton_origin_deny_path;
     path_item_list[1].path_length = strlen(wt_baton_origin_deny_path);
     path_item_list[1].origin_validator = wt_baton_origin_validator_deny_all;
+    path_item_list[2] = path_item_list[0];
+    path_item_list[2].path = wt_baton_reject_400_path;
+    path_item_list[2].path_length = strlen(wt_baton_reject_400_path);
+    path_item_list[2].connect_error_status = 400;
+    path_item_list[3] = path_item_list[0];
+    path_item_list[3].path = wt_baton_reject_403_path;
+    path_item_list[3].path_length = strlen(wt_baton_reject_403_path);
+    path_item_list[3].connect_error_status = 403;
+    path_item_list[4] = path_item_list[0];
+    path_item_list[4].path = wt_baton_reject_429_path;
+    path_item_list[4].path_length = strlen(wt_baton_reject_429_path);
+    path_item_list[4].connect_error_status = 429;
+    path_item_list[5] = path_item_list[0];
+    path_item_list[5].path = wt_baton_reject_500_path;
+    path_item_list[5].path_length = strlen(wt_baton_reject_500_path);
+    path_item_list[5].connect_error_status = 500;
     picoquic_file_param.path_table = path_item_list;
-    picoquic_file_param.path_table_nb = 2;
+    picoquic_file_param.path_table_nb = 6;
 
     /* Setup the server context */
     if (ret == 0) {

@@ -46,6 +46,182 @@
       }
     },
     {
+      "id": "handshake.reject_400",
+      "title": "Explicit 400 WebTransport path rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton-reject-400?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "handshake-status-reject",
+        "handshake-status-400",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton-reject-400?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "handshake.reject_403",
+      "title": "Explicit 403 WebTransport path rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton-reject-403?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "handshake-status-reject",
+        "handshake-status-403",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton-reject-403?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "handshake.reject_429",
+      "title": "Explicit 429 WebTransport path rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton-reject-429?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "handshake-status-reject",
+        "handshake-status-429",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton-reject-429?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "handshake.reject_500",
+      "title": "Explicit 500 WebTransport path rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton-reject-500?version=0&baton=251&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "handshake-status-reject",
+        "handshake-status-500",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton-reject-500?version=0&baton=251&count=1&padding=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
       "id": "handshake.reject_unsupported_protocol",
       "title": "Unsupported WT-Available-Protocols value rejects ready",
       "runner": "browser-baton",

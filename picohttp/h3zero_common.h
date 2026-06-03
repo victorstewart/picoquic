@@ -79,6 +79,7 @@ extern "C" {
         unsigned int accept_legacy_webtransport : 1;
         picohttp_origin_validator_fn origin_validator;
         void* origin_validator_ctx;
+        int connect_error_status;
     } picohttp_server_path_item_t;
 
     int h3zero_origin_validator_allow_all(

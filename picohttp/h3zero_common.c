@@ -1982,6 +1982,19 @@ int h3zero_process_request_frame(
 						stream_ctx->stream_id, path_desc->path);
 					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "403", H3ZERO_USER_AGENT_STRING);
 				}
+				else if (path_desc->connect_error_status != 0) {
+					char status_text[4];
+					if (path_desc->connect_error_status < 100 || path_desc->connect_error_status > 999) {
+						o_bytes = NULL;
+					}
+					else {
+						(void)snprintf(status_text, sizeof(status_text), "%03d", path_desc->connect_error_status);
+						picoquic_log_app_message(cnx,
+							"Rejecting CONNECT on stream: %"PRIu64 ", path:%s, status:%s",
+							stream_ctx->stream_id, path_desc->path, status_text);
+						o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, status_text, H3ZERO_USER_AGENT_STRING);
+					}
+				}
 				else {
 					if (is_webtransport && app_ctx->nb_webtransport_sessions > 0 &&
 						!h3zero_webtransport_flow_control_is_enabled(app_ctx)) {

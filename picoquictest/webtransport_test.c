@@ -1921,6 +1921,37 @@ int picowt_baton_origin_policy_test(void)
     return ret;
 }
 
+static int picowt_baton_reject_status_case(uint8_t test_id, int status)
+{
+    picohttp_server_path_item_t reject_table[1] = {
+        { "/baton-reject", 13, wt_baton_callback, &baton_test_ctx,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+            sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1, 0,
+            h3zero_origin_validator_allow_all, NULL, status }
+    };
+
+    return picowt_baton_test_one_ex(test_id, "/baton-reject?baton=240", 0,
+        2000000, NULL, NULL, reject_table, 1, "https",
+        H3ZERO_WEBTRANSPORT_H3_PROTOCOL, NULL, NULL, 0, 0, status);
+}
+
+int picowt_baton_reject_status_test(void)
+{
+    int ret = picowt_baton_reject_status_case(26, 400);
+
+    if (ret == 0) {
+        ret = picowt_baton_reject_status_case(27, 403);
+    }
+    if (ret == 0) {
+        ret = picowt_baton_reject_status_case(28, 429);
+    }
+    if (ret == 0) {
+        ret = picowt_baton_reject_status_case(29, 500);
+    }
+
+    return ret;
+}
+
 int picowt_baton_settings_test(void)
 {
     return picowt_baton_test_one_ex(17, "/baton?baton=240", 0, 2000000, NULL, NULL,
