@@ -816,9 +816,6 @@ function makeServerOutputRecorder() {
       const text = data.toString();
       output = (output + text).slice(-SERVER_OUTPUT_LIMIT);
 
-      if (STREAM_MODE === "baton") {
-        return;
-      }
       lineBuffer += text;
       const lines = lineBuffer.split(/\r?\n/);
       lineBuffer = lines.pop() || "";
