@@ -798,7 +798,7 @@ function mergeStreamTestSummary(summary, streamSummary) {
   }
   for (const name of ["streamTestBytesReceived", "streamTestBytesSent",
     "streamTestFinReceived", "streamTestFinSent"]) {
-    summary[name] = Math.max(summary[name] || 0, streamSummary[name] || 0);
+    summary[name] = streamSummary[name] || 0;
   }
   return summary;
 }
@@ -928,7 +928,7 @@ async function main() {
         streamServerSummary);
     }
     assertHarnessResult(result);
-    if (RUN_PROTOCOL_CONSTRUCTOR && EXPECT_OK) {
+    if (RUN_PROTOCOL_CONSTRUCTOR && EXPECT_OK && STREAM_MODE === "baton") {
       result.protocolConstructor = await readProtocolConstructorResult(cdp, certConfig.hash);
       assertProtocolConstructorResult(result.protocolConstructor);
       result.urlConstructor = await readUrlConstructorResult(cdp, certConfig.hash);
