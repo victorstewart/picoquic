@@ -502,11 +502,22 @@
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the server-opened zero-byte unidirectional stream row on the Firefox data path while not claiming selected WT-Protocol exposure.",
-      "evidence": "Same selected-protocol constraint as streams.large-bidi-echo-10mb: GitHub WebTransportBrowser run 26904158856, Firefox job 79364305271, showed the Firefox compatibility runner appends protocol=optional to the new C201 stream rows.",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint because it does not provide a usable WT-Available-Protocols value in this lane. Keep the server-opened zero-byte unidirectional stream row on the Firefox data path and preserve the server FIN assertion, but do not claim browser-readable completion for this Firefox stable path.",
+      "evidence": "GitHub WebTransportBrowser run 26910534966, Firefox job 79387042950, reached streams.server-open-uni-zero through protocol=optional. The browser reported WebTransportError: WebTransport connection rejected before delivering the server-opened stream, while the server summary proved connectAccepted=1, optionalProtocolAccepted=1, streamTestFinSent=1, and zero stream bytes sent.",
       "expect": {
+        "ok": false,
         "url": "https://127.0.0.1:4433/baton?version=0&stream=server-uni&stream_size=0&stream_count=1&protocol=optional",
         "protocol": "",
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "connecting"
+        ],
+        "eventsExclude": [
+          "ready",
+          "stream received 0 on server-uni-0",
+          "closed"
+        ],
+        "errorIncludes": "WebTransportError",
         "server": {
           "optionalProtocolAccepted": null,
           "optionalProtocolAcceptedMin": 1
