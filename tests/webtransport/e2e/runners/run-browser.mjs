@@ -203,8 +203,11 @@ function validateExpectedEntry(entry, path, index) {
 }
 
 function loadExpected(path, manifest) {
-  if (!path || !existsSync(path)) {
+  if (!path) {
     return { path: "", entries: new Map() };
+  }
+  if (!existsSync(path)) {
+    throw new Error(`expected-results file not found: ${path}`);
   }
 
   const expected = JSON.parse(readFileSync(path, "utf8"));
