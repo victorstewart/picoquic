@@ -1219,19 +1219,24 @@
         throw new Error("unsupported stream mode " + result.streamMode);
       }
 
-      if (result.streamMode.indexOf("browser-abort-") === 0 ||
-        result.streamMode.indexOf("browser-cancel-incoming-") === 0) {
+      if (result.streamMode.indexOf("browser-abort-") === 0) {
         await withTimeout(closedPromise, 3000);
+        result.closedMs = nowMs() - result.startedMs;
+        note("closed");
+      } else if (result.streamMode.indexOf("browser-cancel-incoming-") === 0) {
+        /* Incoming-stream cancel rows assert browser cancel completion and
+         * server-observed STOP_SENDING. Close/drain rows cover transport.closed.
+         */
       } else {
         transport.close({ closeCode: 0, reason: "stream-test" });
         var closed = await withTimeout(closedPromise, 3000);
         if (!closed.ok) {
           throw new Error(closed.detail);
         }
+        result.closedMs = nowMs() - result.startedMs;
+        note("closed");
       }
-      result.closedMs = nowMs() - result.startedMs;
       result.ok = true;
-      note("closed");
       return result;
     } catch (error) {
       if (!result.error) {

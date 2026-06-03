@@ -53,6 +53,21 @@
       "platform": "linux",
       "reason": "Chrome stable does not currently claim repeated browser-to-server datagram delivery. The one-byte repeated row delivered only one server-observable datagram before timeout, so the stricter large repeated row remains unclaimed in this lane.",
       "evidence": "GitHub WebTransportBrowser run 26863452355, Chrome job 79221931488, timed out on datagrams.client-repeat-one before datagrams.client-repeat-large could run. The large row depends on the same repeated browser-to-server datagram write behavior."
+    },
+    {
+      "scenario": "reset.browser-cancel-incoming-uni",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "148.0.7778.178",
+      "platform": "linux",
+      "reason": "Chrome 148 old headless on GitHub Actions reads from an incoming unidirectional WebTransport stream and accepts ReadableStream.cancel(), but this run did not produce server-observed STOP_SENDING. Keep the browser data-path row active while not claiming the unidirectional STOP mapping for this Chrome stable lane.",
+      "evidence": "WebTransportBrowser run 26916773667, Chrome job 79408205084, reached reset.browser-cancel-incoming-uni with events 'ready', 'stream read before cancel uni', and 'stream canceled incoming uni', read 262144 bytes, then timed out waiting for transport.closed; the server summary showed connectAccepted=1, streamTestBytesSent=1048576, stopSendingReceived=0, and stopSendingAppError123=0.",
+      "expect": {
+        "server": {
+          "stopSendingReceivedMin": null,
+          "stopSendingAppError123Min": null
+        }
+      }
     }
   ]
 }

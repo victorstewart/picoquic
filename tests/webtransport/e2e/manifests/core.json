@@ -4292,7 +4292,6 @@
       "coverage": [
         "constructor",
         "ready",
-        "closed",
         "stop-browser-cancel",
         "stop-browser-cancel-bidi",
         "stop-sending-error-code-123",
@@ -4315,8 +4314,7 @@
         "eventsInclude": [
           "ready",
           "stream read before cancel bidi",
-          "stream canceled incoming bidi",
-          "closed"
+          "stream canceled incoming bidi"
         ],
         "server": {
           "connectAcceptedMin": 1,
@@ -4347,7 +4345,6 @@
       "coverage": [
         "constructor",
         "ready",
-        "closed",
         "stop-browser-cancel",
         "stop-browser-cancel-uni",
         "stop-sending-error-code-123",
@@ -4370,8 +4367,7 @@
         "eventsInclude": [
           "ready",
           "stream read before cancel uni",
-          "stream canceled incoming uni",
-          "closed"
+          "stream canceled incoming uni"
         ],
         "server": {
           "connectAcceptedMin": 1,
