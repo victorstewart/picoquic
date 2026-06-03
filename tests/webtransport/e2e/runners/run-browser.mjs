@@ -71,6 +71,28 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "server",
   "sequenceOrderMatters"
 ]);
+const EXPECT_SERVER_FIELDS = new Set([
+  "packetsReceived",
+  "packetsReceivedMin",
+  "packetsSent",
+  "packetsSentMin",
+  "connectAccepted",
+  "connectAcceptedMin",
+  "optionalProtocolAccepted",
+  "optionalProtocolAcceptedMin",
+  "originRejected",
+  "originRejectedMin",
+  "closeSessionReceived",
+  "closeSessionReceivedMin",
+  "emptyDatagramsReceived",
+  "emptyDatagramsReceivedMin",
+  "batonDatagramsReceived",
+  "batonDatagramsReceivedMin",
+  "zeroBatonReceived",
+  "zeroBatonReceivedMin",
+  "writableBadChunkCloseReceived",
+  "browserCloseReceived"
+]);
 const SCENARIO_FIELDS = new Set([
   "id",
   "title",
@@ -251,6 +273,13 @@ function validateExpectedEntry(entry, path, index) {
       throw new Error(`expected-result pass entry has no expect overrides in ${path}: ${entry.scenario}`);
     }
     rejectUnknownFields(entry.expect, EXPECT_OVERRIDE_FIELDS, `expected[${index}].expect`);
+    if (Object.prototype.hasOwnProperty.call(entry.expect, "server")) {
+      if (!isObject(entry.expect.server)) {
+        throw new Error(`expected[${index}].expect.server must be an object in ${path}`);
+      }
+      rejectUnknownFields(entry.expect.server, EXPECT_SERVER_FIELDS,
+        `expected[${index}].expect.server`);
+    }
   } else if (Object.prototype.hasOwnProperty.call(entry, "expect")) {
     throw new Error(`expected-result skip entry must not include expect in ${path}: ${entry.scenario}`);
   }

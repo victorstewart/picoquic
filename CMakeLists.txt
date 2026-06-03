@@ -938,6 +938,13 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-unknown-expect-field.json)
         set_tests_properties(picohttp_wt_e2e_expected_reject_unknown_expect_field
                              PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_expected_reject_unknown_server_field
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-unknown-server-field.json)
+        set_tests_properties(picohttp_wt_e2e_expected_reject_unknown_server_field
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_expected_reject_missing_metadata
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
