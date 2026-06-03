@@ -351,10 +351,16 @@ static int wt_baton_stream_test_send_reset(picoquic_cnx_t* cnx,
         return 0;
     }
 
-    ret = picowt_reset_stream(cnx, stream_ctx, app_error);
+    /* Browser compatibility evidence: in GitHub WebTransportBrowser run
+     * 26919080316, Chrome/Edge/Firefox did not take the RESET_STREAM_AT path
+     * for server-generated reset rows. This test endpoint sends the WT stream
+     * prefix first, then uses a regular WebTransport-mapped RESET_STREAM.
+     */
+    ret = picoquic_reset_stream(cnx, stream_ctx->stream_id, h3_error);
     if (ret == 0) {
         test_stream->reset_sent = 1;
         test_stream->fin_sent = 1;
+        stream_ctx->ps.stream_state.is_fin_sent = 1;
         picoquic_log_app_message(cnx,
             "Sent WebTransport RESET_STREAM on stream: %" PRIu64
             ", h3_error: %" PRIu64 ", app_error: %" PRIu64,
@@ -392,27 +398,11 @@ static int wt_baton_stream_test_start_server_streams(picoquic_cnx_t* cnx,
     int is_bidir =
         baton_ctx->stream_test_mode == wt_baton_stream_test_server_bidi ||
         baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_bidi;
-    int should_reset =
-        baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_uni ||
-        baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_bidi;
 
     for (uint64_t i = 0; ret == 0 && i < baton_ctx->stream_test_count; i++) {
         h3zero_stream_ctx_t* stream_ctx = NULL;
         ret = wt_baton_stream_test_open_local(cnx, baton_ctx, is_bidir,
             &stream_ctx);
-        if (ret == 0 && should_reset && stream_ctx != NULL) {
-            wt_baton_stream_test_t* test_stream =
-                wt_baton_stream_test_find(baton_ctx, stream_ctx->stream_id, 0,
-                    is_bidir, 1);
-
-            if (test_stream == NULL) {
-                ret = -1;
-            }
-            else {
-                ret = wt_baton_stream_test_send_reset(cnx, test_stream,
-                    stream_ctx, baton_ctx->stream_test_error_code);
-            }
-        }
     }
     return ret;
 }
@@ -500,9 +490,19 @@ static int wt_baton_stream_test_provide_data(picoquic_cnx_t* cnx,
     wt_baton_stream_test_t* test_stream = wt_baton_stream_test_find(
         baton_ctx, stream_ctx->stream_id, 0, IS_BIDIR_STREAM_ID(stream_ctx->stream_id),
         IS_LOCAL_STREAM_ID(stream_ctx->stream_id, baton_ctx->is_client));
+    int should_reset =
+        test_stream != NULL && test_stream->is_local &&
+        !test_stream->reset_sent &&
+        (baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_uni ||
+            baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_bidi);
 
     if (test_stream == NULL || test_stream->fin_sent) {
         (void)picoquic_provide_stream_data_buffer(context, 0, 0, 0);
+    }
+    else if (should_reset) {
+        (void)picoquic_provide_stream_data_buffer(context, 0, 0, 0);
+        ret = wt_baton_stream_test_send_reset(cnx, test_stream, stream_ctx,
+            baton_ctx->stream_test_error_code);
     }
     else {
         uint64_t remaining = baton_ctx->stream_test_size -
