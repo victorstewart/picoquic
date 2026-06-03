@@ -71,6 +71,15 @@
       "evidence": "GitHub WebTransportBrowser run 26863452355, Safari job 79221931481, failed datagrams.client-repeat-large after datagramsSent=10, server.sizedDatagramsReceived=10, server.datagramBytesReceived=12000, and NetworkError with datagramSendCount=16."
     },
     {
+      "scenario": "datagrams.client-repeat-one",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI wrote and delivered only part of the repeated one-byte browser-to-server datagram sequence before the stream closed, so this lane does not claim repeated small client datagram delivery.",
+      "evidence": "GitHub WebTransportBrowser run 26863744613, Safari job 79222810665, failed datagrams.client-repeat-one after datagramsSent=9, server.sizedDatagramsReceived=9, server.datagramBytesReceived=9, then TypeError: stream is closing or closed with datagramSendCount=16."
+    },
+    {
       "scenario": "datagrams.client-empty",
       "status": "pass",
       "category": "browser-bug",
