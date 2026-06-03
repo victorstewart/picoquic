@@ -1012,6 +1012,186 @@
       }
     },
     {
+      "id": "datagrams.server-count-zero-reject",
+      "title": "Zero server WebTransport datagram count rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "endpoint-parameter-validation",
+        "datagram-count-validation",
+        "datagram-count-zero-reject",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=0",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "datagrams.server-count-excess-reject",
+      "title": "Excess server WebTransport datagram count rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=1001",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "endpoint-parameter-validation",
+        "datagram-count-validation",
+        "datagram-count-excess-reject",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=1001",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "datagrams.server-count-without-size-reject",
+      "title": "Repeated server WebTransport datagram count without size rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_count=16",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "endpoint-parameter-validation",
+        "datagram-count-validation",
+        "datagram-count-without-size-reject",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_count=16",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "datagrams.server-count-non-numeric-reject",
+      "title": "Non-numeric server WebTransport datagram count rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=abc",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "endpoint-parameter-validation",
+        "datagram-count-validation",
+        "datagram-count-parse-reject",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&datagram_size=1&datagram_count=abc",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
       "id": "baton.core.padded-byob",
       "title": "Baton stream/datagram/protocol exchange with default padding and BYOB readers",
       "runner": "browser-baton",
