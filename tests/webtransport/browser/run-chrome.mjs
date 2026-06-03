@@ -749,6 +749,48 @@ function summarizeServerOutput(output) {
   };
 }
 
+function expectedStreamServerSummary() {
+  const bytes = STREAM_SIZE * STREAM_COUNT;
+  if (STREAM_MODE === "client-bidi-echo" ||
+    STREAM_MODE === "client-uni-reply") {
+    return {
+      bytesReceived: bytes,
+      bytesSent: bytes,
+      finReceived: STREAM_COUNT,
+      finSent: STREAM_COUNT
+    };
+  }
+  if (STREAM_MODE === "server-uni") {
+    return {
+      bytesReceived: 0,
+      bytesSent: bytes,
+      finReceived: 0,
+      finSent: STREAM_COUNT
+    };
+  }
+  if (STREAM_MODE === "server-bidi") {
+    return {
+      bytesReceived: 0,
+      bytesSent: bytes,
+      finReceived: STREAM_COUNT,
+      finSent: STREAM_COUNT
+    };
+  }
+  return null;
+}
+
+function serverOutputHasStreamTestSummary(output) {
+  const expected = expectedStreamServerSummary();
+  if (!expected) {
+    return true;
+  }
+  const summary = summarizeServerOutput(output);
+  return summary.streamTestBytesReceived >= expected.bytesReceived &&
+    summary.streamTestBytesSent >= expected.bytesSent &&
+    summary.streamTestFinReceived >= expected.finReceived &&
+    summary.streamTestFinSent >= expected.finSent;
+}
+
 async function main() {
   assertFile(BATON, "pico_baton");
 
@@ -833,6 +875,10 @@ async function main() {
     await waitForHarness(cdp);
     const result = await readHarnessResult(cdp);
     result.browser = browserInfo;
+    if (INCLUDE_SERVER_SUMMARY && STREAM_MODE !== "baton") {
+      await waitForServerOutput(serverOutputHasStreamTestSummary,
+        () => serverOutput);
+    }
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);
     }
@@ -863,6 +909,10 @@ async function main() {
       }
     }
     if (INCLUDE_SERVER_SUMMARY) {
+      if (STREAM_MODE !== "baton") {
+        await waitForServerOutput(serverOutputHasStreamTestSummary,
+          () => serverOutput);
+      }
       result.server = summarizeServerOutput(serverOutput);
     }
     console.log(JSON.stringify(result, null, 2));

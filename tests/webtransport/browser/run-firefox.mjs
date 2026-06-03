@@ -49,6 +49,7 @@ const REQUIRE_OPTIONS_CONSTRUCTOR = process.env.PICOQUIC_WT_OPTIONS_CONSTRUCTOR_
 const REQUIRE_STREAM_WRITABLE = process.env.PICOQUIC_WT_STREAM_WRITABLE_REQUIRED !== "0";
 const INCLUDE_SERVER_SUMMARY = process.env.PICOQUIC_WT_INCLUDE_SERVER_SUMMARY === "1";
 const SERVER_OUTPUT_LIMIT = INCLUDE_SERVER_SUMMARY ? 262144 : 32768;
+const SERVER_SUMMARY_WAIT_MS = Number(process.env.PICOQUIC_WT_SERVER_SUMMARY_WAIT_MS || 2000);
 const TIMEOUT_MS = Number(process.env.PICOQUIC_WT_TIMEOUT_MS || 30000);
 const GECKO_DRIVER_PORT = Number(process.env.PICOQUIC_WT_GECKO_DRIVER_PORT || 9445);
 const HARNESS_PORT = Number(process.env.PICOQUIC_WT_HARNESS_PORT || 8081);
@@ -676,6 +677,19 @@ function sumMatches(text, pattern) {
   return total;
 }
 
+async function waitForServerOutput(predicate, getOutput, timeoutMs = SERVER_SUMMARY_WAIT_MS) {
+  const boundedTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 0;
+  const deadline = Date.now() + boundedTimeoutMs;
+
+  while (!predicate(getOutput())) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+    await sleep(Math.min(25, remaining));
+  }
+}
+
 function summarizeServerOutput(output) {
   return {
     bytesCaptured: output.length,
@@ -714,6 +728,48 @@ function summarizeServerOutput(output) {
     browserCloseReceived:
       /error: 2a \(browser-close-test\)/.test(output)
   };
+}
+
+function expectedStreamServerSummary() {
+  const bytes = STREAM_SIZE * STREAM_COUNT;
+  if (STREAM_MODE === "client-bidi-echo" ||
+    STREAM_MODE === "client-uni-reply") {
+    return {
+      bytesReceived: bytes,
+      bytesSent: bytes,
+      finReceived: STREAM_COUNT,
+      finSent: STREAM_COUNT
+    };
+  }
+  if (STREAM_MODE === "server-uni") {
+    return {
+      bytesReceived: 0,
+      bytesSent: bytes,
+      finReceived: 0,
+      finSent: STREAM_COUNT
+    };
+  }
+  if (STREAM_MODE === "server-bidi") {
+    return {
+      bytesReceived: 0,
+      bytesSent: bytes,
+      finReceived: STREAM_COUNT,
+      finSent: STREAM_COUNT
+    };
+  }
+  return null;
+}
+
+function serverOutputHasStreamTestSummary(output) {
+  const expected = expectedStreamServerSummary();
+  if (!expected) {
+    return true;
+  }
+  const summary = summarizeServerOutput(output);
+  return summary.streamTestBytesReceived >= expected.bytesReceived &&
+    summary.streamTestBytesSent >= expected.bytesSent &&
+    summary.streamTestFinReceived >= expected.finReceived &&
+    summary.streamTestFinSent >= expected.finSent;
 }
 
 async function main() {
@@ -782,6 +838,10 @@ async function main() {
     await waitForHarness(endpoint, sessionId);
     const result = await readHarnessResult(endpoint, sessionId);
     result.browser = browserCapabilities;
+    if (INCLUDE_SERVER_SUMMARY && STREAM_MODE !== "baton") {
+      await waitForServerOutput(serverOutputHasStreamTestSummary,
+        () => serverOutput);
+    }
     if (INCLUDE_SERVER_SUMMARY) {
       result.server = summarizeServerOutput(serverOutput);
     }
@@ -816,6 +876,10 @@ async function main() {
         });
     }
     if (INCLUDE_SERVER_SUMMARY) {
+      if (STREAM_MODE !== "baton") {
+        await waitForServerOutput(serverOutputHasStreamTestSummary,
+          () => serverOutput);
+      }
       result.server = summarizeServerOutput(serverOutput);
     }
     console.log(JSON.stringify(result, null, 2));
