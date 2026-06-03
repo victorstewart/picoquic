@@ -1179,13 +1179,23 @@
         try {
           await writer.close();
         } catch (error) {
-          if (baton === 0 && datagramRequirementMet() &&
+          if (datagramRequirementMet() &&
             errorText(error).indexOf("writable stream that is closed or errored") >= 0) {
-            /* Safari 26.4 in GitHub Actions run 26836125845 completed the
-             * final zero baton and observed transport.closed, then rejected
-             * writer.close() because the peer had already closed the session.
-             */
-            return;
+            if (baton === 0) {
+              /* Safari 26.4 in GitHub Actions run 26836125845 completed the
+               * final zero baton and observed transport.closed, then rejected
+               * writer.close() because the peer had already closed the session.
+               */
+              return;
+            }
+            if (sentZero && transportClosed) {
+              /* Safari 26.4 in GitHub Actions run 26901828019 job 79355979158
+               * delivered all 1000 burst datagrams, sent the terminal zero on
+               * one stream, observed transport.closed, and then rejected a
+               * different completed stream's writer.close().
+               */
+              return;
+            }
           }
           throw error;
         }
