@@ -71,27 +71,30 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "server",
   "sequenceOrderMatters"
 ]);
-const EXPECT_SERVER_FIELDS = new Set([
+const EXPECT_SERVER_COUNTER_FIELD_NAMES = [
   "packetsReceived",
-  "packetsReceivedMin",
   "packetsSent",
-  "packetsSentMin",
   "connectAccepted",
-  "connectAcceptedMin",
   "optionalProtocolAccepted",
-  "optionalProtocolAcceptedMin",
+  "originMissing",
   "originRejected",
-  "originRejectedMin",
   "closeSessionReceived",
-  "closeSessionReceivedMin",
   "emptyDatagramsReceived",
-  "emptyDatagramsReceivedMin",
   "batonDatagramsReceived",
-  "batonDatagramsReceivedMin",
-  "zeroBatonReceived",
-  "zeroBatonReceivedMin",
+  "zeroBatonReceived"
+];
+const EXPECT_SERVER_COUNTER_FIELDS =
+  new Set(EXPECT_SERVER_COUNTER_FIELD_NAMES);
+const EXPECT_SERVER_COUNTER_MIN_FIELDS = new Set(
+  EXPECT_SERVER_COUNTER_FIELD_NAMES.map((name) => `${name}Min`));
+const EXPECT_SERVER_BOOLEAN_FIELDS = new Set([
   "writableBadChunkCloseReceived",
   "browserCloseReceived"
+]);
+const EXPECT_SERVER_FIELDS = new Set([
+  ...EXPECT_SERVER_COUNTER_FIELDS,
+  ...EXPECT_SERVER_COUNTER_MIN_FIELDS,
+  ...EXPECT_SERVER_BOOLEAN_FIELDS
 ]);
 const SCENARIO_FIELDS = new Set([
   "id",
@@ -129,6 +132,18 @@ function requireBoolean(value, name) {
 function requirePositiveInteger(value, name) {
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`invalid manifest field ${name}: expected positive integer`);
+  }
+}
+
+function requireNonNegativeIntegerOrNull(value, name, path) {
+  if (value !== null && (!Number.isInteger(value) || value < 0)) {
+    throw new Error(`invalid manifest field ${name}: expected non-negative integer or null in ${path}`);
+  }
+}
+
+function requireBooleanOrNull(value, name, path) {
+  if (value !== null && typeof value !== "boolean") {
+    throw new Error(`invalid manifest field ${name}: expected boolean or null in ${path}`);
   }
 }
 
@@ -256,6 +271,23 @@ function requireExpectedString(object, name, path, owner = "expected-results fil
   }
 }
 
+function validateExpectedServer(server, path, index) {
+  if (!isObject(server)) {
+    throw new Error(`expected[${index}].expect.server must be an object in ${path}`);
+  }
+  rejectUnknownFields(server, EXPECT_SERVER_FIELDS,
+    `expected[${index}].expect.server`);
+  for (const [field, value] of Object.entries(server)) {
+    const name = `expected[${index}].expect.server.${field}`;
+    if (EXPECT_SERVER_COUNTER_FIELDS.has(field) ||
+      EXPECT_SERVER_COUNTER_MIN_FIELDS.has(field)) {
+      requireNonNegativeIntegerOrNull(value, name, path);
+    } else {
+      requireBooleanOrNull(value, name, path);
+    }
+  }
+}
+
 function validateExpectedEntry(entry, path, index) {
   if (!isObject(entry)) {
     throw new Error(`expected[${index}] must be an object in ${path}`);
@@ -274,11 +306,7 @@ function validateExpectedEntry(entry, path, index) {
     }
     rejectUnknownFields(entry.expect, EXPECT_OVERRIDE_FIELDS, `expected[${index}].expect`);
     if (Object.prototype.hasOwnProperty.call(entry.expect, "server")) {
-      if (!isObject(entry.expect.server)) {
-        throw new Error(`expected[${index}].expect.server must be an object in ${path}`);
-      }
-      rejectUnknownFields(entry.expect.server, EXPECT_SERVER_FIELDS,
-        `expected[${index}].expect.server`);
+      validateExpectedServer(entry.expect.server, path, index);
     }
   } else if (Object.prototype.hasOwnProperty.call(entry, "expect")) {
     throw new Error(`expected-result skip entry must not include expect in ${path}: ${entry.scenario}`);
