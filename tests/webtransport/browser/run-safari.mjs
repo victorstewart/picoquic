@@ -29,6 +29,8 @@ const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !=
 const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
 const EXPECT_RECEIVED = parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_RECEIVED", [251, 253, 255]);
 const EXPECT_SENT = parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_SENT", [252, 254, 0]);
+const EXPECT_SENT_VARIANTS =
+  parseIntegerArrayVariantsEnv("PICOQUIC_WT_EXPECT_SENT_VARIANTS", null);
 const EXPECT_DATAGRAMS_RECEIVED =
   parseIntegerArrayEnv("PICOQUIC_WT_EXPECT_DATAGRAMS_RECEIVED", null);
 const EXPECT_DATAGRAM_LENGTHS =
@@ -86,6 +88,21 @@ function parseIntegerArrayEnv(name, fallback) {
   if (!Array.isArray(parsed) || !parsed.every((entry) =>
     Number.isInteger(entry) && entry >= 0 && entry <= 255)) {
     throw new Error(`${name} must be a JSON array of baton byte values`);
+  }
+  return parsed;
+}
+
+function parseIntegerArrayVariantsEnv(name, fallback) {
+  const value = process.env[name];
+  if (!value) {
+    return fallback;
+  }
+  const parsed = JSON.parse(value);
+  if (!Array.isArray(parsed) || parsed.length === 0 ||
+    !parsed.every((entry) => Array.isArray(entry) &&
+      entry.every((value) => Number.isInteger(value) &&
+        value >= 0 && value <= 255))) {
+    throw new Error(`${name} must be a JSON array of baton byte arrays`);
   }
   return parsed;
 }
@@ -154,6 +171,14 @@ function equalExpectedBatonArray(actual, expected) {
   }
   return equalArray([...actual].sort((a, b) => a - b),
     [...expected].sort((a, b) => a - b));
+}
+
+function equalExpectedBatonArrayVariant(actual, variants) {
+  if (!Array.isArray(variants)) {
+    return false;
+  }
+  return variants.some((expected) =>
+    equalExpectedBatonArray(actual, expected));
 }
 
 function terminateProcess(child, signal = "SIGTERM", timeoutMs = 3000) {
@@ -624,7 +649,9 @@ function assertHarnessResult(result) {
   if (!equalExpectedBatonArray(result.received, EXPECT_RECEIVED)) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
   }
-  if (!equalExpectedBatonArray(result.sent, EXPECT_SENT)) {
+  if (EXPECT_SENT_VARIANTS ?
+    !equalExpectedBatonArrayVariant(result.sent, EXPECT_SENT_VARIANTS) :
+    !equalExpectedBatonArray(result.sent, EXPECT_SENT)) {
     throw new Error(`unexpected sent baton sequence: ${JSON.stringify(result.sent)}`);
   }
   if (EXPECT_DATAGRAMS_RECEIVED &&

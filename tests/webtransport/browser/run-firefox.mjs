@@ -269,8 +269,17 @@ function certHash(certPath) {
   return createHash("sha256").update(cert.raw).digest("base64url");
 }
 
+function useFirefoxProtocolOptionalEndpoint() {
+  /* Firefox 151.0.3 CI still needs the protocol=optional endpoint to exercise
+   * stream-mode data paths. Keep strict negative/core rows unchanged when they
+   * are expected to reject, but let expected stream-mode browser gaps still
+   * reach pico_baton so server FIN/byte assertions remain meaningful.
+   */
+  return FIREFOX_PROTOCOL_OPTIONAL && (EXPECT_OK || STREAM_MODE !== "baton");
+}
+
 function firefoxWtUrl(rawUrl) {
-  if (!FIREFOX_PROTOCOL_OPTIONAL || !EXPECT_OK) {
+  if (!useFirefoxProtocolOptionalEndpoint()) {
     return rawUrl;
   }
   const url = new URL(rawUrl);
@@ -284,7 +293,7 @@ function buildPageUrl(pageUrl, certificateHash) {
   url.searchParams.set("timeoutMs", String(TIMEOUT_MS));
   url.searchParams.set("url", WT_URL);
   url.searchParams.set("protocol", REQUESTED_PROTOCOL);
-  if (FIREFOX_PROTOCOL_OPTIONAL && EXPECT_OK) {
+  if (useFirefoxProtocolOptionalEndpoint()) {
     url.searchParams.set("requireProtocol", "0");
   }
   url.searchParams.set("certHash", certificateHash);

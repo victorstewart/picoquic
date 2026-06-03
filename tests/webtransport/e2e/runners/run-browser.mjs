@@ -53,6 +53,7 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "streamFinReceived",
   "received",
   "sent",
+  "sentVariants",
   "datagramsReceived",
   "datagramLengths",
   "datagramLengthsMin",
@@ -256,6 +257,15 @@ function requireNonNegativeIntegerArray(value, name, path) {
   }
 }
 
+function requireNonNegativeIntegerArrayArray(value, name, path) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`invalid manifest field ${name}: expected non-empty array of arrays in ${path}`);
+  }
+  for (const [index, entry] of value.entries()) {
+    requireNonNegativeIntegerArray(entry, `${name}[${index}]`, path);
+  }
+}
+
 function requireDatagramMode(value, name, path) {
   if (!["baton", "empty", "length"].includes(value)) {
     throw new Error(`invalid manifest field ${name}: unsupported mode ${value} in ${path}`);
@@ -322,6 +332,8 @@ function validateExpectation(expect, path, name, requireOk, allowNull) {
       requireNonNegativeIntegerOrNull(value, fieldName, path);
     } else if (EXPECT_NUMBER_ARRAY_FIELDS.has(field)) {
       requireNonNegativeIntegerArray(value, fieldName, path);
+    } else if (field === "sentVariants") {
+      requireNonNegativeIntegerArrayArray(value, fieldName, path);
     } else if (EXPECT_STRING_ARRAY_FIELDS.has(field)) {
       requireStringArray(value, fieldName, path);
     } else {
@@ -616,14 +628,27 @@ function parseJsonOutput(output) {
 }
 
 function assertArrayEquals(id, name, actual, expected, orderMatters = true) {
+  if (!arrayEquals(actual, expected, orderMatters)) {
+    throw new Error(`${id}: expected ${name} ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
+}
+
+function arrayEquals(actual, expected, orderMatters = true) {
   const actualArray = orderMatters ? actual : Array.isArray(actual) ?
     [...actual].sort((a, b) => a - b) : actual;
   const expectedArray = orderMatters ? expected : [...expected].sort((a, b) => a - b);
 
-  if (!Array.isArray(actualArray) || actualArray.length !== expectedArray.length ||
-    actualArray.some((value, index) => value !== expectedArray[index])) {
-    throw new Error(`${id}: expected ${name} ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  return Array.isArray(actualArray) && actualArray.length === expectedArray.length &&
+    !actualArray.some((value, index) => value !== expectedArray[index]);
+}
+
+function assertArrayEqualsAny(id, name, actual, variants, orderMatters = true) {
+  for (const expected of variants) {
+    if (arrayEquals(actual, expected, orderMatters)) {
+      return;
+    }
   }
+  throw new Error(`${id}: expected ${name} to match one of ${JSON.stringify(variants)}, got ${JSON.stringify(actual)}`);
 }
 
 function assertDiagnosticTestsInclude(id, name, diagnostic, expectedNames) {
@@ -683,6 +708,10 @@ function assertScenarioResult(id, result, expect) {
   }
   if (expect.sent) {
     assertArrayEquals(id, "sent", result.sent, expect.sent,
+      sequenceOrderMatters);
+  }
+  if (expect.sentVariants) {
+    assertArrayEqualsAny(id, "sent", result.sent, expect.sentVariants,
       sequenceOrderMatters);
   }
   if (expect.datagramsReceived) {
@@ -953,6 +982,10 @@ async function runScenario(browser, scenario, vars) {
   }
   if (Array.isArray(scenarioExpect.sent)) {
     env.PICOQUIC_WT_EXPECT_SENT = JSON.stringify(scenarioExpect.sent);
+  }
+  if (Array.isArray(scenarioExpect.sentVariants)) {
+    env.PICOQUIC_WT_EXPECT_SENT_VARIANTS =
+      JSON.stringify(scenarioExpect.sentVariants);
   }
   if (Array.isArray(scenarioExpect.datagramsReceived)) {
     env.PICOQUIC_WT_EXPECT_DATAGRAMS_RECEIVED =
