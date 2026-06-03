@@ -1214,6 +1214,254 @@
       }
     },
     {
+      "id": "baton.core.terminal-wrap-default-reader",
+      "title": "Baton stream exchange sends terminal zero after short wrap",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=253&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "URL-constructor",
+        "constructor-options-observed",
+        "allowPooling-serverCertificateHashes-observed",
+        "ready",
+        "closed",
+        "Origin-header",
+        "origin-policy-allow",
+        "WT-Protocol",
+        "session-diagnostics",
+        "default-reader",
+        "terminal-baton-wrap",
+        "terminal-zero-baton-send",
+        "no-server-datagram-required",
+        "incoming-unidirectional-stream",
+        "outgoing-bidirectional-stream",
+        "stream-bad-chunk",
+        "unidirectional-stream-bad-chunk",
+        "bidirectional-stream-bad-chunk",
+        "datagram-send",
+        "datagram-bad-chunk",
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=253&count=1&padding=0",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "received": [253, 255],
+        "sent": [254, 0],
+        "datagramsReceived": [],
+        "datagramLengths": [],
+        "datagramsSent": 1,
+        "eventsInclude": [
+          "ready",
+          "received 253 on remote-uni",
+          "datagram sent",
+          "sent 254",
+          "received 255 on local-bidi",
+          "sent 0",
+          "closed"
+        ],
+        "datagramWritableOk": true,
+        "datagramWritableTestsInclude": ["string-chunk"],
+        "streamWritableOk": true,
+        "streamWritableTestsInclude": [
+          "unidirectional-string-chunk",
+          "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
+        ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
+        "protocolConstructorOk": true,
+        "protocolConstructorTestsInclude": [
+          "valid-protocol",
+          "duplicate-protocol",
+          "empty-protocol",
+          "long-protocol",
+          "non-isomorphic-protocol"
+        ],
+        "urlConstructorOk": true,
+        "urlConstructorTestsInclude": [
+          "http-url",
+          "url-fragment",
+          "malformed-url"
+        ],
+        "sessionDiagnosticsOk": true,
+        "sessionDiagnosticsTestsInclude": [
+          "ready-promise",
+          "closed-promise",
+          "protocol-property",
+          "incoming-bidirectional-readable",
+          "incoming-unidirectional-readable",
+          "create-bidirectional-stream-function",
+          "create-unidirectional-stream-function",
+          "datagrams-object",
+          "datagrams-readable",
+          "datagrams-writable-or-createWritable",
+          "reliability-optional",
+          "congestionControl-optional",
+          "supportsReliableOnly-optional",
+          "responseHeaders-optional",
+          "draining-optional",
+          "getStats-optional"
+        ],
+        "optionsConstructorTestsInclude": [
+          "allow-pooling-with-certificate-hash"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
+          "zeroBatonReceivedMin": 1,
+          "closeSessionReceivedMin": 1,
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
+        }
+      }
+    },
+    {
+      "id": "baton.core.terminal-immediate-default-reader",
+      "title": "Baton stream exchange sends terminal zero immediately",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=255&count=1&padding=0",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "URL-constructor",
+        "constructor-options-observed",
+        "allowPooling-serverCertificateHashes-observed",
+        "ready",
+        "closed",
+        "Origin-header",
+        "origin-policy-allow",
+        "WT-Protocol",
+        "session-diagnostics",
+        "default-reader",
+        "terminal-baton-immediate",
+        "terminal-zero-baton-send",
+        "no-server-datagram-required",
+        "incoming-unidirectional-stream",
+        "outgoing-bidirectional-stream",
+        "stream-bad-chunk",
+        "unidirectional-stream-bad-chunk",
+        "bidirectional-stream-bad-chunk",
+        "datagram-send",
+        "datagram-bad-chunk",
+        "new-stream-after-close",
+        "browser-close",
+        "close-capsule"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=255&count=1&padding=0",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "received": [255],
+        "sent": [0],
+        "datagramsReceived": [],
+        "datagramLengths": [],
+        "datagramsSent": 1,
+        "eventsInclude": [
+          "ready",
+          "received 255 on remote-uni",
+          "datagram sent",
+          "sent 0",
+          "closed"
+        ],
+        "datagramWritableOk": true,
+        "datagramWritableTestsInclude": ["string-chunk"],
+        "streamWritableOk": true,
+        "streamWritableTestsInclude": [
+          "unidirectional-string-chunk",
+          "bidirectional-string-chunk"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
+        ],
+        "closeSessionOk": true,
+        "closeSessionTestsInclude": [
+          "ready",
+          "close-called",
+          "closed-resolved"
+        ],
+        "protocolConstructorOk": true,
+        "protocolConstructorTestsInclude": [
+          "valid-protocol",
+          "duplicate-protocol",
+          "empty-protocol",
+          "long-protocol",
+          "non-isomorphic-protocol"
+        ],
+        "urlConstructorOk": true,
+        "urlConstructorTestsInclude": [
+          "http-url",
+          "url-fragment",
+          "malformed-url"
+        ],
+        "sessionDiagnosticsOk": true,
+        "sessionDiagnosticsTestsInclude": [
+          "ready-promise",
+          "closed-promise",
+          "protocol-property",
+          "incoming-bidirectional-readable",
+          "incoming-unidirectional-readable",
+          "create-bidirectional-stream-function",
+          "create-unidirectional-stream-function",
+          "datagrams-object",
+          "datagrams-readable",
+          "datagrams-writable-or-createWritable",
+          "reliability-optional",
+          "congestionControl-optional",
+          "supportsReliableOnly-optional",
+          "responseHeaders-optional",
+          "draining-optional",
+          "getStats-optional"
+        ],
+        "optionsConstructorTestsInclude": [
+          "allow-pooling-with-certificate-hash"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "batonDatagramsReceivedMin": 1,
+          "zeroBatonReceivedMin": 1,
+          "closeSessionReceivedMin": 1,
+          "writableBadChunkCloseReceived": true,
+          "browserCloseReceived": true
+        }
+      }
+    },
+    {
       "id": "datagrams.client-empty",
       "title": "Server receives a zero-length browser WebTransport datagram",
       "runner": "browser-baton",

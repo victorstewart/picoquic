@@ -125,6 +125,56 @@
       }
     },
     {
+      "scenario": "baton.core.terminal-wrap-default-reader",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not claim selected WT-Protocol exposure. The terminal-wrap scenario should still complete the same WebTransport stream close path, but it inherits the Firefox protocol-constructor, selected-protocol, close-capsule, browser-close diagnostic, browser-close reason, and writable diagnostic caveats as the other positive Firefox baton scenarios.",
+      "evidence": "Same positive-path caveat as baton.core.compact-default-reader and baton.core.medium-padded-default-reader: Firefox 151.0.3 completed positive baton exchanges in GitHub WebTransportBrowser runs 26830637957 and 26860542607, while earlier runs 26835514645, 26835807876, and 26836125845 document the closeSession and browserCloseReceived nondeterminism inherited by positive baton scenarios.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/baton?version=0&baton=253&count=1&padding=0&protocol=optional",
+        "protocol": "",
+        "protocolConstructorOk": false,
+        "closeSessionOk": null,
+        "closeSessionTestsInclude": [],
+        "streamWritableOk": null,
+        "streamWritableTestsInclude": ["unidirectional-string-chunk"],
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": null,
+          "browserCloseReceived": null
+        }
+      }
+    },
+    {
+      "scenario": "baton.core.terminal-immediate-default-reader",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint and does not claim selected WT-Protocol exposure. The terminal-immediate scenario should still complete the same WebTransport stream close path, but it inherits the Firefox protocol-constructor, selected-protocol, close-capsule, browser-close diagnostic, browser-close reason, and writable diagnostic caveats as the other positive Firefox baton scenarios.",
+      "evidence": "Same positive-path caveat as baton.core.compact-default-reader and baton.core.medium-padded-default-reader: Firefox 151.0.3 completed positive baton exchanges in GitHub WebTransportBrowser runs 26830637957 and 26860542607, while earlier runs 26835514645, 26835807876, and 26836125845 document the closeSession and browserCloseReceived nondeterminism inherited by positive baton scenarios.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/baton?version=0&baton=255&count=1&padding=0&protocol=optional",
+        "protocol": "",
+        "protocolConstructorOk": false,
+        "closeSessionOk": null,
+        "closeSessionTestsInclude": [],
+        "streamWritableOk": null,
+        "streamWritableTestsInclude": ["unidirectional-string-chunk"],
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1,
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": null,
+          "browserCloseReceived": null
+        }
+      }
+    },
+    {
       "scenario": "datagrams.client-empty",
       "status": "pass",
       "category": "browser-missing",

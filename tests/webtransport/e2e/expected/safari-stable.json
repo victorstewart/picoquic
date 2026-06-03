@@ -83,6 +83,38 @@
       }
     },
     {
+      "scenario": "baton.core.terminal-wrap-default-reader",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari stable throws NotSupportedError for allowPooling with serverCertificateHashes, matching the W3C constructor requirement, but Safari 26.4 CI has not emitted an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path.",
+      "evidence": "Same positive-path caveat as baton.core.compact-default-reader and baton.core.medium-padded-default-reader: GitHub runs 26796690452 and 26798507855 document the constructor and close-session diagnostics, while run 26860542607 passed Safari positive padded boundary coverage before these terminal baton rows were added.",
+      "expect": {
+        "optionsConstructorOk": true,
+        "server": {
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": false
+        }
+      }
+    },
+    {
+      "scenario": "baton.core.terminal-immediate-default-reader",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari stable throws NotSupportedError for allowPooling with serverCertificateHashes, matching the W3C constructor requirement, but Safari 26.4 CI has not emitted an observable WT_CLOSE_SESSION capsule for the writable diagnostic transport.close() path.",
+      "evidence": "Same positive-path caveat as baton.core.compact-default-reader and baton.core.medium-padded-default-reader: GitHub runs 26796690452 and 26798507855 document the constructor and close-session diagnostics, while run 26860542607 passed Safari positive padded boundary coverage before these terminal baton rows were added.",
+      "expect": {
+        "optionsConstructorOk": true,
+        "server": {
+          "closeSessionReceivedMin": 0,
+          "writableBadChunkCloseReceived": false
+        }
+      }
+    },
+    {
       "scenario": "baton.core.short-padded-default-reader",
       "status": "pass",
       "category": "browser-bug",
