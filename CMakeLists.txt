@@ -889,6 +889,27 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          list)
         set_tests_properties(picohttp_wt_e2e_manifest
                              PROPERTIES LABELS wt_browser)
+        add_test(NAME picohttp_wt_e2e_manifest_reject_unknown_expect_field
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --manifest ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/manifest-unknown-expect-field.json)
+        set_tests_properties(picohttp_wt_e2e_manifest_reject_unknown_expect_field
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_manifest_reject_unknown_server_field
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --manifest ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/manifest-unknown-server-field.json)
+        set_tests_properties(picohttp_wt_e2e_manifest_reject_unknown_server_field
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_manifest_reject_server_bad_counter_type
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         list
+                         --manifest ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/manifest-server-bad-counter-type.json)
+        set_tests_properties(picohttp_wt_e2e_manifest_reject_server_bad_counter_type
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_expected_chrome
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs

@@ -155,6 +155,30 @@ function rejectUnknownFields(object, allowed, name) {
   }
 }
 
+function validateServerExpectation(server, path, name) {
+  if (!isObject(server)) {
+    throw new Error(`invalid manifest field ${name}: expected object in ${path}`);
+  }
+  rejectUnknownFields(server, EXPECT_SERVER_FIELDS, name);
+  for (const [field, value] of Object.entries(server)) {
+    const fieldName = `${name}.${field}`;
+    if (EXPECT_SERVER_COUNTER_FIELDS.has(field) ||
+      EXPECT_SERVER_COUNTER_MIN_FIELDS.has(field)) {
+      requireNonNegativeIntegerOrNull(value, fieldName, path);
+    } else {
+      requireBooleanOrNull(value, fieldName, path);
+    }
+  }
+}
+
+function validateScenarioExpect(expect, path, scenarioId) {
+  rejectUnknownFields(expect, EXPECT_OVERRIDE_FIELDS, `${scenarioId}.expect`);
+  requireBoolean(expect.ok, `${scenarioId}.expect.ok`);
+  if (Object.prototype.hasOwnProperty.call(expect, "server")) {
+    validateServerExpectation(expect.server, path, `${scenarioId}.expect.server`);
+  }
+}
+
 function validateScenario(scenario, path) {
   if (!isObject(scenario)) {
     throw new Error(`invalid scenario in ${path}: expected object`);
@@ -205,7 +229,7 @@ function validateScenario(scenario, path) {
   if (!isObject(scenario.expect)) {
     throw new Error(`invalid manifest field ${scenario.id}.expect: expected object`);
   }
-  requireBoolean(scenario.expect.ok, `${scenario.id}.expect.ok`);
+  validateScenarioExpect(scenario.expect, path, scenario.id);
 }
 
 function usage() {
@@ -271,23 +295,6 @@ function requireExpectedString(object, name, path, owner = "expected-results fil
   }
 }
 
-function validateExpectedServer(server, path, index) {
-  if (!isObject(server)) {
-    throw new Error(`expected[${index}].expect.server must be an object in ${path}`);
-  }
-  rejectUnknownFields(server, EXPECT_SERVER_FIELDS,
-    `expected[${index}].expect.server`);
-  for (const [field, value] of Object.entries(server)) {
-    const name = `expected[${index}].expect.server.${field}`;
-    if (EXPECT_SERVER_COUNTER_FIELDS.has(field) ||
-      EXPECT_SERVER_COUNTER_MIN_FIELDS.has(field)) {
-      requireNonNegativeIntegerOrNull(value, name, path);
-    } else {
-      requireBooleanOrNull(value, name, path);
-    }
-  }
-}
-
 function validateExpectedEntry(entry, path, index) {
   if (!isObject(entry)) {
     throw new Error(`expected[${index}] must be an object in ${path}`);
@@ -306,7 +313,8 @@ function validateExpectedEntry(entry, path, index) {
     }
     rejectUnknownFields(entry.expect, EXPECT_OVERRIDE_FIELDS, `expected[${index}].expect`);
     if (Object.prototype.hasOwnProperty.call(entry.expect, "server")) {
-      validateExpectedServer(entry.expect.server, path, index);
+      validateServerExpectation(entry.expect.server, path,
+        `expected[${index}].expect.server`);
     }
   } else if (Object.prototype.hasOwnProperty.call(entry, "expect")) {
     throw new Error(`expected-result skip entry must not include expect in ${path}: ${entry.scenario}`);

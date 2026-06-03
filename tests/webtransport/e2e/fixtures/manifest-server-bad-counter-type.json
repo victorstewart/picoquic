@@ -1,0 +1,21 @@
+{
+  "suite": "fixture",
+  "description": "Fixture used to verify E2E scenario server counter assertions reject malformed values.",
+  "scenarios": [
+    {
+      "id": "fixture.server-bad-counter-type",
+      "title": "Malformed scenario server counter fixture",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251",
+      "coverage": [
+        "fixture"
+      ],
+      "expect": {
+        "ok": true,
+        "server": {
+          "packetsSentMin": "1"
+        }
+      }
+    }
+  ]
+}

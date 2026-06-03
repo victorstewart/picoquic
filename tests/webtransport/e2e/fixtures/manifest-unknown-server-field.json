@@ -1,0 +1,21 @@
+{
+  "suite": "fixture",
+  "description": "Fixture used to verify unknown E2E scenario server assertion fields are rejected.",
+  "scenarios": [
+    {
+      "id": "fixture.unknown-server-field",
+      "title": "Unknown scenario server field fixture",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251",
+      "coverage": [
+        "fixture"
+      ],
+      "expect": {
+        "ok": true,
+        "server": {
+          "unsupportedServerCounterMin": 1
+        }
+      }
+    }
+  ]
+}
