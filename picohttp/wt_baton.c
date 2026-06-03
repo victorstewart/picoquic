@@ -245,6 +245,9 @@ int wt_baton_check(picoquic_cnx_t* cnx, h3zero_stream_ctx_t* stream_ctx,
 
             if (baton_7 == picoquic_is_client(cnx) && baton_received != 0) {
                 baton_ctx->is_datagram_ready = 1;
+                baton_ctx->send_datagrams_remaining =
+                    baton_ctx->send_datagram_size == UINT64_MAX ?
+                    1 : baton_ctx->send_datagram_count;
                 baton_ctx->baton_datagram_send_next = baton_received;
                 h3zero_set_datagram_ready(cnx, baton_ctx->control_stream_id);
             }
@@ -646,6 +649,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         baton_ctx->send_empty_datagram = 0;
         baton_ctx->accept_empty_datagram = 0;
         baton_ctx->send_datagram_size = UINT64_MAX;
+        baton_ctx->send_datagram_count = 1;
+        baton_ctx->send_datagrams_remaining = 0;
         baton_ctx->accept_datagram_size = UINT64_MAX;
         if (query_offset < path_length) {
             const uint8_t* queries = path + query_offset;
@@ -657,6 +662,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 h3zero_query_parameter_number(queries, queries_length, "inject", 6, &baton_ctx->inject_error, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "padding", 7, &baton_ctx->max_padding, WT_BATON_DEFAULT_PADDING) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "datagram_size", 13, &baton_ctx->send_datagram_size, UINT64_MAX) != 0 ||
+                h3zero_query_parameter_number(queries, queries_length, "datagram_count", 14, &baton_ctx->send_datagram_count, 1) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "client_datagram_size", 20, &baton_ctx->accept_datagram_size, UINT64_MAX) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "protocol", 8,
                     protocol_mode, sizeof(protocol_mode), &protocol_mode_length) != 0 ||
@@ -677,6 +683,12 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 baton_ctx->send_datagram_size > WT_BATON_MAX_DATAGRAM_SIZE) ||
                 (baton_ctx->accept_datagram_size != UINT64_MAX &&
                     baton_ctx->accept_datagram_size > WT_BATON_MAX_DATAGRAM_SIZE)) {
+                ret = -1;
+            }
+            else if (baton_ctx->send_datagram_count < 1 ||
+                baton_ctx->send_datagram_count > WT_BATON_MAX_DATAGRAM_COUNT ||
+                (baton_ctx->send_datagram_count > 1 &&
+                    baton_ctx->send_datagram_size == UINT64_MAX)) {
                 ret = -1;
             }
             else if (protocol_mode_length > 0) {
@@ -715,6 +727,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             baton_ctx->send_empty_datagram = 0;
             baton_ctx->accept_empty_datagram = 0;
             baton_ctx->send_datagram_size = UINT64_MAX;
+            baton_ctx->send_datagram_count = 1;
+            baton_ctx->send_datagrams_remaining = 0;
             baton_ctx->accept_datagram_size = UINT64_MAX;
         }
 
@@ -902,14 +916,18 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 }
                 else {
                     baton_ctx->is_datagram_ready = 0;
+                    baton_ctx->send_datagrams_remaining = 0;
                     baton_ctx->baton_datagram_send_next = 0;
                     baton_ctx->nb_datagrams_sent += 1;
                 }
             }
             else if (baton_ctx->send_datagram_size != UINT64_MAX) {
                 if (baton_ctx->send_datagram_size <= space) {
+                    int ready_after_send =
+                        baton_ctx->send_datagrams_remaining > 1;
                     uint8_t* buffer = h3zero_provide_datagram_buffer(context,
-                        (size_t)baton_ctx->send_datagram_size, 0);
+                        (size_t)baton_ctx->send_datagram_size,
+                        ready_after_send);
                     if (buffer == NULL) {
                         ret = -1;
                     }
@@ -917,11 +935,19 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                         for (size_t i = 0; i < (size_t)baton_ctx->send_datagram_size; i++) {
                             buffer[i] = (uint8_t)i;
                         }
-                        baton_ctx->is_datagram_ready = 0;
+                        if (baton_ctx->send_datagrams_remaining > 0) {
+                            baton_ctx->send_datagrams_remaining -= 1;
+                        }
+                        baton_ctx->is_datagram_ready =
+                            baton_ctx->send_datagrams_remaining > 0;
                         baton_ctx->baton_datagram_send_next = 0;
                         baton_ctx->nb_datagrams_sent += 1;
                         baton_ctx->nb_datagram_bytes_sent += (size_t)baton_ctx->send_datagram_size;
                     }
+                }
+                else {
+                    (void)h3zero_provide_datagram_buffer(context,
+                        (size_t)baton_ctx->send_datagram_size, 1);
                 }
             }
             else if (space > WT_BATON_MAX_DATAGRAM_SIZE) {

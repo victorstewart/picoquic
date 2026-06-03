@@ -52,6 +52,7 @@ extern "C" {
 #define WT_BATON_MAX_LANES 256
 #define WT_BATON_DEFAULT_PADDING 0x3fff
 #define WT_BATON_MAX_DATAGRAM_SIZE 1536
+#define WT_BATON_MAX_DATAGRAM_COUNT 1000
     /* WT Protocol */
 #define PICOWT_BATON_ALPN "devious-baton-00"
 #define PICOWT_BATON_ALPN_AVAILABLE "wrong-end-baton, devious-baton-00"
@@ -134,6 +135,8 @@ extern "C" {
         int send_empty_datagram;
         int accept_empty_datagram;
         uint64_t send_datagram_size;
+        uint64_t send_datagram_count;
+        uint64_t send_datagrams_remaining;
         uint64_t accept_datagram_size;
         int nb_empty_datagrams_received;
         uint8_t baton_datagram_send_next;

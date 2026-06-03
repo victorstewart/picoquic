@@ -47,6 +47,8 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "sent",
   "datagramsReceived",
   "datagramLengths",
+  "datagramLengthsMin",
+  "datagramLength",
   "eventsInclude",
   "eventsExclude",
   "datagramsReceivedMin",
@@ -102,6 +104,8 @@ const EXPECT_COUNTER_FIELDS = new Set([
   "closedMs",
   "datagramsSent",
   "datagramSendSize",
+  "datagramLengthsMin",
+  "datagramLength",
   "datagramsReceivedMin"
 ]);
 const EXPECT_NUMBER_ARRAY_FIELDS = new Set([
@@ -627,6 +631,19 @@ function assertScenarioResult(id, result, expect) {
     assertArrayEquals(id, "datagramLengths", result.datagramLengths,
       expect.datagramLengths);
   }
+  if (hasExpectedValue(expect, "datagramLengthsMin") &&
+    (!Array.isArray(result.datagramLengths) ||
+      result.datagramLengths.length < expect.datagramLengthsMin)) {
+    throw new Error(`${id}: expected at least ${expect.datagramLengthsMin} datagram lengths, got ${JSON.stringify(result.datagramLengths)}`);
+  }
+  if (hasExpectedValue(expect, "datagramLength")) {
+    const lengths = Array.isArray(result.datagramLengths) ?
+      result.datagramLengths : [];
+    if (lengths.length === 0 ||
+      lengths.some((length) => length !== expect.datagramLength)) {
+      throw new Error(`${id}: expected all datagram lengths to be ${expect.datagramLength}, got ${JSON.stringify(result.datagramLengths)}`);
+    }
+  }
   if (expect.eventsInclude) {
     const events = Array.isArray(result.events) ?
       result.events.map((entry) => entry && entry.event) : [];
@@ -859,6 +876,10 @@ async function runScenario(browser, scenario, vars) {
   }
   if (Number.isInteger(rendered.datagramSendSize)) {
     env.PICOQUIC_WT_DATAGRAM_SEND_SIZE = String(rendered.datagramSendSize);
+  }
+  if (Number.isInteger(scenarioExpect.datagramLengthsMin)) {
+    env.PICOQUIC_WT_DATAGRAM_RECEIVE_MIN =
+      String(scenarioExpect.datagramLengthsMin);
   }
   if (Array.isArray(scenarioExpect.received)) {
     env.PICOQUIC_WT_EXPECT_RECEIVED = JSON.stringify(scenarioExpect.received);

@@ -941,6 +941,7 @@
       constructorRequireUnreliable: requireDatagram,
       useByob: options.useByob !== false,
       datagramReceiveMode: options.datagramReceiveMode || "baton",
+      datagramReceiveMin: options.datagramReceiveMin || 0,
       datagramSendMode: options.datagramSendMode || "baton",
       datagramSendSize: options.datagramSendSize || 0,
       startedMs: nowMs(),
@@ -1073,6 +1074,13 @@
     }
 
     function datagramRequirementMet() {
+      var datagramReceiveMin = options.datagramReceiveMin || 0;
+      if (datagramReceiveMin > 0) {
+        if ((options.datagramReceiveMode || "baton") === "baton") {
+          return result.datagramsReceived.length >= datagramReceiveMin;
+        }
+        return result.datagramLengths.length >= datagramReceiveMin;
+      }
       return !requireDatagram ||
         result.datagramsReceived.length > 0 ||
         result.datagramLengths.length > 0;
@@ -1364,6 +1372,7 @@
       requireProtocol: search.get("requireProtocol") !== "0",
       requireDatagram: search.get("requireDatagram") !== "0",
       datagramReceiveMode: search.get("datagramReceiveMode") || "baton",
+      datagramReceiveMin: Number(search.get("datagramReceiveMin")) || 0,
       datagramSendMode: search.get("datagramSendMode") || "baton",
       datagramSendSize: Number(search.get("datagramSendSize")) || 0,
       useByob: search.get("useByob") !== "0",
@@ -1394,6 +1403,7 @@
         constructorRequireUnreliable: options.requireDatagram !== false,
         useByob: options.useByob !== false,
         datagramReceiveMode: options.datagramReceiveMode || "baton",
+        datagramReceiveMin: options.datagramReceiveMin || 0,
         datagramSendMode: options.datagramSendMode || "baton",
         datagramSendSize: options.datagramSendSize || 0,
         received: [],

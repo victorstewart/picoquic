@@ -16,6 +16,7 @@ const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const DATAGRAM_RECEIVE_MODE = process.env.PICOQUIC_WT_DATAGRAM_RECEIVE_MODE || "baton";
+const DATAGRAM_RECEIVE_MIN = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_RECEIVE_MIN");
 const DATAGRAM_SEND_MODE = process.env.PICOQUIC_WT_DATAGRAM_SEND_MODE || "baton";
 const DATAGRAM_SEND_SIZE = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_SEND_SIZE");
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
@@ -258,6 +259,9 @@ function buildPageUrl(pageUrl, certificateHash) {
   }
   if (DATAGRAM_RECEIVE_MODE !== "baton") {
     url.searchParams.set("datagramReceiveMode", DATAGRAM_RECEIVE_MODE);
+  }
+  if (DATAGRAM_RECEIVE_MIN !== null) {
+    url.searchParams.set("datagramReceiveMin", String(DATAGRAM_RECEIVE_MIN));
   }
   if (DATAGRAM_SEND_MODE !== "baton") {
     url.searchParams.set("datagramSendMode", DATAGRAM_SEND_MODE);

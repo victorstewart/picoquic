@@ -57,6 +57,9 @@ Use `datagramReceiveMode: "length"` when a scenario needs to assert the exact
 byte length of a non-baton server datagram through `datagramLengths`. Use
 `datagramSendMode: "length"` with `datagramSendSize` when the browser should
 send a deterministic fixed-size datagram instead of a baton payload.
+For repeated same-size server datagrams, use `datagramLengthsMin` together
+with `datagramLength`; the browser page waits for the minimum count before
+finishing, and the runner verifies every observed length.
 Use `datagramsReceivedMin` when a positive scenario exercises concurrent lanes
 and only needs to prove browser datagram availability; HTTP/3 datagrams are
 unreliable, so duplicated or dropped baton datagram echoes are not a stream

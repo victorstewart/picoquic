@@ -545,6 +545,10 @@ int picowt_baton_compact_test(void)
     const uint8_t bad_protocol_path[] = "/baton?baton=33&padding=0&protocol=bogus";
     const uint8_t empty_datagram_path[] = "/baton?baton=33&padding=0&datagram=empty";
     const uint8_t bad_datagram_path[] = "/baton?baton=33&padding=0&datagram=bogus";
+    const uint8_t sized_datagram_count_path[] = "/baton?baton=33&padding=0&datagram_size=1&datagram_count=16";
+    const uint8_t bad_datagram_count_zero_path[] = "/baton?baton=33&padding=0&datagram_size=1&datagram_count=0";
+    const uint8_t bad_datagram_count_excess_path[] = "/baton?baton=33&padding=0&datagram_size=1&datagram_count=1001";
+    const uint8_t bad_datagram_count_without_size_path[] = "/baton?baton=33&padding=0&datagram_count=16";
     const uint8_t empty_client_datagram_path[] = "/baton?baton=33&padding=0&client_datagram=empty";
     const uint8_t bad_client_datagram_path[] = "/baton?baton=33&padding=0&client_datagram=bogus";
     const uint8_t bad_version_path[] = "/baton?version=1&baton=33&padding=0";
@@ -576,6 +580,14 @@ int picowt_baton_compact_test(void)
         ret = -1;
     }
     if (ret == 0 &&
+        (wt_baton_ctx_path_params(&baton_ctx, sized_datagram_count_path,
+            sizeof(sized_datagram_count_path) - 1) != 0 ||
+            baton_ctx.send_datagram_size != 1 ||
+            baton_ctx.send_datagram_count != 16 ||
+            baton_ctx.send_datagrams_remaining != 0)) {
+        ret = -1;
+    }
+    if (ret == 0 &&
         (wt_baton_ctx_path_params(&baton_ctx, empty_client_datagram_path,
             sizeof(empty_client_datagram_path) - 1) != 0 ||
             baton_ctx.accept_empty_datagram != 1)) {
@@ -589,6 +601,21 @@ int picowt_baton_compact_test(void)
     if (ret == 0 &&
         wt_baton_ctx_path_params(&baton_ctx, bad_datagram_path,
             sizeof(bad_datagram_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_datagram_count_zero_path,
+            sizeof(bad_datagram_count_zero_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_datagram_count_excess_path,
+            sizeof(bad_datagram_count_excess_path) - 1) == 0) {
+        ret = -1;
+    }
+    if (ret == 0 &&
+        wt_baton_ctx_path_params(&baton_ctx, bad_datagram_count_without_size_path,
+            sizeof(bad_datagram_count_without_size_path) - 1) == 0) {
         ret = -1;
     }
     if (ret == 0 &&
