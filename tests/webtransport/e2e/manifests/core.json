@@ -614,6 +614,50 @@
       }
     },
     {
+      "id": "handshake.reject_bad_protocol_mode",
+      "title": "Unsupported baton protocol mode rejects ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&protocol=bad",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready-rejects",
+        "endpoint-parameter-validation",
+        "protocol-mode-validation",
+        "server-no-connect-accept"
+      ],
+      "expect": {
+        "ok": false,
+        "url": "https://127.0.0.1:{port}/baton?version=0&baton=251&count=1&padding=0&protocol=bad",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "protocol": "",
+        "readyMs": 0,
+        "closedMs": 0,
+        "received": [],
+        "sent": [],
+        "datagramsReceived": [],
+        "datagramsSent": 0,
+        "eventsInclude": ["connecting"],
+        "eventsExclude": [
+          "ready",
+          "closed",
+          "datagram sent"
+        ],
+        "errorIncludes": "WebTransportError",
+        "server": {
+          "connectAccepted": 0,
+          "optionalProtocolAccepted": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1
+        }
+      }
+    },
+    {
       "id": "baton.core.padded-byob",
       "title": "Baton stream/datagram/protocol exchange with default padding and BYOB readers",
       "runner": "browser-baton",
