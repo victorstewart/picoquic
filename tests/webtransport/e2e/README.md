@@ -19,6 +19,12 @@ browser:
 node tests/webtransport/e2e/runners/run-browser.mjs support --json
 ```
 
+Summarize the same validated ledgers by coverage tag:
+
+```sh
+node tests/webtransport/e2e/runners/run-browser.mjs coverage --json
+```
+
 Every scenario must declare a stable lowercase ID, title, `browser-baton`
 runner configuration, non-empty coverage tags, and an explicit `expect.ok`
 value. The runner rejects underspecified scenarios before launching a browser.

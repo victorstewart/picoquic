@@ -347,6 +347,7 @@ function usage() {
     "usage:",
     "  node tests/webtransport/e2e/runners/run-browser.mjs list [--manifest <path>] [--expected <path>] [--json]",
     "  node tests/webtransport/e2e/runners/run-browser.mjs support [--manifest <path>] [--expected-dir <path>] [--json]",
+    "  node tests/webtransport/e2e/runners/run-browser.mjs coverage [--manifest <path>] [--expected-dir <path>] [--json]",
     "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|edge|firefox|safari> [--manifest <path>] [--expected <path>] [--no-expected] [--scenario <id>] [--json]"
   ].join("\n"));
 }
@@ -929,6 +930,47 @@ function supportStatus(entry) {
   return entry.status;
 }
 
+function loadSupport(manifestPath, expectedDir) {
+  const manifest = loadManifest(manifestPath);
+  const browsers = Object.keys(BROWSER_RUNNERS);
+  return {
+    manifest,
+    result: {
+      suite: manifest.suite || "",
+      description: manifest.description || "",
+      manifest: manifestPath,
+      expectedDir,
+      browsers: browsers.map((browser) => {
+        const expectedPath = join(expectedDir, `${browser}-stable.json`);
+        const expected = loadExpected(expectedPath, manifest);
+        requireExpectedBrowser(expected, browser);
+        const scenarios = manifest.scenarios.map((scenario) => {
+          const entry = expected.entries.get(scenario.id);
+          const summary = {
+            id: scenario.id,
+            title: scenario.title || "",
+            coverage: scenario.coverage || [],
+            status: supportStatus(entry)
+          };
+          if (entry) {
+            summary.expected = expectedMetadata(entry);
+          }
+          return summary;
+        });
+        return {
+          browser,
+          expected: expected.path,
+          counts: scenarios.reduce((counts, scenario) => {
+            counts[scenario.status] = (counts[scenario.status] || 0) + 1;
+            return counts;
+          }, {}),
+          scenarios
+        };
+      })
+    }
+  };
+}
+
 function commandSupport(args) {
   const manifestPath = resolve(takeOption(args, "--manifest", DEFAULT_MANIFEST));
   const expectedDir = resolve(takeOption(args, "--expected-dir",
@@ -938,41 +980,7 @@ function commandSupport(args) {
     throw new Error(`unexpected support arguments: ${args.join(" ")}`);
   }
 
-  const manifest = loadManifest(manifestPath);
-  const browsers = Object.keys(BROWSER_RUNNERS);
-  const result = {
-    suite: manifest.suite || "",
-    description: manifest.description || "",
-    manifest: manifestPath,
-    expectedDir,
-    browsers: browsers.map((browser) => {
-      const expectedPath = join(expectedDir, `${browser}-stable.json`);
-      const expected = loadExpected(expectedPath, manifest);
-      requireExpectedBrowser(expected, browser);
-      const scenarios = manifest.scenarios.map((scenario) => {
-        const entry = expected.entries.get(scenario.id);
-        const summary = {
-          id: scenario.id,
-          title: scenario.title || "",
-          coverage: scenario.coverage || [],
-          status: supportStatus(entry)
-        };
-        if (entry) {
-          summary.expected = expectedMetadata(entry);
-        }
-        return summary;
-      });
-      return {
-        browser,
-        expected: expected.path,
-        counts: scenarios.reduce((counts, scenario) => {
-          counts[scenario.status] = (counts[scenario.status] || 0) + 1;
-          return counts;
-        }, {}),
-        scenarios
-      };
-    })
-  };
+  const { manifest, result } = loadSupport(manifestPath, expectedDir);
 
   if (json) {
     console.log(JSON.stringify(result, null, 2));
@@ -984,6 +992,71 @@ function commandSupport(args) {
       console.log([
         scenario.id,
         ...result.browsers.map((browser) => browser.scenarios[index].status)
+      ].join("\t"));
+    }
+  }
+}
+
+function addCoverageStatus(coverageEntry, browser, status) {
+  const browserEntry = coverageEntry.browsers[browser] ||
+    { counts: {} };
+  browserEntry.counts[status] = (browserEntry.counts[status] || 0) + 1;
+  coverageEntry.browsers[browser] = browserEntry;
+}
+
+function commandCoverage(args) {
+  const manifestPath = resolve(takeOption(args, "--manifest", DEFAULT_MANIFEST));
+  const expectedDir = resolve(takeOption(args, "--expected-dir",
+    DEFAULT_EXPECTED_DIR));
+  const json = hasOption(args, "--json");
+  if (args.length !== 0) {
+    throw new Error(`unexpected coverage arguments: ${args.join(" ")}`);
+  }
+
+  const { result: support } = loadSupport(manifestPath, expectedDir);
+  const coverage = new Map();
+  for (const browser of support.browsers) {
+    for (const scenario of browser.scenarios) {
+      for (const tag of scenario.coverage) {
+        if (!coverage.has(tag)) {
+          coverage.set(tag, { tag, scenarios: new Set(), browsers: {} });
+        }
+        const entry = coverage.get(tag);
+        entry.scenarios.add(scenario.id);
+        addCoverageStatus(entry, browser.browser, scenario.status);
+      }
+    }
+  }
+  const result = {
+    suite: support.suite,
+    description: support.description,
+    manifest: support.manifest,
+    expectedDir: support.expectedDir,
+    coverage: Array.from(coverage.values())
+      .sort((left, right) => left.tag.localeCompare(right.tag))
+      .map((entry) => ({
+        tag: entry.tag,
+        scenarioCount: entry.scenarios.size,
+        scenarios: Array.from(entry.scenarios).sort(),
+        browsers: entry.browsers
+      }))
+  };
+
+  if (json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`# suite: ${result.suite}`);
+    console.log([
+      "coverage",
+      "scenarios",
+      ...support.browsers.map((browser) => browser.browser)
+    ].join("\t"));
+    for (const entry of result.coverage) {
+      console.log([
+        entry.tag,
+        String(entry.scenarioCount),
+        ...support.browsers.map((browser) =>
+          JSON.stringify(entry.browsers[browser.browser]?.counts || {}))
       ].join("\t"));
     }
   }
@@ -1037,6 +1110,9 @@ async function main() {
   } else if (args[0] === "support") {
     args.shift();
     commandSupport(args);
+  } else if (args[0] === "coverage") {
+    args.shift();
+    commandCoverage(args);
   } else if (args.length === 0 || args.includes("--help")) {
     usage();
     process.exit(args.includes("--help") ? 0 : 1);

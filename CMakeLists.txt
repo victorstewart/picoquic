@@ -896,6 +896,13 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --json)
         set_tests_properties(picohttp_wt_e2e_support_summary
                              PROPERTIES LABELS wt_browser)
+        add_test(NAME picohttp_wt_e2e_coverage_summary
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         coverage
+                         --json)
+        set_tests_properties(picohttp_wt_e2e_coverage_summary
+                             PROPERTIES LABELS wt_browser)
         add_test(NAME picohttp_wt_e2e_manifest_reject_unknown_expect_field
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
