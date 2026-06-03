@@ -763,6 +763,74 @@
           "streamTestFinReceivedMin": 0
         }
       }
+    },
+    {
+      "scenario": "reset.browser-abort-bidi",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the reset/abort row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737 and 26914421909.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/browser-abort-bidi?stream_size=1&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "reset.browser-abort-uni",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the reset/abort row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737 and 26914421909.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/browser-abort-uni?stream_size=1&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "reset.browser-cancel-incoming-bidi",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the STOP/cancel row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737 and 26914421909.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/browser-cancel-incoming-bidi?stream_size=1048576&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "reset.browser-cancel-incoming-uni",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the STOP/cancel row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737 and 26914421909.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/browser-cancel-incoming-uni?stream_size=1048576&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
     }
   ]
 }

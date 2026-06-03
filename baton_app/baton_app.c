@@ -440,6 +440,10 @@ static char const* wt_baton_stream_fin_empty_bidi_path = "/wt/stream/fin-empty-b
 static char const* wt_baton_stream_fin_empty_uni_path = "/wt/stream/fin-empty-uni";
 static char const* wt_baton_stream_server_open_uni_path = "/wt/stream/server-open-uni";
 static char const* wt_baton_stream_server_open_bidi_path = "/wt/stream/server-open-bidi";
+static char const* wt_baton_reset_browser_abort_bidi_path = "/wt/reset/browser-abort-bidi";
+static char const* wt_baton_reset_browser_abort_uni_path = "/wt/reset/browser-abort-uni";
+static char const* wt_baton_reset_browser_cancel_bidi_path = "/wt/reset/browser-cancel-incoming-bidi";
+static char const* wt_baton_reset_browser_cancel_uni_path = "/wt/reset/browser-cancel-incoming-uni";
 static wt_baton_app_ctx_t wt_baton_stream_client_bidi_ctx = { 0, wt_baton_stream_test_client_bidi_echo };
 static wt_baton_app_ctx_t wt_baton_stream_client_uni_ctx = { 0, wt_baton_stream_test_client_uni_reply };
 static wt_baton_app_ctx_t wt_baton_stream_server_uni_ctx = { 0, wt_baton_stream_test_server_uni };
@@ -456,7 +460,7 @@ static int wt_baton_origin_validator_deny_all(
 int wt_baton_server(char const* path, picoquic_quic_config_t* config)
 {
     int ret = 0;
-    picohttp_server_path_item_t path_item_list[14] = { { 0 } };
+    picohttp_server_path_item_t path_item_list[18] = { { 0 } };
     const struct st_wt_baton_stream_path_t {
         char const* path;
         wt_baton_app_ctx_t* ctx;
@@ -468,7 +472,11 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
         { wt_baton_stream_fin_empty_bidi_path, &wt_baton_stream_client_bidi_ctx },
         { wt_baton_stream_fin_empty_uni_path, &wt_baton_stream_client_uni_ctx },
         { wt_baton_stream_server_open_uni_path, &wt_baton_stream_server_uni_ctx },
-        { wt_baton_stream_server_open_bidi_path, &wt_baton_stream_server_bidi_ctx }
+        { wt_baton_stream_server_open_bidi_path, &wt_baton_stream_server_bidi_ctx },
+        { wt_baton_reset_browser_abort_bidi_path, &wt_baton_stream_client_bidi_ctx },
+        { wt_baton_reset_browser_abort_uni_path, &wt_baton_stream_client_uni_ctx },
+        { wt_baton_reset_browser_cancel_bidi_path, &wt_baton_stream_server_bidi_ctx },
+        { wt_baton_reset_browser_cancel_uni_path, &wt_baton_stream_server_uni_ctx }
     };
 
     /* Start: start the QUIC process with cert and key files */

@@ -4166,6 +4166,224 @@
           "streamTestFinSent": 1
         }
       }
+    },
+    {
+      "id": "reset.browser-abort-bidi",
+      "title": "Browser aborts an outgoing bidirectional WebTransport stream",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/reset/browser-abort-bidi?stream_size=1&stream_count=1",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "browser-abort-bidi",
+      "streamSize": 1,
+      "streamCount": 1,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "reset-browser-abort",
+        "reset-browser-abort-bidi",
+        "reset-stream-error-code-123",
+        "reset-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/reset/browser-abort-bidi?stream_size=1&stream_count=1",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "browser-abort-bidi",
+        "streamSize": 1,
+        "streamCount": 1,
+        "streamBytesSent": 1,
+        "streamBytesReceived": 0,
+        "streamFinSent": 0,
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "ready",
+          "stream wrote abort-bidi",
+          "stream aborted bidi",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "resetStreamReceivedMin": 1,
+          "resetStreamAppError123Min": 1,
+          "stopSendingReceived": 0,
+          "stopSendingAppError123": 0
+        }
+      }
+    },
+    {
+      "id": "reset.browser-abort-uni",
+      "title": "Browser aborts an outgoing unidirectional WebTransport stream",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/reset/browser-abort-uni?stream_size=1&stream_count=1",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "browser-abort-uni",
+      "streamSize": 1,
+      "streamCount": 1,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "reset-browser-abort",
+        "reset-browser-abort-uni",
+        "reset-stream-error-code-123",
+        "reset-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/reset/browser-abort-uni?stream_size=1&stream_count=1",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "browser-abort-uni",
+        "streamSize": 1,
+        "streamCount": 1,
+        "streamBytesSent": 1,
+        "streamBytesReceived": 0,
+        "streamFinSent": 0,
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "ready",
+          "stream wrote abort-uni",
+          "stream aborted uni",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "resetStreamReceivedMin": 1,
+          "resetStreamAppError123Min": 1,
+          "stopSendingReceived": 0,
+          "stopSendingAppError123": 0
+        }
+      }
+    },
+    {
+      "id": "reset.browser-cancel-incoming-bidi",
+      "title": "Browser cancels an incoming bidirectional WebTransport stream",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/reset/browser-cancel-incoming-bidi?stream_size=1048576&stream_count=1",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "browser-cancel-incoming-bidi",
+      "streamSize": 1048576,
+      "streamCount": 1,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "stop-browser-cancel",
+        "stop-browser-cancel-bidi",
+        "stop-sending-error-code-123",
+        "reset-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/reset/browser-cancel-incoming-bidi?stream_size=1048576&stream_count=1",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "browser-cancel-incoming-bidi",
+        "streamSize": 1048576,
+        "streamCount": 1,
+        "streamBytesSent": 0,
+        "streamBytesReceived": 0,
+        "streamFinSent": 0,
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "ready",
+          "stream canceled incoming bidi",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "resetStreamReceived": 0,
+          "resetStreamAppError123": 0,
+          "stopSendingReceivedMin": 1,
+          "stopSendingAppError123Min": 1
+        }
+      }
+    },
+    {
+      "id": "reset.browser-cancel-incoming-uni",
+      "title": "Browser cancels an incoming unidirectional WebTransport stream",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/reset/browser-cancel-incoming-uni?stream_size=1048576&stream_count=1",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "browser-cancel-incoming-uni",
+      "streamSize": 1048576,
+      "streamCount": 1,
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "stop-browser-cancel",
+        "stop-browser-cancel-uni",
+        "stop-sending-error-code-123",
+        "reset-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/reset/browser-cancel-incoming-uni?stream_size=1048576&stream_count=1",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "browser-cancel-incoming-uni",
+        "streamSize": 1048576,
+        "streamCount": 1,
+        "streamBytesSent": 0,
+        "streamBytesReceived": 0,
+        "streamFinSent": 0,
+        "streamFinReceived": 0,
+        "eventsInclude": [
+          "ready",
+          "stream canceled incoming uni",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "resetStreamReceived": 0,
+          "resetStreamAppError123": 0,
+          "stopSendingReceivedMin": 1,
+          "stopSendingAppError123Min": 1
+        }
+      }
     }
   ]
 }

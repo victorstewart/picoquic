@@ -78,6 +78,16 @@
     return packet;
   }
 
+  function makeStreamError(message, code) {
+    if (typeof WebTransportError === "function") {
+      return new WebTransportError(message, {
+        source: "stream",
+        streamErrorCode: code
+      });
+    }
+    return new Error(message);
+  }
+
   function varintLength(firstByte) {
     return 1 << (firstByte >> 6);
   }
@@ -1077,7 +1087,67 @@
       }
       note("ready");
 
-      if (result.streamMode === "client-bidi-echo") {
+      if (result.streamMode === "browser-abort-bidi") {
+        var abortBidi = await transport.createBidirectionalStream();
+        var abortBidiWriter = abortBidi.writable.getWriter();
+        try {
+          await abortBidiWriter.ready;
+          await abortBidiWriter.write(new Uint8Array([123]));
+          result.streamBytesSent += 1;
+          note("stream wrote abort-bidi");
+          await abortBidiWriter.abort(makeStreamError("browser-abort-bidi", 123));
+          note("stream aborted bidi");
+        } finally {
+          abortBidiWriter.releaseLock();
+        }
+      } else if (result.streamMode === "browser-abort-uni") {
+        var abortUni = await transport.createUnidirectionalStream();
+        var abortUniWriter = abortUni.getWriter();
+        try {
+          await abortUniWriter.ready;
+          await abortUniWriter.write(new Uint8Array([123]));
+          result.streamBytesSent += 1;
+          note("stream wrote abort-uni");
+          await abortUniWriter.abort(makeStreamError("browser-abort-uni", 123));
+          note("stream aborted uni");
+        } finally {
+          abortUniWriter.releaseLock();
+        }
+      } else if (result.streamMode === "browser-cancel-incoming-bidi") {
+        var cancelBidiReader = transport.incomingBidirectionalStreams.getReader();
+        try {
+          var cancelBidiIncoming = await cancelBidiReader.read();
+          if (cancelBidiIncoming.done) {
+            throw new Error("incoming bidirectional stream ended before cancel");
+          }
+          var cancelBidiReadable = cancelBidiIncoming.value.readable.getReader();
+          try {
+            await cancelBidiReadable.cancel(makeStreamError("browser-cancel-bidi", 123));
+            note("stream canceled incoming bidi");
+          } finally {
+            cancelBidiReadable.releaseLock();
+          }
+        } finally {
+          cancelBidiReader.releaseLock();
+        }
+      } else if (result.streamMode === "browser-cancel-incoming-uni") {
+        var cancelUniReader = transport.incomingUnidirectionalStreams.getReader();
+        try {
+          var cancelUniIncoming = await cancelUniReader.read();
+          if (cancelUniIncoming.done) {
+            throw new Error("incoming unidirectional stream ended before cancel");
+          }
+          var cancelUniReadable = cancelUniIncoming.value.getReader();
+          try {
+            await cancelUniReadable.cancel(makeStreamError("browser-cancel-uni", 123));
+            note("stream canceled incoming uni");
+          } finally {
+            cancelUniReadable.releaseLock();
+          }
+        } finally {
+          cancelUniReader.releaseLock();
+        }
+      } else if (result.streamMode === "client-bidi-echo") {
         for (var bidiIndex = 0; bidiIndex < result.streamCount; bidiIndex++) {
           var bidiStream = await transport.createBidirectionalStream();
           var readEcho = readStreamPayload(bidiStream.readable,
@@ -1123,10 +1193,15 @@
         throw new Error("unsupported stream mode " + result.streamMode);
       }
 
-      transport.close({ closeCode: 0, reason: "stream-test" });
-      var closed = await withTimeout(closedPromise, 3000);
-      if (!closed.ok) {
-        throw new Error(closed.detail);
+      if (result.streamMode.indexOf("browser-abort-") === 0 ||
+        result.streamMode.indexOf("browser-cancel-incoming-") === 0) {
+        await withTimeout(closedPromise, 3000);
+      } else {
+        transport.close({ closeCode: 0, reason: "stream-test" });
+        var closed = await withTimeout(closedPromise, 3000);
+        if (!closed.ok) {
+          throw new Error(closed.detail);
+        }
       }
       result.closedMs = nowMs() - result.startedMs;
       result.ok = true;

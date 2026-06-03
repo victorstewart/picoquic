@@ -734,6 +734,14 @@ function summarizeServerOutput(output) {
       /WebTransport stream test received FIN on stream: [0-9]+, bytes: ([0-9]+)/g),
     streamTestBytesSent: sumMatches(output,
       /WebTransport stream test sent FIN on stream: [0-9]+, bytes: ([0-9]+)/g),
+    resetStreamReceived: countMatches(output,
+      /Received WebTransport RESET_STREAM on stream/g),
+    stopSendingReceived: countMatches(output,
+      /Received WebTransport STOP_SENDING on stream/g),
+    resetStreamAppError123: countMatches(output,
+      /Received WebTransport RESET_STREAM on stream: [0-9]+, h3_error: [0-9]+, app_error: 123/g),
+    stopSendingAppError123: countMatches(output,
+      /Received WebTransport STOP_SENDING on stream: [0-9]+, h3_error: [0-9]+, app_error: 123/g),
     writableBadChunkCloseReceived:
       output.includes("error: 0 (writable-bad-chunk-test)"),
     browserCloseReceived:
@@ -769,6 +777,40 @@ function expectedStreamServerSummary() {
     };
   }
   return null;
+}
+
+function expectedResetServerSummary() {
+  if (STREAM_MODE === "browser-abort-bidi" ||
+    STREAM_MODE === "browser-abort-uni") {
+    return {
+      resetStreamReceived: 1,
+      resetStreamAppError123: 1,
+      stopSendingReceived: 0,
+      stopSendingAppError123: 0
+    };
+  }
+  if (STREAM_MODE === "browser-cancel-incoming-bidi" ||
+    STREAM_MODE === "browser-cancel-incoming-uni") {
+    return {
+      resetStreamReceived: 0,
+      resetStreamAppError123: 0,
+      stopSendingReceived: 1,
+      stopSendingAppError123: 1
+    };
+  }
+  return null;
+}
+
+function serverOutputHasResetSummary(output) {
+  const expected = expectedResetServerSummary();
+  if (!expected) {
+    return true;
+  }
+  const summary = summarizeServerOutput(output);
+  return summary.resetStreamReceived >= expected.resetStreamReceived &&
+    summary.resetStreamAppError123 >= expected.resetStreamAppError123 &&
+    summary.stopSendingReceived >= expected.stopSendingReceived &&
+    summary.stopSendingAppError123 >= expected.stopSendingAppError123;
 }
 
 function serverOutputHasStreamTestSummary(output) {
@@ -808,6 +850,8 @@ function isServerSummaryLine(line) {
     line.includes("Received sized WebTransport datagram on stream") ||
     line.includes("All ZERO baton on stream") ||
     line.includes("WebTransport stream test ") ||
+    line.includes("Received WebTransport RESET_STREAM") ||
+    line.includes("Received WebTransport STOP_SENDING") ||
     line.includes("error: 0 (writable-bad-chunk-test)") ||
     line.includes("error: 2a (browser-close-test)");
 }
@@ -930,6 +974,8 @@ async function main() {
     if (INCLUDE_SERVER_SUMMARY && STREAM_MODE !== "baton") {
       await waitForServerOutput(serverOutputHasStreamTestSummary,
         () => serverOutput.streamTrace());
+      await waitForServerOutput(serverOutputHasResetSummary,
+        () => serverOutput.summaryTrace());
       streamServerSummary = summarizeServerOutput(serverOutput.streamTrace());
     }
     if (INCLUDE_SERVER_SUMMARY) {

@@ -1064,6 +1064,17 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     stream_ctx->stream_id);
             }
             else {
+                uint32_t app_error = 0;
+                uint64_t h3_error = h3zero_stream_get_remote_error(stream_ctx,
+                    picohttp_callback_reset);
+                int has_app_error = h3zero_stream_get_webtransport_error(
+                    stream_ctx, picohttp_callback_reset, &app_error) == 0;
+
+                picoquic_log_app_message(cnx,
+                    "Received WebTransport RESET_STREAM on stream: %" PRIu64
+                    ", h3_error: %" PRIu64 ", app_error: %u",
+                    stream_ctx->stream_id, h3_error,
+                    has_app_error ? app_error : 0);
                 picoquic_log_app_message(cnx, "Received reset on stream %" PRIu64 ", closing the session", stream_ctx->stream_id);
                 ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_GAME_OVER, NULL);
 
@@ -1092,6 +1103,17 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     stream_ctx->stream_id);
             }
             else {
+                uint32_t app_error = 0;
+                uint64_t h3_error = h3zero_stream_get_remote_error(stream_ctx,
+                    picohttp_callback_stop_sending);
+                int has_app_error = h3zero_stream_get_webtransport_error(
+                    stream_ctx, picohttp_callback_stop_sending, &app_error) == 0;
+
+                picoquic_log_app_message(cnx,
+                    "Received WebTransport STOP_SENDING on stream: %" PRIu64
+                    ", h3_error: %" PRIu64 ", app_error: %u",
+                    stream_ctx->stream_id, h3_error,
+                    has_app_error ? app_error : 0);
                 picoquic_log_app_message(cnx, "Received stop sending on stream %" PRIu64 ", closing the session", stream_ctx->stream_id);
                 ret = wt_baton_close_session(cnx, baton_ctx, WT_BATON_SESSION_ERR_GAME_OVER, NULL);
 
