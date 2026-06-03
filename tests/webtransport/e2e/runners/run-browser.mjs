@@ -30,6 +30,47 @@ const EXPECTED_ENTRY_FIELDS = new Set([
   "evidence",
   "expect"
 ]);
+const EXPECT_OVERRIDE_FIELDS = new Set([
+  "ok",
+  "url",
+  "protocol",
+  "requireDatagram",
+  "constructorRequireUnreliable",
+  "useByob",
+  "readyMs",
+  "closedMs",
+  "datagramsSent",
+  "datagramReceiveMode",
+  "datagramSendMode",
+  "received",
+  "sent",
+  "datagramsReceived",
+  "datagramLengths",
+  "eventsInclude",
+  "eventsExclude",
+  "datagramsReceivedMin",
+  "errorIncludes",
+  "protocolConstructorOk",
+  "protocolConstructorTestsInclude",
+  "urlConstructorOk",
+  "urlConstructorTestsInclude",
+  "optionsConstructorOk",
+  "optionsConstructorTestsInclude",
+  "datagramWritableOk",
+  "datagramWritableTestsInclude",
+  "streamWritableOk",
+  "streamWritableTestsInclude",
+  "postCloseOk",
+  "postCloseTestsInclude",
+  "postCloseDatagramOk",
+  "postCloseDatagramTestsInclude",
+  "closeSessionOk",
+  "closeSessionTestsInclude",
+  "sessionDiagnosticsOk",
+  "sessionDiagnosticsTestsInclude",
+  "server",
+  "sequenceOrderMatters"
+]);
 const SCENARIO_FIELDS = new Set([
   "id",
   "title",
@@ -209,6 +250,7 @@ function validateExpectedEntry(entry, path, index) {
     if (!isObject(entry.expect) || Object.keys(entry.expect).length === 0) {
       throw new Error(`expected-result pass entry has no expect overrides in ${path}: ${entry.scenario}`);
     }
+    rejectUnknownFields(entry.expect, EXPECT_OVERRIDE_FIELDS, `expected[${index}].expect`);
   } else if (Object.prototype.hasOwnProperty.call(entry, "expect")) {
     throw new Error(`expected-result skip entry must not include expect in ${path}: ${entry.scenario}`);
   }
