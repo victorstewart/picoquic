@@ -12,6 +12,13 @@ List the core scenarios:
 node tests/webtransport/e2e/runners/run-browser.mjs list
 ```
 
+Summarize the validated stable browser support ledgers without launching a
+browser:
+
+```sh
+node tests/webtransport/e2e/runners/run-browser.mjs support --json
+```
+
 Every scenario must declare a stable lowercase ID, title, `browser-baton`
 runner configuration, non-empty coverage tags, and an explicit `expect.ok`
 value. The runner rejects underspecified scenarios before launching a browser.
@@ -121,6 +128,9 @@ that exact assertion for the documented browser/version.
 Expected-result files are validated against the manifest with `list --expected`:
 stale scenario IDs, duplicate entries, unsupported statuses, and malformed
 pass/skip entries are test failures.
+The `support` command validates the core scenario manifest plus every stable
+browser expected-result file and reports each scenario as `claimed-pass`,
+`expected-pass`, or `skip` for Chrome, Edge, Firefox, and Safari.
 Run output includes browser metadata so support tables can cite exact browser
 versions from CI artifacts.
 

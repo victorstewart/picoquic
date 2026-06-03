@@ -346,7 +346,8 @@ function usage() {
   console.error([
     "usage:",
     "  node tests/webtransport/e2e/runners/run-browser.mjs list [--manifest <path>] [--expected <path>] [--json]",
-    "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|edge|safari> [--manifest <path>] [--expected <path>] [--no-expected] [--scenario <id>] [--json]"
+    "  node tests/webtransport/e2e/runners/run-browser.mjs support [--manifest <path>] [--expected-dir <path>] [--json]",
+    "  node tests/webtransport/e2e/runners/run-browser.mjs --browser <chrome|edge|firefox|safari> [--manifest <path>] [--expected <path>] [--no-expected] [--scenario <id>] [--json]"
   ].join("\n"));
 }
 
@@ -918,6 +919,76 @@ function commandList(args) {
   }
 }
 
+function supportStatus(entry) {
+  if (!entry) {
+    return "claimed-pass";
+  }
+  if (entry.status === "pass") {
+    return "expected-pass";
+  }
+  return entry.status;
+}
+
+function commandSupport(args) {
+  const manifestPath = resolve(takeOption(args, "--manifest", DEFAULT_MANIFEST));
+  const expectedDir = resolve(takeOption(args, "--expected-dir",
+    DEFAULT_EXPECTED_DIR));
+  const json = hasOption(args, "--json");
+  if (args.length !== 0) {
+    throw new Error(`unexpected support arguments: ${args.join(" ")}`);
+  }
+
+  const manifest = loadManifest(manifestPath);
+  const browsers = Object.keys(BROWSER_RUNNERS);
+  const result = {
+    suite: manifest.suite || "",
+    description: manifest.description || "",
+    manifest: manifestPath,
+    expectedDir,
+    browsers: browsers.map((browser) => {
+      const expectedPath = join(expectedDir, `${browser}-stable.json`);
+      const expected = loadExpected(expectedPath, manifest);
+      requireExpectedBrowser(expected, browser);
+      const scenarios = manifest.scenarios.map((scenario) => {
+        const entry = expected.entries.get(scenario.id);
+        const summary = {
+          id: scenario.id,
+          title: scenario.title || "",
+          coverage: scenario.coverage || [],
+          status: supportStatus(entry)
+        };
+        if (entry) {
+          summary.expected = expectedMetadata(entry);
+        }
+        return summary;
+      });
+      return {
+        browser,
+        expected: expected.path,
+        counts: scenarios.reduce((counts, scenario) => {
+          counts[scenario.status] = (counts[scenario.status] || 0) + 1;
+          return counts;
+        }, {}),
+        scenarios
+      };
+    })
+  };
+
+  if (json) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(`# suite: ${result.suite}`);
+    console.log(["scenario", ...result.browsers.map((entry) => entry.browser)]
+      .join("\t"));
+    for (const [index, scenario] of manifest.scenarios.entries()) {
+      console.log([
+        scenario.id,
+        ...result.browsers.map((browser) => browser.scenarios[index].status)
+      ].join("\t"));
+    }
+  }
+}
+
 async function commandRun(args) {
   const browser = takeOption(args, "--browser", process.env.PICOQUIC_WT_BROWSER || "");
   const manifestPath = resolve(takeOption(args, "--manifest", DEFAULT_MANIFEST));
@@ -963,6 +1034,9 @@ async function main() {
   if (args[0] === "list") {
     args.shift();
     commandList(args);
+  } else if (args[0] === "support") {
+    args.shift();
+    commandSupport(args);
   } else if (args.length === 0 || args.includes("--help")) {
     usage();
     process.exit(args.includes("--help") ? 0 : 1);
