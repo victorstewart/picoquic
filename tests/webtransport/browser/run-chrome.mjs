@@ -490,18 +490,6 @@ function assertHarnessResult(result) {
       expected: USE_BYOB
     })}`);
   }
-  if (result.datagramReceiveMode !== DATAGRAM_RECEIVE_MODE) {
-    throw new Error(`unexpected datagram receive mode: ${JSON.stringify({
-      datagramReceiveMode: result.datagramReceiveMode,
-      expected: DATAGRAM_RECEIVE_MODE
-    })}`);
-  }
-  if ((result.datagramSendMode || "baton") !== DATAGRAM_SEND_MODE) {
-    throw new Error(`unexpected datagram send mode: ${JSON.stringify({
-      datagramSendMode: result.datagramSendMode,
-      expected: DATAGRAM_SEND_MODE
-    })}`);
-  }
   if ((result.streamMode || "baton") !== STREAM_MODE) {
     throw new Error(`unexpected stream mode: ${JSON.stringify({
       streamMode: result.streamMode,
@@ -518,6 +506,18 @@ function assertHarnessResult(result) {
       })}`);
     }
     return;
+  }
+  if (result.datagramReceiveMode !== DATAGRAM_RECEIVE_MODE) {
+    throw new Error(`unexpected datagram receive mode: ${JSON.stringify({
+      datagramReceiveMode: result.datagramReceiveMode,
+      expected: DATAGRAM_RECEIVE_MODE
+    })}`);
+  }
+  if ((result.datagramSendMode || "baton") !== DATAGRAM_SEND_MODE) {
+    throw new Error(`unexpected datagram send mode: ${JSON.stringify({
+      datagramSendMode: result.datagramSendMode,
+      expected: DATAGRAM_SEND_MODE
+    })}`);
   }
   if (!equalExpectedBatonArray(result.received, EXPECT_RECEIVED)) {
     throw new Error(`unexpected received baton sequence: ${JSON.stringify(result.received)}`);
