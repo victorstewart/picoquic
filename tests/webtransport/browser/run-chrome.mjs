@@ -16,6 +16,7 @@ const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const DATAGRAM_RECEIVE_MODE = process.env.PICOQUIC_WT_DATAGRAM_RECEIVE_MODE || "baton";
 const DATAGRAM_SEND_MODE = process.env.PICOQUIC_WT_DATAGRAM_SEND_MODE || "baton";
+const DATAGRAM_SEND_SIZE = parseOptionalIntegerEnv("PICOQUIC_WT_DATAGRAM_SEND_SIZE");
 const EXPECT_OK = process.env.PICOQUIC_WT_EXPECT_OK !== "0";
 const RUN_PROTOCOL_CONSTRUCTOR = process.env.PICOQUIC_WT_PROTOCOL_CONSTRUCTOR !== "0";
 const CERT_HASH_ALG = process.env.PICOQUIC_WT_CERT_HASH_ALG || "sha-256";
@@ -264,6 +265,9 @@ function buildPageUrl(certificateHash) {
   }
   if (DATAGRAM_SEND_MODE !== "baton") {
     url.searchParams.set("datagramSendMode", DATAGRAM_SEND_MODE);
+  }
+  if (DATAGRAM_SEND_SIZE !== null) {
+    url.searchParams.set("datagramSendSize", String(DATAGRAM_SEND_SIZE));
   }
   return url.href;
 }
@@ -648,6 +652,14 @@ function countMatches(text, pattern) {
   return matches ? matches.length : 0;
 }
 
+function sumMatches(text, pattern) {
+  let total = 0;
+  for (const match of text.matchAll(pattern)) {
+    total += Number(match[1]);
+  }
+  return total;
+}
+
 function serverOutputHasBrowserClose(output) {
   return /error: 2a \(browser-close-test\)/.test(output);
 }
@@ -685,6 +697,10 @@ function summarizeServerOutput(output) {
       /Received empty WebTransport datagram on stream/g),
     batonDatagramsReceived: countMatches(output,
       /Received baton WebTransport datagram on stream/g),
+    sizedDatagramsReceived: countMatches(output,
+      /Received sized WebTransport datagram on stream/g),
+    datagramBytesReceived: sumMatches(output,
+      /Received (?:baton|sized) WebTransport datagram on stream: [0-9]+, length: ([0-9]+)/g),
     zeroBatonReceived: countMatches(output, /All ZERO baton on stream/g),
     writableBadChunkCloseReceived:
       output.includes("error: 0 (writable-bad-chunk-test)"),

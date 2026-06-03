@@ -42,6 +42,7 @@ const EXPECT_OVERRIDE_FIELDS = new Set([
   "datagramsSent",
   "datagramReceiveMode",
   "datagramSendMode",
+  "datagramSendSize",
   "received",
   "sent",
   "datagramsReceived",
@@ -100,6 +101,7 @@ const EXPECT_COUNTER_FIELDS = new Set([
   "readyMs",
   "closedMs",
   "datagramsSent",
+  "datagramSendSize",
   "datagramsReceivedMin"
 ]);
 const EXPECT_NUMBER_ARRAY_FIELDS = new Set([
@@ -131,6 +133,8 @@ const EXPECT_SERVER_COUNTER_FIELD_NAMES = [
   "closeSessionReceived",
   "emptyDatagramsReceived",
   "batonDatagramsReceived",
+  "sizedDatagramsReceived",
+  "datagramBytesReceived",
   "zeroBatonReceived"
 ];
 const EXPECT_SERVER_COUNTER_FIELDS =
@@ -156,6 +160,7 @@ const SCENARIO_FIELDS = new Set([
   "useByob",
   "datagramReceiveMode",
   "datagramSendMode",
+  "datagramSendSize",
   "timeoutMs",
   "certificateHashMode",
   "certificateHashAlgorithm",
@@ -225,7 +230,7 @@ function requireNonNegativeIntegerArray(value, name, path) {
 }
 
 function requireDatagramMode(value, name, path) {
-  if (!["baton", "empty"].includes(value)) {
+  if (!["baton", "empty", "length"].includes(value)) {
     throw new Error(`invalid manifest field ${name}: unsupported mode ${value} in ${path}`);
   }
 }
@@ -313,12 +318,15 @@ function validateScenario(scenario, path) {
     }
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "datagramReceiveMode") &&
-    !["baton", "empty"].includes(scenario.datagramReceiveMode)) {
+    !["baton", "empty", "length"].includes(scenario.datagramReceiveMode)) {
     throw new Error(`invalid manifest field ${scenario.id}.datagramReceiveMode: unsupported mode ${scenario.datagramReceiveMode}`);
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "datagramSendMode") &&
-    !["baton", "empty"].includes(scenario.datagramSendMode)) {
+    !["baton", "empty", "length"].includes(scenario.datagramSendMode)) {
     throw new Error(`invalid manifest field ${scenario.id}.datagramSendMode: unsupported mode ${scenario.datagramSendMode}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(scenario, "datagramSendSize")) {
+    requirePositiveInteger(scenario.datagramSendSize, `${scenario.id}.datagramSendSize`);
   }
   if (Object.prototype.hasOwnProperty.call(scenario, "timeoutMs")) {
     requirePositiveInteger(scenario.timeoutMs, `${scenario.id}.timeoutMs`);
@@ -600,6 +608,10 @@ function assertScenarioResult(id, result, expect) {
     (result.datagramSendMode || "baton") !== expect.datagramSendMode) {
     throw new Error(`${id}: expected datagramSendMode=${JSON.stringify(expect.datagramSendMode)}, got ${JSON.stringify(result.datagramSendMode)}`);
   }
+  if (hasExpectedValue(expect, "datagramSendSize") &&
+    (result.datagramSendSize || 0) !== expect.datagramSendSize) {
+    throw new Error(`${id}: expected datagramSendSize=${JSON.stringify(expect.datagramSendSize)}, got ${JSON.stringify(result.datagramSendSize || 0)}`);
+  }
   if (expect.received) {
     assertArrayEquals(id, "received", result.received, expect.received,
       sequenceOrderMatters);
@@ -844,6 +856,9 @@ async function runScenario(browser, scenario, vars) {
   };
   if (rendered.certificateHashAlgorithm) {
     env.PICOQUIC_WT_CERT_HASH_ALG = rendered.certificateHashAlgorithm;
+  }
+  if (Number.isInteger(rendered.datagramSendSize)) {
+    env.PICOQUIC_WT_DATAGRAM_SEND_SIZE = String(rendered.datagramSendSize);
   }
   if (Array.isArray(scenarioExpect.received)) {
     env.PICOQUIC_WT_EXPECT_RECEIVED = JSON.stringify(scenarioExpect.received);

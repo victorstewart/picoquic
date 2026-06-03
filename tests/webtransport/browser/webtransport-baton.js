@@ -70,6 +70,14 @@
     return packet;
   }
 
+  function makeSizedDatagram(size) {
+    var packet = new Uint8Array(size);
+    for (var i = 0; i < packet.length; i++) {
+      packet[i] = i & 0xff;
+    }
+    return packet;
+  }
+
   function varintLength(firstByte) {
     return 1 << (firstByte >> 6);
   }
@@ -934,6 +942,7 @@
       useByob: options.useByob !== false,
       datagramReceiveMode: options.datagramReceiveMode || "baton",
       datagramSendMode: options.datagramSendMode || "baton",
+      datagramSendSize: options.datagramSendSize || 0,
       startedMs: nowMs(),
       readyMs: 0,
       closedMs: 0,
@@ -1256,6 +1265,8 @@
               read.value.byteLength);
           }
           note("datagram length 0");
+        } else if (options.datagramReceiveMode === "length") {
+          note("datagram length " + read.value.byteLength);
         } else {
           var decoder = new BatonDecoder(MAX_PACKET_BYTES);
           decoder.push(read.value);
@@ -1301,6 +1312,9 @@
           if (options.datagramSendMode === "empty") {
             await datagramWriter.write(new Uint8Array(0));
             note("datagram sent length 0");
+          } else if (options.datagramSendMode === "length") {
+            await datagramWriter.write(makeSizedDatagram(options.datagramSendSize || 1));
+            note("datagram sent length " + (options.datagramSendSize || 1));
           } else {
             await datagramWriter.write(makeBatonPacket(42, 0));
             note("datagram sent");
@@ -1351,6 +1365,7 @@
       requireDatagram: search.get("requireDatagram") !== "0",
       datagramReceiveMode: search.get("datagramReceiveMode") || "baton",
       datagramSendMode: search.get("datagramSendMode") || "baton",
+      datagramSendSize: Number(search.get("datagramSendSize")) || 0,
       useByob: search.get("useByob") !== "0",
       onProgress: render
     };
@@ -1380,6 +1395,7 @@
         useByob: options.useByob !== false,
         datagramReceiveMode: options.datagramReceiveMode || "baton",
         datagramSendMode: options.datagramSendMode || "baton",
+        datagramSendSize: options.datagramSendSize || 0,
         received: [],
         sent: [],
         datagramsReceived: [],

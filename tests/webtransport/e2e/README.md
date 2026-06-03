@@ -53,6 +53,10 @@ Use `datagramWritableOk` on positive scenarios that must prove
 `datagrams.writable` rejects a non-`BufferSource` chunk with `TypeError` while
 the main scenario still successfully sends and receives the exact expected
 baton datagram payload, such as `datagramsReceived: [252]`.
+Use `datagramReceiveMode: "length"` when a scenario needs to assert the exact
+byte length of a non-baton server datagram through `datagramLengths`. Use
+`datagramSendMode: "length"` with `datagramSendSize` when the browser should
+send a deterministic fixed-size datagram instead of a baton payload.
 Use `datagramsReceivedMin` when a positive scenario exercises concurrent lanes
 and only needs to prove browser datagram availability; HTTP/3 datagrams are
 unreliable, so duplicated or dropped baton datagram echoes are not a stream
@@ -95,6 +99,9 @@ Use `server.batonDatagramsReceivedMin` and `server.zeroBatonReceivedMin` to
 prove pico_baton observed browser-to-server datagram and terminal stream-baton
 traffic, respectively; browser-side `sent`/`datagramsSent` values alone only
 prove the JavaScript API accepted those writes.
+Use `server.sizedDatagramsReceivedMin` and `server.datagramBytesReceivedMin`
+when the server must prove that it observed browser-to-server datagrams with a
+specific payload length.
 
 Run the portable core scenario in Chrome:
 
