@@ -1,0 +1,7 @@
+{
+  "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
+  "notes": "Fixture used to verify unknown WPT expected-manifest fields are rejected.",
+  "expected": []
+}

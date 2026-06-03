@@ -1,0 +1,13 @@
+{
+  "browser": "fixture",
+  "channel": "stable",
+  "platform": "linux",
+  "expected": [
+    {
+      "test": "constructor.https.sub.any.js",
+      "status": "skip",
+      "reason": "Fixture used to verify unknown WPT expected-entry fields are rejected.",
+      "bug": "https://example.invalid/fixture"
+    }
+  ]
+}

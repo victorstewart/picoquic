@@ -30,6 +30,8 @@ const EXPECTED_WPT_TESTS = [
   "back-forward-cache-*.js",
   "in-removed-iframe.https.html"
 ];
+const EXPECTED_MANIFEST_FIELDS = new Set(["browser", "channel", "platform", "expected"]);
+const EXPECTED_ENTRY_FIELDS = new Set(["test", "status", "reason"]);
 
 function usage() {
   console.error([
@@ -260,6 +262,14 @@ function requireNonEmptyString(object, name, expectedPath, owner = "expected man
   }
 }
 
+function rejectUnknownFields(object, allowed, owner, expectedPath) {
+  for (const field of Object.keys(object)) {
+    if (!allowed.has(field)) {
+      throw new Error(`unknown ${owner} field ${field}: ${expectedPath}`);
+    }
+  }
+}
+
 function loadExpectedManifest(expectedPath, discoveredTests) {
   if (!existsSync(expectedPath)) {
     throw new Error(`expected manifest not found: ${expectedPath}`);
@@ -269,6 +279,7 @@ function loadExpectedManifest(expectedPath, discoveredTests) {
   if (expected === null || typeof expected !== "object" || Array.isArray(expected)) {
     throw new Error(`expected manifest must be an object: ${expectedPath}`);
   }
+  rejectUnknownFields(expected, EXPECTED_MANIFEST_FIELDS, "expected manifest", expectedPath);
   requireNonEmptyString(expected, "browser", expectedPath);
   requireNonEmptyString(expected, "channel", expectedPath);
   requireNonEmptyString(expected, "platform", expectedPath);
@@ -281,6 +292,7 @@ function loadExpectedManifest(expectedPath, discoveredTests) {
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error(`expected[${index}] must be an object in ${expectedPath}`);
     }
+    rejectUnknownFields(entry, EXPECTED_ENTRY_FIELDS, `expected[${index}]`, expectedPath);
     if (typeof entry.test !== "string" || entry.test.length === 0) {
       throw new Error(`expected[${index}].test must be a non-empty string in ${expectedPath}`);
     }
