@@ -851,6 +851,17 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --dry-run)
         set_tests_properties(picohttp_wt_wpt_run_dry
                              PROPERTIES LABELS wt_wpt)
+        add_test(NAME picohttp_wt_wpt_run_reject_expected_browser_mismatch
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/run-wpt.mjs
+                         run
+                         --wpt-root ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/fixtures/fake-wpt
+                         --browser chrome
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/wpt/expected/edge-stable.json
+                         --test constructor.https.sub.any.js
+                         --dry-run)
+        set_tests_properties(picohttp_wt_wpt_run_reject_expected_browser_mismatch
+                             PROPERTIES LABELS wt_wpt WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_manifest
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs

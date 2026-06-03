@@ -299,6 +299,12 @@ function loadExpectedManifest(expectedPath, discoveredTests) {
   return expected;
 }
 
+function requireExpectedBrowser(expected, browser, expectedPath) {
+  if (expected.browser !== browser) {
+    throw new Error(`expected manifest browser ${expected.browser} does not match selected browser ${browser}: ${expectedPath}`);
+  }
+}
+
 async function commandList(args) {
   const wptRoot = takeOption(args, "--wpt-root", process.env.PICOQUIC_WPT_ROOT || "");
   const expectedPath = takeOption(args, "--expected", "");
@@ -387,7 +393,9 @@ async function commandRun(args) {
   const command = resolveWptCommand(wptRoot);
   const discovered = discoverTests(wptRoot);
   if (expectedPath) {
-    loadExpectedManifest(resolve(expectedPath), discovered.tests);
+    const resolvedExpectedPath = resolve(expectedPath);
+    const expected = loadExpectedManifest(resolvedExpectedPath, discovered.tests);
+    requireExpectedBrowser(expected, browser, resolvedExpectedPath);
   }
   const selected = selectTests(discovered.tests, selectors);
   const testArgs = selected.map((test) => `webtransport/${test}`);
