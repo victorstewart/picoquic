@@ -845,6 +845,74 @@
           "stopSendingAppError123Min": null
         }
       }
+    },
+    {
+      "scenario": "reset.server-reset-bidi",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the server-reset row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows and C203 reset rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737, 26914421909, and 26917564358.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/server-reset-bidi?code=123&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "reset.server-reset-uni",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the server-reset row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows and C203 reset rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737, 26914421909, and 26917564358.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/server-reset-uni?code=123&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "reset.server-stop-bidi",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the server-stop row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows and C203 reset rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737, 26914421909, and 26917564358.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/server-stop-bidi?code=123&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
+    },
+    {
+      "scenario": "reset.server-stop-uni",
+      "status": "pass",
+      "category": "browser-missing",
+      "browserVersion": "151.0.3",
+      "platform": "linux",
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the server-stop row on the data path while not claiming selected WT-Protocol exposure.",
+      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows and C203 reset rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737, 26914421909, and 26917564358.",
+      "expect": {
+        "url": "https://127.0.0.1:4433/wt/reset/server-stop-uni?code=123&stream_count=1&protocol=optional",
+        "protocol": "",
+        "server": {
+          "optionalProtocolAccepted": null,
+          "optionalProtocolAcceptedMin": 1
+        }
+      }
     }
   ]
 }

@@ -102,7 +102,11 @@ extern "C" {
         wt_baton_stream_test_client_bidi_echo,
         wt_baton_stream_test_client_uni_reply,
         wt_baton_stream_test_server_uni,
-        wt_baton_stream_test_server_bidi
+        wt_baton_stream_test_server_bidi,
+        wt_baton_stream_test_server_reset_uni,
+        wt_baton_stream_test_server_reset_bidi,
+        wt_baton_stream_test_server_stop_uni,
+        wt_baton_stream_test_server_stop_bidi
     } wt_baton_stream_test_mode_enum;
 
     typedef struct st_wt_baton_stream_test_t {
@@ -114,6 +118,8 @@ extern "C" {
         unsigned int fin_received : 1;
         unsigned int fin_sent : 1;
         unsigned int reply_started : 1;
+        unsigned int reset_sent : 1;
+        unsigned int stop_sent : 1;
         unsigned int is_active : 1;
     } wt_baton_stream_test_t;
 
@@ -168,6 +174,7 @@ extern "C" {
         wt_baton_stream_test_mode_enum stream_test_mode;
         uint64_t stream_test_size;
         uint64_t stream_test_count;
+        uint64_t stream_test_error_code;
         uint64_t stream_test_opened;
         uint64_t stream_test_fin_received;
         uint64_t stream_test_fin_sent;

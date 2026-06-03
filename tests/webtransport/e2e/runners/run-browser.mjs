@@ -165,7 +165,11 @@ const EXPECT_SERVER_COUNTER_FIELD_NAMES = [
   "resetStreamReceived",
   "stopSendingReceived",
   "resetStreamAppError123",
-  "stopSendingAppError123"
+  "stopSendingAppError123",
+  "resetStreamSent",
+  "stopSendingSent",
+  "resetStreamSentAppError123",
+  "stopSendingSentAppError123"
 ];
 const EXPECT_SERVER_COUNTER_FIELDS =
   new Set(EXPECT_SERVER_COUNTER_FIELD_NAMES);
@@ -282,7 +286,8 @@ function requireStreamMode(value, name, path) {
   if (!["baton", "client-bidi-echo", "client-uni-reply",
     "server-uni", "server-bidi", "browser-abort-bidi",
     "browser-abort-uni", "browser-cancel-incoming-bidi",
-    "browser-cancel-incoming-uni"].includes(value)) {
+    "browser-cancel-incoming-uni", "server-reset-bidi",
+    "server-reset-uni", "server-stop-bidi", "server-stop-uni"].includes(value)) {
     throw new Error(`invalid manifest field ${name}: unsupported mode ${value} in ${path}`);
   }
 }

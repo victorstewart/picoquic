@@ -444,10 +444,18 @@ static char const* wt_baton_reset_browser_abort_bidi_path = "/wt/reset/browser-a
 static char const* wt_baton_reset_browser_abort_uni_path = "/wt/reset/browser-abort-uni";
 static char const* wt_baton_reset_browser_cancel_bidi_path = "/wt/reset/browser-cancel-incoming-bidi";
 static char const* wt_baton_reset_browser_cancel_uni_path = "/wt/reset/browser-cancel-incoming-uni";
+static char const* wt_baton_reset_server_reset_bidi_path = "/wt/reset/server-reset-bidi";
+static char const* wt_baton_reset_server_reset_uni_path = "/wt/reset/server-reset-uni";
+static char const* wt_baton_reset_server_stop_bidi_path = "/wt/reset/server-stop-bidi";
+static char const* wt_baton_reset_server_stop_uni_path = "/wt/reset/server-stop-uni";
 static wt_baton_app_ctx_t wt_baton_stream_client_bidi_ctx = { 0, wt_baton_stream_test_client_bidi_echo };
 static wt_baton_app_ctx_t wt_baton_stream_client_uni_ctx = { 0, wt_baton_stream_test_client_uni_reply };
 static wt_baton_app_ctx_t wt_baton_stream_server_uni_ctx = { 0, wt_baton_stream_test_server_uni };
 static wt_baton_app_ctx_t wt_baton_stream_server_bidi_ctx = { 0, wt_baton_stream_test_server_bidi };
+static wt_baton_app_ctx_t wt_baton_stream_server_reset_uni_ctx = { 0, wt_baton_stream_test_server_reset_uni };
+static wt_baton_app_ctx_t wt_baton_stream_server_reset_bidi_ctx = { 0, wt_baton_stream_test_server_reset_bidi };
+static wt_baton_app_ctx_t wt_baton_stream_server_stop_uni_ctx = { 0, wt_baton_stream_test_server_stop_uni };
+static wt_baton_app_ctx_t wt_baton_stream_server_stop_bidi_ctx = { 0, wt_baton_stream_test_server_stop_bidi };
 
 static int wt_baton_origin_validator_deny_all(
     const uint8_t* UNUSED(origin), size_t UNUSED(origin_length),
@@ -460,7 +468,7 @@ static int wt_baton_origin_validator_deny_all(
 int wt_baton_server(char const* path, picoquic_quic_config_t* config)
 {
     int ret = 0;
-    picohttp_server_path_item_t path_item_list[18] = { { 0 } };
+    picohttp_server_path_item_t path_item_list[22] = { { 0 } };
     const struct st_wt_baton_stream_path_t {
         char const* path;
         wt_baton_app_ctx_t* ctx;
@@ -476,7 +484,11 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
         { wt_baton_reset_browser_abort_bidi_path, &wt_baton_stream_client_bidi_ctx },
         { wt_baton_reset_browser_abort_uni_path, &wt_baton_stream_client_uni_ctx },
         { wt_baton_reset_browser_cancel_bidi_path, &wt_baton_stream_server_bidi_ctx },
-        { wt_baton_reset_browser_cancel_uni_path, &wt_baton_stream_server_uni_ctx }
+        { wt_baton_reset_browser_cancel_uni_path, &wt_baton_stream_server_uni_ctx },
+        { wt_baton_reset_server_reset_bidi_path, &wt_baton_stream_server_reset_bidi_ctx },
+        { wt_baton_reset_server_reset_uni_path, &wt_baton_stream_server_reset_uni_ctx },
+        { wt_baton_reset_server_stop_bidi_path, &wt_baton_stream_server_stop_bidi_ctx },
+        { wt_baton_reset_server_stop_uni_path, &wt_baton_stream_server_stop_uni_ctx }
     };
 
     /* Start: start the QUIC process with cert and key files */

@@ -1059,6 +1059,47 @@
       note("stream read before cancel " + label);
     }
 
+    async function expectReadableStreamError(readable, label) {
+      var reader = readable.getReader();
+      try {
+        var outcome = await withTimeout(reader.read().then(function (value) {
+          return { ok: true, value: value };
+        }, function (error) {
+          return { ok: false, error: error };
+        }), 3000);
+        if (outcome.ok) {
+          throw new Error("expected server reset on " + label + ", got " +
+            JSON.stringify(outcome.value));
+        }
+        note("stream reset " + label);
+        note("stream reset detail " + label + " " + errorText(outcome.error));
+      } finally {
+        reader.releaseLock();
+      }
+    }
+
+    async function writeByteAndExpectStop(writable, label) {
+      var writer = writable.getWriter();
+      try {
+        await writer.ready;
+        await writer.write(new Uint8Array([123]));
+        result.streamBytesSent += 1;
+        note("stream wrote before stop " + label);
+        var outcome = await withTimeout(writer.closed.then(function () {
+          return { ok: true, detail: "" };
+        }, function (error) {
+          return { ok: false, detail: errorText(error) };
+        }), 3000);
+        if (outcome.ok) {
+          throw new Error("expected server stop on " + label);
+        }
+        note("stream stopped " + label);
+        note("stream stopped detail " + label + " " + outcome.detail);
+      } finally {
+        writer.releaseLock();
+      }
+    }
+
     async function readIncomingUni(reader, label) {
       var incoming = await reader.read();
       if (incoming.done) {
@@ -1173,6 +1214,36 @@
         } finally {
           cancelUniReader.releaseLock();
         }
+      } else if (result.streamMode === "server-reset-bidi") {
+        var resetBidiReader = transport.incomingBidirectionalStreams.getReader();
+        try {
+          var resetBidiIncoming = await resetBidiReader.read();
+          if (resetBidiIncoming.done) {
+            throw new Error("incoming bidirectional stream ended before reset");
+          }
+          await expectReadableStreamError(resetBidiIncoming.value.readable,
+            "server-reset-bidi");
+        } finally {
+          resetBidiReader.releaseLock();
+        }
+      } else if (result.streamMode === "server-reset-uni") {
+        var resetUniReader = transport.incomingUnidirectionalStreams.getReader();
+        try {
+          var resetUniIncoming = await resetUniReader.read();
+          if (resetUniIncoming.done) {
+            throw new Error("incoming unidirectional stream ended before reset");
+          }
+          await expectReadableStreamError(resetUniIncoming.value,
+            "server-reset-uni");
+        } finally {
+          resetUniReader.releaseLock();
+        }
+      } else if (result.streamMode === "server-stop-bidi") {
+        var stopBidi = await transport.createBidirectionalStream();
+        await writeByteAndExpectStop(stopBidi.writable, "server-stop-bidi");
+      } else if (result.streamMode === "server-stop-uni") {
+        var stopUni = await transport.createUnidirectionalStream();
+        await writeByteAndExpectStop(stopUni, "server-stop-uni");
       } else if (result.streamMode === "client-bidi-echo") {
         for (var bidiIndex = 0; bidiIndex < result.streamCount; bidiIndex++) {
           var bidiStream = await transport.createBidirectionalStream();

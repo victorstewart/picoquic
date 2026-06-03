@@ -309,7 +309,8 @@ static void wt_baton_stream_test_fill(uint8_t* buffer, uint64_t offset,
 }
 
 static int wt_baton_stream_test_open_local(picoquic_cnx_t* cnx,
-    wt_baton_ctx_t* baton_ctx, int is_bidir)
+    wt_baton_ctx_t* baton_ctx, int is_bidir,
+    h3zero_stream_ctx_t** created_stream_ctx)
 {
     int ret = 0;
     h3zero_stream_ctx_t* stream_ctx = NULL;
@@ -330,8 +331,56 @@ static int wt_baton_stream_test_open_local(picoquic_cnx_t* cnx,
         baton_ctx->stream_test_opened += 1;
         stream_ctx->path_callback = wt_baton_callback;
         stream_ctx->path_callback_ctx = baton_ctx;
+        if (created_stream_ctx != NULL) {
+            *created_stream_ctx = stream_ctx;
+        }
         ret = picoquic_mark_active_stream(cnx, stream_ctx->stream_id, 1,
             stream_ctx);
+    }
+    return ret;
+}
+
+static int wt_baton_stream_test_send_reset(picoquic_cnx_t* cnx,
+    wt_baton_stream_test_t* test_stream, h3zero_stream_ctx_t* stream_ctx,
+    uint64_t app_error)
+{
+    int ret = 0;
+    uint64_t h3_error = H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(app_error);
+
+    if (test_stream->reset_sent) {
+        return 0;
+    }
+
+    ret = picowt_reset_stream(cnx, stream_ctx, app_error);
+    if (ret == 0) {
+        test_stream->reset_sent = 1;
+        test_stream->fin_sent = 1;
+        picoquic_log_app_message(cnx,
+            "Sent WebTransport RESET_STREAM on stream: %" PRIu64
+            ", h3_error: %" PRIu64 ", app_error: %" PRIu64,
+            stream_ctx->stream_id, h3_error, app_error);
+    }
+    return ret;
+}
+
+static int wt_baton_stream_test_send_stop(picoquic_cnx_t* cnx,
+    wt_baton_stream_test_t* test_stream, h3zero_stream_ctx_t* stream_ctx,
+    uint64_t app_error)
+{
+    int ret = 0;
+    uint64_t h3_error = H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(app_error);
+
+    if (test_stream->stop_sent) {
+        return 0;
+    }
+
+    ret = picoquic_stop_sending(cnx, stream_ctx->stream_id, h3_error);
+    if (ret == 0) {
+        test_stream->stop_sent = 1;
+        picoquic_log_app_message(cnx,
+            "Sent WebTransport STOP_SENDING on stream: %" PRIu64
+            ", h3_error: %" PRIu64 ", app_error: %" PRIu64,
+            stream_ctx->stream_id, h3_error, app_error);
     }
     return ret;
 }
@@ -341,10 +390,29 @@ static int wt_baton_stream_test_start_server_streams(picoquic_cnx_t* cnx,
 {
     int ret = 0;
     int is_bidir =
-        baton_ctx->stream_test_mode == wt_baton_stream_test_server_bidi;
+        baton_ctx->stream_test_mode == wt_baton_stream_test_server_bidi ||
+        baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_bidi;
+    int should_reset =
+        baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_uni ||
+        baton_ctx->stream_test_mode == wt_baton_stream_test_server_reset_bidi;
 
     for (uint64_t i = 0; ret == 0 && i < baton_ctx->stream_test_count; i++) {
-        ret = wt_baton_stream_test_open_local(cnx, baton_ctx, is_bidir);
+        h3zero_stream_ctx_t* stream_ctx = NULL;
+        ret = wt_baton_stream_test_open_local(cnx, baton_ctx, is_bidir,
+            &stream_ctx);
+        if (ret == 0 && should_reset && stream_ctx != NULL) {
+            wt_baton_stream_test_t* test_stream =
+                wt_baton_stream_test_find(baton_ctx, stream_ctx->stream_id, 0,
+                    is_bidir, 1);
+
+            if (test_stream == NULL) {
+                ret = -1;
+            }
+            else {
+                ret = wt_baton_stream_test_send_reset(cnx, test_stream,
+                    stream_ctx, baton_ctx->stream_test_error_code);
+            }
+        }
     }
     return ret;
 }
@@ -375,6 +443,16 @@ static int wt_baton_stream_test_data(picoquic_cnx_t* cnx,
                 test_stream->bytes_sent += length;
                 baton_ctx->stream_test_bytes_sent += length;
             }
+        }
+        else if (ret == 0 && !test_stream->stop_sent &&
+            ((baton_ctx->stream_test_mode ==
+                wt_baton_stream_test_server_stop_bidi && is_bidir &&
+                !is_local) ||
+            (baton_ctx->stream_test_mode ==
+                wt_baton_stream_test_server_stop_uni && !is_bidir &&
+                !is_local))) {
+            ret = wt_baton_stream_test_send_stop(cnx, test_stream, stream_ctx,
+                baton_ctx->stream_test_error_code);
         }
     }
 
@@ -407,7 +485,7 @@ static int wt_baton_stream_test_data(picoquic_cnx_t* cnx,
             wt_baton_stream_test_client_uni_reply && !is_bidir && !is_local &&
             !test_stream->reply_started) {
             test_stream->reply_started = 1;
-            ret = wt_baton_stream_test_open_local(cnx, baton_ctx, 0);
+            ret = wt_baton_stream_test_open_local(cnx, baton_ctx, 0, NULL);
         }
     }
 
@@ -856,6 +934,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         baton_ctx->stream_test_mode = wt_baton_stream_test_none;
         baton_ctx->stream_test_size = 0;
         baton_ctx->stream_test_count = 1;
+        baton_ctx->stream_test_error_code = 123;
         if (query_offset < path_length) {
             const uint8_t* queries = path + query_offset;
             size_t queries_length = path_length - query_offset;
@@ -870,6 +949,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 h3zero_query_parameter_number(queries, queries_length, "client_datagram_size", 20, &baton_ctx->accept_datagram_size, UINT64_MAX) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "stream_size", 11, &baton_ctx->stream_test_size, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "stream_count", 12, &baton_ctx->stream_test_count, 1) != 0 ||
+                h3zero_query_parameter_number(queries, queries_length, "code", 4, &baton_ctx->stream_test_error_code, 123) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "protocol", 8,
                     protocol_mode, sizeof(protocol_mode), &protocol_mode_length) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "datagram", 8,
@@ -901,7 +981,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             }
             else if (baton_ctx->stream_test_size > WT_BATON_MAX_STREAM_TEST_SIZE ||
                 baton_ctx->stream_test_count < 1 ||
-                baton_ctx->stream_test_count > WT_BATON_MAX_STREAM_TEST_COUNT) {
+                baton_ctx->stream_test_count > WT_BATON_MAX_STREAM_TEST_COUNT ||
+                baton_ctx->stream_test_error_code > UINT32_MAX) {
                 ret = -1;
             }
             else if (protocol_mode_length > 0) {
@@ -956,6 +1037,30 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     baton_ctx->stream_test_mode =
                         wt_baton_stream_test_server_bidi;
                 }
+                else if (stream_mode_length == sizeof("server-reset-uni") - 1 &&
+                    memcmp(stream_mode, "server-reset-uni",
+                        sizeof("server-reset-uni") - 1) == 0) {
+                    baton_ctx->stream_test_mode =
+                        wt_baton_stream_test_server_reset_uni;
+                }
+                else if (stream_mode_length == sizeof("server-reset-bidi") - 1 &&
+                    memcmp(stream_mode, "server-reset-bidi",
+                        sizeof("server-reset-bidi") - 1) == 0) {
+                    baton_ctx->stream_test_mode =
+                        wt_baton_stream_test_server_reset_bidi;
+                }
+                else if (stream_mode_length == sizeof("server-stop-uni") - 1 &&
+                    memcmp(stream_mode, "server-stop-uni",
+                        sizeof("server-stop-uni") - 1) == 0) {
+                    baton_ctx->stream_test_mode =
+                        wt_baton_stream_test_server_stop_uni;
+                }
+                else if (stream_mode_length == sizeof("server-stop-bidi") - 1 &&
+                    memcmp(stream_mode, "server-stop-bidi",
+                        sizeof("server-stop-bidi") - 1) == 0) {
+                    baton_ctx->stream_test_mode =
+                        wt_baton_stream_test_server_stop_bidi;
+                }
                 else {
                     ret = -1;
                 }
@@ -975,6 +1080,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             baton_ctx->stream_test_mode = wt_baton_stream_test_none;
             baton_ctx->stream_test_size = 0;
             baton_ctx->stream_test_count = 1;
+            baton_ctx->stream_test_error_code = 123;
         }
         if (ret == 0 && app_ctx != NULL &&
             app_ctx->stream_test_mode != wt_baton_stream_test_none) {
@@ -1023,7 +1129,11 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 if (baton_ctx->stream_test_mode ==
                     wt_baton_stream_test_server_uni ||
                     baton_ctx->stream_test_mode ==
-                    wt_baton_stream_test_server_bidi) {
+                    wt_baton_stream_test_server_bidi ||
+                    baton_ctx->stream_test_mode ==
+                    wt_baton_stream_test_server_reset_uni ||
+                    baton_ctx->stream_test_mode ==
+                    wt_baton_stream_test_server_reset_bidi) {
                     ret = wt_baton_stream_test_start_server_streams(cnx,
                         baton_ctx);
                 }

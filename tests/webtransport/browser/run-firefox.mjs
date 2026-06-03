@@ -738,10 +738,18 @@ function summarizeServerOutput(output) {
       /Received WebTransport RESET_STREAM on stream/g),
     stopSendingReceived: countMatches(output,
       /Received WebTransport STOP_SENDING on stream/g),
+    resetStreamSent: countMatches(output,
+      /Sent WebTransport RESET_STREAM on stream/g),
+    stopSendingSent: countMatches(output,
+      /Sent WebTransport STOP_SENDING on stream/g),
     resetStreamAppError123: countMatches(output,
       /Received WebTransport RESET_STREAM on stream: [0-9]+, h3_error: [0-9]+, app_error: 123/g),
     stopSendingAppError123: countMatches(output,
       /Received WebTransport STOP_SENDING on stream: [0-9]+, h3_error: [0-9]+, app_error: 123/g),
+    resetStreamSentAppError123: countMatches(output,
+      /Sent WebTransport RESET_STREAM on stream: [0-9]+, h3_error: [0-9]+, app_error: 123/g),
+    stopSendingSentAppError123: countMatches(output,
+      /Sent WebTransport STOP_SENDING on stream: [0-9]+, h3_error: [0-9]+, app_error: 123/g),
     writableBadChunkCloseReceived:
       output.includes("error: 0 (writable-bad-chunk-test)"),
     browserCloseReceived:
@@ -786,7 +794,11 @@ function expectedResetServerSummary() {
       resetStreamReceived: 1,
       resetStreamAppError123: 1,
       stopSendingReceived: 0,
-      stopSendingAppError123: 0
+      stopSendingAppError123: 0,
+      resetStreamSent: 0,
+      resetStreamSentAppError123: 0,
+      stopSendingSent: 0,
+      stopSendingSentAppError123: 0
     };
   }
   if (STREAM_MODE === "browser-cancel-incoming-bidi" ||
@@ -795,7 +807,37 @@ function expectedResetServerSummary() {
       resetStreamReceived: 0,
       resetStreamAppError123: 0,
       stopSendingReceived: 1,
-      stopSendingAppError123: 1
+      stopSendingAppError123: 1,
+      resetStreamSent: 0,
+      resetStreamSentAppError123: 0,
+      stopSendingSent: 0,
+      stopSendingSentAppError123: 0
+    };
+  }
+  if (STREAM_MODE === "server-reset-bidi" ||
+    STREAM_MODE === "server-reset-uni") {
+    return {
+      resetStreamReceived: 0,
+      resetStreamAppError123: 0,
+      stopSendingReceived: 0,
+      stopSendingAppError123: 0,
+      resetStreamSent: 1,
+      resetStreamSentAppError123: 1,
+      stopSendingSent: 0,
+      stopSendingSentAppError123: 0
+    };
+  }
+  if (STREAM_MODE === "server-stop-bidi" ||
+    STREAM_MODE === "server-stop-uni") {
+    return {
+      resetStreamReceived: 0,
+      resetStreamAppError123: 0,
+      stopSendingReceived: 0,
+      stopSendingAppError123: 0,
+      resetStreamSent: 0,
+      resetStreamSentAppError123: 0,
+      stopSendingSent: 1,
+      stopSendingSentAppError123: 1
     };
   }
   return null;
@@ -807,10 +849,12 @@ function serverOutputHasResetSummary(output) {
     return true;
   }
   const summary = summarizeServerOutput(output);
-  return summary.resetStreamReceived >= expected.resetStreamReceived &&
-    summary.resetStreamAppError123 >= expected.resetStreamAppError123 &&
-    summary.stopSendingReceived >= expected.stopSendingReceived &&
-    summary.stopSendingAppError123 >= expected.stopSendingAppError123;
+  for (const [name, value] of Object.entries(expected)) {
+    if (summary[name] < value) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function serverOutputHasStreamTestSummary(output) {
@@ -852,6 +896,8 @@ function isServerSummaryLine(line) {
     line.includes("WebTransport stream test ") ||
     line.includes("Received WebTransport RESET_STREAM") ||
     line.includes("Received WebTransport STOP_SENDING") ||
+    line.includes("Sent WebTransport RESET_STREAM") ||
+    line.includes("Sent WebTransport STOP_SENDING") ||
     line.includes("error: 0 (writable-bad-chunk-test)") ||
     line.includes("error: 2a (browser-close-test)");
 }
