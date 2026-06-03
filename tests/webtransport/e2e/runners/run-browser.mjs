@@ -229,7 +229,19 @@ function loadExpected(path, manifest) {
     }
     entries.set(entry.scenario, entry);
   }
-  return { path, entries };
+  return {
+    path,
+    browser: expected.browser,
+    channel: expected.channel,
+    platform: expected.platform,
+    entries
+  };
+}
+
+function requireExpectedBrowser(expected, browser) {
+  if (expected.path && expected.browser !== browser) {
+    throw new Error(`expected-results browser ${expected.browser} does not match selected browser ${browser}: ${expected.path}`);
+  }
 }
 
 function mergeExpect(base, override) {
@@ -693,6 +705,7 @@ async function commandRun(args) {
 
   const manifest = loadManifest(manifestPath);
   const expected = loadExpected(expectedPath, manifest);
+  requireExpectedBrowser(expected, browser);
   const vars = { port: DEFAULT_PORT, expected };
   const scenarios = selectedScenarios(manifest, scenarioId);
   const results = [];

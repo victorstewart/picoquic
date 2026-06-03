@@ -917,6 +917,15 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
                          --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/fixtures/expected-missing-reason.json)
         set_tests_properties(picohttp_wt_e2e_expected_reject_missing_reason
                              PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
+        add_test(NAME picohttp_wt_e2e_run_reject_expected_browser_mismatch
+                 COMMAND ${NODE_EXECUTABLE}
+                         ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
+                         --browser chrome
+                         --expected ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/expected/edge-stable.json
+                         --scenario baton.core.padded-byob
+                         --json)
+        set_tests_properties(picohttp_wt_e2e_run_reject_expected_browser_mismatch
+                             PROPERTIES LABELS wt_browser WILL_FAIL TRUE)
         add_test(NAME picohttp_wt_e2e_expected_safari
                  COMMAND ${NODE_EXECUTABLE}
                          ${PROJECT_SOURCE_DIR}/tests/webtransport/e2e/runners/run-browser.mjs
