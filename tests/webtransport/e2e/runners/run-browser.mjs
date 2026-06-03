@@ -140,7 +140,6 @@ const EXPECT_SERVER_COUNTER_FIELD_NAMES = [
   "emptyDatagramsReceived",
   "batonDatagramsReceived",
   "sizedDatagramsReceived",
-  "batonParameterRejected",
   "datagramBytesReceived",
   "zeroBatonReceived"
 ];

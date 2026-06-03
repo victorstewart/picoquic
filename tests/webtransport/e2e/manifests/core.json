@@ -961,7 +961,6 @@
         "server": {
           "connectAccepted": 0,
           "optionalProtocolAccepted": 0,
-          "batonParameterRejectedMin": 1,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }
@@ -1007,7 +1006,6 @@
         "server": {
           "connectAccepted": 0,
           "optionalProtocolAccepted": 0,
-          "batonParameterRejectedMin": 1,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1
         }

@@ -753,11 +753,6 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             /* init the global parameters */
             if (path != NULL && path_length > 0) {
                 ret = wt_baton_ctx_path_params(baton_ctx, path, path_length);
-                if (ret != 0) {
-                    picoquic_log_app_message(cnx,
-                        "Rejecting malformed baton WebTransport CONNECT parameters on stream: %" PRIu64,
-                        stream_ctx->stream_id);
-                }
             }
 
             if (ret == 0) {
