@@ -37,6 +37,15 @@
       "evidence": "Local macOS Chrome 148.0.7778.216 run of datagrams.server-empty on 2026-06-02 timed out with datagramLengths=[] after pico_baton logged and Chrome ACKed `datagram, length: 1: 00`."
     },
     {
+      "scenario": "datagrams.server-repeat-large",
+      "status": "skip",
+      "category": "browser-bug",
+      "browserVersion": "148.0.7778.178",
+      "platform": "linux",
+      "reason": "Chrome stable delivered only a partial repeated 1200-byte server datagram sequence before reporting the WebTransport session closed, so this lane does not claim large repeated server datagram delivery.",
+      "evidence": "GitHub WebTransportBrowser run 26923501085, Chrome job 79428746884, failed datagrams.server-repeat-large after receiving nine 1200-byte datagrams with datagramReceiveMin=16, then reported WebTransportError: The session is closed."
+    },
+    {
       "scenario": "datagrams.client-repeat-one",
       "status": "skip",
       "category": "browser-bug",

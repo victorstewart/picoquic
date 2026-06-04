@@ -53,6 +53,21 @@
           "stopSendingAppError123Min": null
         }
       }
+    },
+    {
+      "scenario": "reset.browser-cancel-incoming-bidi",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "148.0.3967.83",
+      "platform": "linux",
+      "reason": "Edge stable completed the browser-visible incoming bidirectional cancel row, but did not reliably produce a server-observable WebTransport-mapped STOP_SENDING frame. Keep the row active while not claiming the server STOP_SENDING counter in this lane.",
+      "evidence": "GitHub WebTransportBrowser run 26923501085, Edge job 79428746860, failed reset.browser-cancel-incoming-bidi only because server.stopSendingReceived was 0 instead of at least 1. The same Edge stable lane already has consecutive evidence for the unidirectional incoming-cancel row omitting the same server counter.",
+      "expect": {
+        "server": {
+          "stopSendingReceivedMin": null,
+          "stopSendingAppError123Min": null
+        }
+      }
     }
   ]
 }
