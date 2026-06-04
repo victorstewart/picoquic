@@ -247,6 +247,10 @@
     return value && typeof value.getReader === "function";
   }
 
+  function isWritableStreamLike(value) {
+    return value && typeof value.getWriter === "function";
+  }
+
   function valueKind(value) {
     if (value === null) {
       return "null";
@@ -603,6 +607,57 @@
       });
     }
 
+    function optionalSendOrderUnsupported(error) {
+      var text = errorText(error).toLowerCase();
+      return error && (error.name === "TypeError" ||
+        error.name === "NotSupportedError" ||
+        text.indexOf("unsupported") >= 0 ||
+        text.indexOf("not supported") >= 0 ||
+        text.indexOf("not implemented") >= 0);
+    }
+
+    async function cleanupOptionalWritable(writable) {
+      if (isWritableStreamLike(writable)) {
+        var writer = null;
+        try {
+          writer = writable.getWriter();
+          await withTimeout(writer.close(), 1000);
+        } catch (_) {}
+        finally {
+          if (writer) {
+            try {
+              writer.releaseLock();
+            } catch (_) {}
+          }
+        }
+      }
+    }
+
+    async function checkOptionalWritable(target, name, createWritable) {
+      var writable = null;
+      try {
+        writable = await createWritable();
+        record(target, name, isWritableStreamLike(writable), valueKind(writable));
+      } catch (error) {
+        record(target, name, optionalSendOrderUnsupported(error), errorText(error));
+      } finally {
+        await cleanupOptionalWritable(writable);
+      }
+    }
+
+    async function checkDatagramSendOrderOption() {
+      if (!transport.datagrams ||
+        typeof transport.datagrams.createWritable !== "function") {
+        record(result.datagramWritable,
+          "datagram-createWritable-sendOrder-optional", true, "unsupported");
+        return;
+      }
+      await checkOptionalWritable(result.datagramWritable,
+        "datagram-createWritable-sendOrder-optional", function () {
+          return transport.datagrams.createWritable({ sendOrder: 7 });
+        });
+    }
+
     async function checkStreamWritable(name, writable) {
       var writer = writable.getWriter();
       try {
@@ -657,6 +712,17 @@
       } catch (error) {
         record(result.streamWritable, "bidirectional-setup", false, errorText(error));
       }
+
+      await checkDatagramSendOrderOption();
+      await checkOptionalWritable(result.streamWritable,
+        "unidirectional-sendOrder-option", function () {
+          return transport.createUnidirectionalStream({ sendOrder: 7 });
+        });
+      await checkOptionalWritable(result.streamWritable,
+        "bidirectional-sendOrder-option", async function () {
+          var stream = await transport.createBidirectionalStream({ sendOrder: 8 });
+          return stream && stream.writable;
+        });
     } catch (error) {
       if (result.datagramWritable.tests.length === 0) {
         record(result.datagramWritable, "setup", false, errorText(error));

@@ -689,6 +689,10 @@ function sumMatches(text, pattern) {
   return total;
 }
 
+function serverOutputHasWritableBadChunkClose(output) {
+  return /error: 0 \(writable-bad-chunk-test\)/.test(output);
+}
+
 async function waitForServerOutput(predicate, getOutput, timeoutMs = SERVER_SUMMARY_WAIT_MS) {
   const boundedTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 0;
   const deadline = Date.now() + boundedTimeoutMs;
@@ -1069,6 +1073,15 @@ async function main() {
       result.streamWritable = writableBadChunk.streamWritable;
       if (REQUIRE_STREAM_WRITABLE) {
         assertDiagnosticResult("streamWritable", result.streamWritable);
+      }
+      if (INCLUDE_SERVER_SUMMARY &&
+        result.datagramWritable && result.datagramWritable.ok === true &&
+        result.streamWritable && result.streamWritable.ok === true) {
+        /* Same evidence wait as Chrome: the browser diagnostic can resolve
+         * before Node has captured pico_baton's writable-bad-chunk close log.
+         */
+        await waitForServerOutput(serverOutputHasWritableBadChunkClose,
+          () => serverOutput.summaryTrace());
       }
       result.closeSession = await readDiagnostic(endpoint, sessionId,
         "runCloseSessionTests", certConfig.hash, {

@@ -1548,6 +1548,12 @@
         "WT-Protocol",
         "session-diagnostics",
         "stats-optional-observed",
+        "reliability-optional-observed",
+        "congestionControl-optional-observed",
+        "supportsReliableOnly-optional-observed",
+        "responseHeaders-optional-observed",
+        "draining-optional-observed",
+        "sendOrder-options-observed",
         "stream-echo-bidi",
         "stream-echo-uni",
         "stream-server-open-uni-count-1",
@@ -1595,11 +1601,16 @@
           "closed"
         ],
         "datagramWritableOk": true,
-        "datagramWritableTestsInclude": ["string-chunk"],
+        "datagramWritableTestsInclude": [
+          "string-chunk",
+          "datagram-createWritable-sendOrder-optional"
+        ],
         "streamWritableOk": true,
         "streamWritableTestsInclude": [
           "unidirectional-string-chunk",
-          "bidirectional-string-chunk"
+          "bidirectional-string-chunk",
+          "unidirectional-sendOrder-option",
+          "bidirectional-sendOrder-option"
         ],
         "postCloseOk": true,
         "postCloseTestsInclude": [
