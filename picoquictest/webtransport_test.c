@@ -1184,6 +1184,15 @@ int picowt_h3_coexistence_test(void)
             (test_ctx == NULL || test_ctx->cnx_client == NULL) ? 0 : test_ctx->cnx_client->remote_error);
     }
 
+    if (test_ctx != NULL && test_ctx->cnx_server != NULL) {
+        h3zero_callback_ctx_t* h3zero_server_cb =
+            (h3zero_callback_ctx_t*)picoquic_get_callback_context(test_ctx->cnx_server);
+        if (h3zero_server_cb != NULL &&
+            h3zero_server_cb != picoquic_get_default_callback_context(test_ctx->qserver)) {
+            h3zero_callback_delete_context(test_ctx->cnx_server, h3zero_server_cb);
+            picoquic_set_callback(test_ctx->cnx_server, NULL, NULL);
+        }
+    }
     if (test_ctx != NULL && test_ctx->cnx_client != NULL) {
         picoquic_set_callback(test_ctx->cnx_client, NULL, NULL);
     }
