@@ -448,14 +448,32 @@ static char const* wt_baton_reset_server_reset_bidi_path = "/wt/reset/server-res
 static char const* wt_baton_reset_server_reset_uni_path = "/wt/reset/server-reset-uni";
 static char const* wt_baton_reset_server_stop_bidi_path = "/wt/reset/server-stop-bidi";
 static char const* wt_baton_reset_server_stop_uni_path = "/wt/reset/server-stop-uni";
-static wt_baton_app_ctx_t wt_baton_stream_client_bidi_ctx = { 0, wt_baton_stream_test_client_bidi_echo };
-static wt_baton_app_ctx_t wt_baton_stream_client_uni_ctx = { 0, wt_baton_stream_test_client_uni_reply };
-static wt_baton_app_ctx_t wt_baton_stream_server_uni_ctx = { 0, wt_baton_stream_test_server_uni };
-static wt_baton_app_ctx_t wt_baton_stream_server_bidi_ctx = { 0, wt_baton_stream_test_server_bidi };
-static wt_baton_app_ctx_t wt_baton_stream_server_reset_uni_ctx = { 0, wt_baton_stream_test_server_reset_uni };
-static wt_baton_app_ctx_t wt_baton_stream_server_reset_bidi_ctx = { 0, wt_baton_stream_test_server_reset_bidi };
-static wt_baton_app_ctx_t wt_baton_stream_server_stop_uni_ctx = { 0, wt_baton_stream_test_server_stop_uni };
-static wt_baton_app_ctx_t wt_baton_stream_server_stop_bidi_ctx = { 0, wt_baton_stream_test_server_stop_bidi };
+static char const* wt_baton_close_server_immediate_path = "/wt/close/server-immediate";
+static char const* wt_baton_close_server_after_ready_path = "/wt/close/server-after-ready";
+static char const* wt_baton_close_browser_close_path = "/wt/close/browser-close";
+static char const* wt_baton_close_browser_close_long_reason_path = "/wt/close/browser-close-long-reason";
+static char const* wt_baton_close_server_close_long_reason_path = "/wt/close/server-close-long-reason";
+static char const* wt_baton_close_fin_no_capsule_path = "/wt/close/fin-no-capsule";
+static char const* wt_baton_drain_server_drain_path = "/wt/drain/server-drain";
+static char const* wt_baton_drain_server_drain_then_close_path = "/wt/drain/server-drain-then-close";
+static char const* wt_baton_session_gone_active_streams_path = "/wt/session-gone/active-streams";
+static char const* wt_baton_session_gone_datagram_after_close_path = "/wt/session-gone/datagram-after-close";
+static char const* wt_baton_session_gone_new_stream_after_close_path = "/wt/session-gone/new-stream-after-close";
+static wt_baton_app_ctx_t wt_baton_stream_client_bidi_ctx = { 0, wt_baton_stream_test_client_bidi_echo, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_stream_client_uni_ctx = { 0, wt_baton_stream_test_client_uni_reply, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_stream_server_uni_ctx = { 0, wt_baton_stream_test_server_uni, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_stream_server_bidi_ctx = { 0, wt_baton_stream_test_server_bidi, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_stream_server_reset_uni_ctx = { 0, wt_baton_stream_test_server_reset_uni, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_stream_server_reset_bidi_ctx = { 0, wt_baton_stream_test_server_reset_bidi, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_stream_server_stop_uni_ctx = { 0, wt_baton_stream_test_server_stop_uni, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_stream_server_stop_bidi_ctx = { 0, wt_baton_stream_test_server_stop_bidi, wt_baton_lifecycle_none };
+static wt_baton_app_ctx_t wt_baton_lifecycle_wait_for_browser_close_ctx = { 0, wt_baton_stream_test_none, wt_baton_lifecycle_wait_for_browser_close };
+static wt_baton_app_ctx_t wt_baton_lifecycle_server_close_immediate_ctx = { 0, wt_baton_stream_test_none, wt_baton_lifecycle_server_close_immediate };
+static wt_baton_app_ctx_t wt_baton_lifecycle_server_close_on_stream_ctx = { 0, wt_baton_stream_test_none, wt_baton_lifecycle_server_close_on_stream };
+static wt_baton_app_ctx_t wt_baton_lifecycle_server_close_long_reason_ctx = { 0, wt_baton_stream_test_none, wt_baton_lifecycle_server_close_long_reason };
+static wt_baton_app_ctx_t wt_baton_lifecycle_server_fin_no_capsule_ctx = { 0, wt_baton_stream_test_none, wt_baton_lifecycle_server_fin_no_capsule };
+static wt_baton_app_ctx_t wt_baton_lifecycle_server_drain_ctx = { 0, wt_baton_stream_test_none, wt_baton_lifecycle_server_drain };
+static wt_baton_app_ctx_t wt_baton_lifecycle_server_drain_then_close_ctx = { 0, wt_baton_stream_test_none, wt_baton_lifecycle_server_drain_then_close };
 
 static int wt_baton_origin_validator_deny_all(
     const uint8_t* UNUSED(origin), size_t UNUSED(origin_length),
@@ -468,7 +486,7 @@ static int wt_baton_origin_validator_deny_all(
 int wt_baton_server(char const* path, picoquic_quic_config_t* config)
 {
     int ret = 0;
-    picohttp_server_path_item_t path_item_list[22] = { { 0 } };
+    picohttp_server_path_item_t path_item_list[33] = { { 0 } };
     const struct st_wt_baton_stream_path_t {
         char const* path;
         wt_baton_app_ctx_t* ctx;
@@ -488,7 +506,18 @@ int wt_baton_server(char const* path, picoquic_quic_config_t* config)
         { wt_baton_reset_server_reset_bidi_path, &wt_baton_stream_server_reset_bidi_ctx },
         { wt_baton_reset_server_reset_uni_path, &wt_baton_stream_server_reset_uni_ctx },
         { wt_baton_reset_server_stop_bidi_path, &wt_baton_stream_server_stop_bidi_ctx },
-        { wt_baton_reset_server_stop_uni_path, &wt_baton_stream_server_stop_uni_ctx }
+        { wt_baton_reset_server_stop_uni_path, &wt_baton_stream_server_stop_uni_ctx },
+        { wt_baton_close_server_immediate_path, &wt_baton_lifecycle_server_close_immediate_ctx },
+        { wt_baton_close_server_after_ready_path, &wt_baton_lifecycle_server_close_on_stream_ctx },
+        { wt_baton_close_browser_close_path, &wt_baton_lifecycle_wait_for_browser_close_ctx },
+        { wt_baton_close_browser_close_long_reason_path, &wt_baton_lifecycle_wait_for_browser_close_ctx },
+        { wt_baton_close_server_close_long_reason_path, &wt_baton_lifecycle_server_close_long_reason_ctx },
+        { wt_baton_close_fin_no_capsule_path, &wt_baton_lifecycle_server_fin_no_capsule_ctx },
+        { wt_baton_drain_server_drain_path, &wt_baton_lifecycle_server_drain_ctx },
+        { wt_baton_drain_server_drain_then_close_path, &wt_baton_lifecycle_server_drain_then_close_ctx },
+        { wt_baton_session_gone_active_streams_path, &wt_baton_lifecycle_server_close_on_stream_ctx },
+        { wt_baton_session_gone_datagram_after_close_path, &wt_baton_lifecycle_server_close_on_stream_ctx },
+        { wt_baton_session_gone_new_stream_after_close_path, &wt_baton_lifecycle_server_close_on_stream_ctx }
     };
 
     /* Start: start the QUIC process with cert and key files */

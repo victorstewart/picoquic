@@ -1034,6 +1034,8 @@
       readyMs: 0,
       closedMs: 0,
       startedMs: nowMs(),
+      postClose: null,
+      postCloseDatagram: null,
       events: []
     };
     window.__picoquicWebTransportProgress = result;
@@ -1081,6 +1083,106 @@
       }
     }
 
+    function closeReason(length) {
+      var reason = "";
+      for (var i = 0; i < length; i++) {
+        reason += "x";
+      }
+      return reason;
+    }
+
+    function isSessionClosedError(error) {
+      var text = errorText(error).toLowerCase();
+      return text.indexOf("session is closed") >= 0 ||
+        text.indexOf("transport is closed") >= 0 ||
+        text.indexOf("connection lost") >= 0;
+    }
+
+    function isLifecycleMode(mode) {
+      return [
+        "server-close-immediate",
+        "server-close-after-ready",
+        "browser-close",
+        "browser-close-long-reason",
+        "server-close-long-reason",
+        "fin-no-capsule",
+        "server-drain",
+        "server-drain-then-close",
+        "session-gone-active-streams",
+        "session-gone-datagram-after-close",
+        "session-gone-new-stream-after-close"
+      ].indexOf(mode) >= 0;
+    }
+
+    async function waitForClosedSettlement(label) {
+      var closed = await withTimeout(closedPromise, 3000);
+      if (!closed.ok) {
+        note("closed detail " + label + " " + closed.detail);
+      }
+      result.closedMs = nowMs() - result.startedMs;
+      note("closed");
+    }
+
+    async function waitForDrainingSignal(label) {
+      if (!isPromiseLike(transport.draining)) {
+        note("draining unsupported " + label);
+        note("draining checked " + label);
+        return;
+      }
+      try {
+        var drained = await withTimeout(transport.draining.then(function () {
+          return { ok: true, detail: "" };
+        }, function (error) {
+          return { ok: false, detail: errorText(error) };
+        }), 3000);
+        if (drained.ok) {
+          note("draining resolved " + label);
+        } else {
+          note("draining rejected " + label + " " + drained.detail);
+        }
+      } catch (error) {
+        note("draining timeout " + label + " " + errorText(error));
+      }
+      note("draining checked " + label);
+    }
+
+    async function writeLifecycleTrigger(label) {
+      var stream = await transport.createBidirectionalStream();
+      var writer = stream.writable.getWriter();
+      try {
+        await writer.ready;
+        await writer.write(new Uint8Array([42]));
+        result.streamBytesSent += 1;
+        note("lifecycle trigger " + label);
+        try {
+          await writer.close();
+          result.streamFinSent += 1;
+          note("lifecycle trigger fin " + label);
+        } catch (error) {
+          if (!isSessionClosedError(error)) {
+            throw error;
+          }
+          note("lifecycle trigger closed " + label);
+        }
+      } finally {
+        writer.releaseLock();
+      }
+    }
+
+    async function runPostCloseStreams(label) {
+      result.postClose = await runPostCloseTests(transport);
+      if (!result.postClose.ok) {
+        throw new Error("post-close stream tests failed on " + label + ": " +
+          JSON.stringify(result.postClose));
+      }
+      note("post-close streams " + label);
+    }
+
+    async function runPostCloseDatagram(label) {
+      result.postCloseDatagram = await runPostCloseDatagramTests(transport);
+      note("post-close datagram " + label);
+    }
+
     async function readIncomingUni(reader, label) {
       var incoming = await reader.read();
       if (incoming.done) {
@@ -1117,19 +1219,31 @@
       }, function (error) {
         return { ok: false, detail: errorText(error) };
       });
-      await transport.ready;
-      result.readyMs = nowMs() - result.startedMs;
-      result.protocol = transport.protocol || "";
-      if (options.requireProtocol !== false &&
-        options.protocol && result.protocol !== options.protocol) {
-        throw new Error("unexpected WebTransport protocol '" + result.protocol + "'");
+      var ready = await withTimeout(transport.ready.then(function () {
+        return { ok: true, detail: "" };
+      }, function (error) {
+        return { ok: false, detail: errorText(error) };
+      }), 3000);
+      if (!ready.ok) {
+        if (!isLifecycleMode(result.streamMode)) {
+          throw new Error(ready.detail);
+        }
+        note("ready rejected " + result.streamMode + " " + ready.detail);
+      } else {
+        result.readyMs = nowMs() - result.startedMs;
+        result.protocol = transport.protocol || "";
+        if (options.requireProtocol !== false &&
+          options.protocol && result.protocol !== options.protocol) {
+          throw new Error("unexpected WebTransport protocol '" +
+            result.protocol + "'");
+        }
+        result.sessionDiagnostics = await runSessionDiagnostics(transport);
+        if (!result.sessionDiagnostics.ok) {
+          throw new Error("session diagnostics failed: " +
+            JSON.stringify(result.sessionDiagnostics));
+        }
+        note("ready");
       }
-      result.sessionDiagnostics = await runSessionDiagnostics(transport);
-      if (!result.sessionDiagnostics.ok) {
-        throw new Error("session diagnostics failed: " +
-          JSON.stringify(result.sessionDiagnostics));
-      }
-      note("ready");
 
       if (result.streamMode === "browser-abort-bidi") {
         var abortBidi = await transport.createBidirectionalStream();
@@ -1215,6 +1329,31 @@
       } else if (result.streamMode === "server-stop-uni") {
         var stopUni = await transport.createUnidirectionalStream();
         await writeByteAndExpectStop(stopUni, "server-stop-uni");
+      } else if (result.streamMode === "server-close-immediate") {
+        note("server close wait server-close-immediate");
+      } else if (result.streamMode === "server-close-after-ready") {
+        await writeLifecycleTrigger("server-close-after-ready");
+      } else if (result.streamMode === "browser-close") {
+        transport.close({ closeCode: 42, reason: "done" });
+        note("browser close called browser-close");
+      } else if (result.streamMode === "browser-close-long-reason") {
+        transport.close({ closeCode: 42, reason: closeReason(1024) });
+        note("browser close called browser-close-long-reason");
+      } else if (result.streamMode === "server-close-long-reason") {
+        note("server close wait server-close-long-reason");
+      } else if (result.streamMode === "fin-no-capsule") {
+        note("server fin wait fin-no-capsule");
+      } else if (result.streamMode === "server-drain") {
+        await waitForDrainingSignal("server-drain");
+        transport.close({ closeCode: 0, reason: "drain-complete" });
+      } else if (result.streamMode === "server-drain-then-close") {
+        await waitForDrainingSignal("server-drain-then-close");
+      } else if (result.streamMode === "session-gone-active-streams") {
+        await writeLifecycleTrigger("session-gone-active-streams");
+      } else if (result.streamMode === "session-gone-datagram-after-close") {
+        await writeLifecycleTrigger("session-gone-datagram-after-close");
+      } else if (result.streamMode === "session-gone-new-stream-after-close") {
+        await writeLifecycleTrigger("session-gone-new-stream-after-close");
       } else if (result.streamMode === "client-bidi-echo") {
         for (var bidiIndex = 0; bidiIndex < result.streamCount; bidiIndex++) {
           var bidiStream = await transport.createBidirectionalStream();
@@ -1269,6 +1408,15 @@
         /* Incoming-stream cancel rows assert browser cancel completion and
          * server-observed STOP_SENDING. Close/drain rows cover transport.closed.
          */
+      } else if (isLifecycleMode(result.streamMode)) {
+        await waitForClosedSettlement(result.streamMode);
+        if (result.streamMode === "session-gone-active-streams" ||
+          result.streamMode === "session-gone-new-stream-after-close") {
+          await runPostCloseStreams(result.streamMode);
+        }
+        if (result.streamMode === "session-gone-datagram-after-close") {
+          await runPostCloseDatagram(result.streamMode);
+        }
       } else {
         transport.close({ closeCode: 0, reason: "stream-test" });
         var closed = await withTimeout(closedPromise, 3000);

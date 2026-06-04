@@ -109,6 +109,17 @@ extern "C" {
         wt_baton_stream_test_server_stop_bidi
     } wt_baton_stream_test_mode_enum;
 
+    typedef enum {
+        wt_baton_lifecycle_none = 0,
+        wt_baton_lifecycle_wait_for_browser_close,
+        wt_baton_lifecycle_server_close_immediate,
+        wt_baton_lifecycle_server_close_on_stream,
+        wt_baton_lifecycle_server_close_long_reason,
+        wt_baton_lifecycle_server_fin_no_capsule,
+        wt_baton_lifecycle_server_drain,
+        wt_baton_lifecycle_server_drain_then_close
+    } wt_baton_lifecycle_mode_enum;
+
     typedef struct st_wt_baton_stream_test_t {
         uint64_t stream_id;
         uint64_t bytes_received;
@@ -181,12 +192,19 @@ extern "C" {
         uint64_t stream_test_bytes_received;
         uint64_t stream_test_bytes_sent;
         wt_baton_stream_test_t stream_tests[WT_BATON_MAX_STREAM_TEST_COUNT * 2];
+        /* Lifecycle test mode. */
+        wt_baton_lifecycle_mode_enum lifecycle_mode;
+        uint64_t lifecycle_close_error_code;
+        size_t lifecycle_close_reason_len;
+        uint8_t lifecycle_close_reason[picowt_close_message_max + 1];
+        unsigned int lifecycle_close_reason_present : 1;
         char wt_protocol[256];
     } wt_baton_ctx_t;
 
     typedef struct st_wt_baton_app_ctx_t {
         int nb_turns_required;
         wt_baton_stream_test_mode_enum stream_test_mode;
+        wt_baton_lifecycle_mode_enum lifecycle_mode;
     } wt_baton_app_ctx_t;
 
     int wt_baton_prepare_context(picoquic_cnx_t* cnx, wt_baton_ctx_t* baton_ctx,

@@ -153,6 +153,12 @@ const EXPECT_SERVER_COUNTER_FIELD_NAMES = [
   "originMissing",
   "originRejected",
   "closeSessionReceived",
+  "closeSessionReceivedError42",
+  "closeSessionSent",
+  "closeSessionSentError42",
+  "drainSessionSent",
+  "controlFinNoCapsuleSent",
+  "lifecycleTriggerReceived",
   "emptyDatagramsReceived",
   "batonDatagramsReceived",
   "sizedDatagramsReceived",
@@ -287,7 +293,13 @@ function requireStreamMode(value, name, path) {
     "server-uni", "server-bidi", "browser-abort-bidi",
     "browser-abort-uni", "browser-cancel-incoming-bidi",
     "browser-cancel-incoming-uni", "server-reset-bidi",
-    "server-reset-uni", "server-stop-bidi", "server-stop-uni"].includes(value)) {
+    "server-reset-uni", "server-stop-bidi", "server-stop-uni",
+    "server-close-immediate", "server-close-after-ready",
+    "browser-close", "browser-close-long-reason",
+    "server-close-long-reason", "fin-no-capsule", "server-drain",
+    "server-drain-then-close", "session-gone-active-streams",
+    "session-gone-datagram-after-close",
+    "session-gone-new-stream-after-close"].includes(value)) {
     throw new Error(`invalid manifest field ${name}: unsupported mode ${value} in ${path}`);
   }
 }

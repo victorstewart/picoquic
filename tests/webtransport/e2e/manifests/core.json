@@ -4796,6 +4796,485 @@
           "stopSendingSentAppError123Min": 1
         }
       }
+    },
+    {
+      "id": "close.server-immediate",
+      "title": "Server immediately closes a WebTransport session with an empty reason",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/close/server-immediate?code=0&reason=",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "server-close-immediate",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "closed",
+        "close-server-close",
+        "close-empty-reason",
+        "close-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/close/server-immediate?code=0&reason=",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "server-close-immediate",
+        "eventsInclude": [
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "closeSessionSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "close.server-after-ready",
+      "title": "Server closes a WebTransport session after the browser is ready",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/close/server-after-ready?code=42&reason=done",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "server-close-after-ready",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "close-server-close",
+        "close-code-42",
+        "close-reason-done",
+        "close-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/close/server-after-ready?code=42&reason=done",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "server-close-after-ready",
+        "streamBytesSent": 1,
+        "eventsInclude": [
+          "ready",
+          "lifecycle trigger server-close-after-ready",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
+          "closeSessionSentMin": 1,
+          "closeSessionSentError42Min": 1
+        }
+      }
+    },
+    {
+      "id": "close.browser-close",
+      "title": "Browser closes a WebTransport session with code and reason",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/close/browser-close",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "browser-close",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "close-browser-close",
+        "close-code-42",
+        "close-reason-done",
+        "close-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/close/browser-close",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "browser-close",
+        "eventsInclude": [
+          "ready",
+          "browser close called browser-close",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "closeSessionReceivedMin": 1,
+          "closeSessionReceivedError42Min": 1
+        }
+      }
+    },
+    {
+      "id": "close.browser-close-long-reason",
+      "title": "Browser closes a WebTransport session with the maximum reason length",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/close/browser-close-long-reason",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "browser-close-long-reason",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "close-browser-close",
+        "close-long-reason",
+        "close-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/close/browser-close-long-reason",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "browser-close-long-reason",
+        "eventsInclude": [
+          "ready",
+          "browser close called browser-close-long-reason",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "closeSessionReceivedMin": 1,
+          "closeSessionReceivedError42Min": 1
+        }
+      }
+    },
+    {
+      "id": "close.server-close-long-reason",
+      "title": "Server closes a WebTransport session with the maximum reason length",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/close/server-close-long-reason",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "server-close-long-reason",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "closed",
+        "close-server-close",
+        "close-long-reason",
+        "close-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/close/server-close-long-reason",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "server-close-long-reason",
+        "eventsInclude": [
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "closeSessionSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "close.fin-no-capsule",
+      "title": "Server closes the WebTransport control stream without a close capsule",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/close/fin-no-capsule",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "fin-no-capsule",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "closed",
+        "close-fin-no-capsule",
+        "close-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/close/fin-no-capsule",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "fin-no-capsule",
+        "eventsInclude": [
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "controlFinNoCapsuleSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "drain.server-drain",
+      "title": "Server drains a WebTransport session and the browser closes it",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/drain/server-drain",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "server-drain",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "drain-server-drain",
+        "drain-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/drain/server-drain",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "server-drain",
+        "eventsInclude": [
+          "ready",
+          "draining checked server-drain",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "drainSessionSentMin": 1,
+          "closeSessionReceivedMin": 1
+        }
+      }
+    },
+    {
+      "id": "drain.server-drain-then-close",
+      "title": "Server drains and then closes a WebTransport session",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/drain/server-drain-then-close",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "server-drain-then-close",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "closed",
+        "drain-server-drain",
+        "close-server-close",
+        "drain-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/drain/server-drain-then-close",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "server-drain-then-close",
+        "eventsInclude": [
+          "draining checked server-drain-then-close",
+          "closed"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "drainSessionSentMin": 1,
+          "closeSessionSentMin": 1
+        }
+      }
+    },
+    {
+      "id": "session-gone.active-streams",
+      "title": "Server close cleans up an active browser stream",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/session-gone/active-streams?code=42&reason=done",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "session-gone-active-streams",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "session-gone-active-streams",
+        "session-gone-post-close-streams",
+        "session-gone-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/session-gone/active-streams?code=42&reason=done",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "session-gone-active-streams",
+        "streamBytesSent": 1,
+        "eventsInclude": [
+          "ready",
+          "lifecycle trigger session-gone-active-streams",
+          "closed",
+          "post-close streams session-gone-active-streams"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
+          "closeSessionSentMin": 1,
+          "closeSessionSentError42Min": 1
+        }
+      }
+    },
+    {
+      "id": "session-gone.datagram-after-close",
+      "title": "Browser datagram writes fail after server session close",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/session-gone/datagram-after-close?code=42&reason=done",
+      "protocol": "devious-baton-00",
+      "requireDatagram": true,
+      "useByob": false,
+      "streamMode": "session-gone-datagram-after-close",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "session-gone-datagram-after-close",
+        "session-gone-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/session-gone/datagram-after-close?code=42&reason=done",
+        "protocol": "devious-baton-00",
+        "requireDatagram": true,
+        "constructorRequireUnreliable": true,
+        "useByob": false,
+        "streamMode": "session-gone-datagram-after-close",
+        "streamBytesSent": 1,
+        "eventsInclude": [
+          "ready",
+          "lifecycle trigger session-gone-datagram-after-close",
+          "closed",
+          "post-close datagram session-gone-datagram-after-close"
+        ],
+        "postCloseDatagramOk": true,
+        "postCloseDatagramTestsInclude": [
+          "datagram-write-after-close"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
+          "closeSessionSentMin": 1,
+          "closeSessionSentError42Min": 1
+        }
+      }
+    },
+    {
+      "id": "session-gone.new-stream-after-close",
+      "title": "Browser stream creation fails after server session close",
+      "runner": "browser-baton",
+      "wtUrl": "https://127.0.0.1:{port}/wt/session-gone/new-stream-after-close?code=42&reason=done",
+      "protocol": "devious-baton-00",
+      "requireDatagram": false,
+      "useByob": false,
+      "streamMode": "session-gone-new-stream-after-close",
+      "timeoutMs": 30000,
+      "coverage": [
+        "constructor",
+        "ready",
+        "closed",
+        "session-gone-new-stream-after-close",
+        "session-gone-post-close-streams",
+        "session-gone-dedicated-endpoint"
+      ],
+      "expect": {
+        "ok": true,
+        "url": "https://127.0.0.1:{port}/wt/session-gone/new-stream-after-close?code=42&reason=done",
+        "protocol": "devious-baton-00",
+        "requireDatagram": false,
+        "constructorRequireUnreliable": false,
+        "useByob": false,
+        "streamMode": "session-gone-new-stream-after-close",
+        "streamBytesSent": 1,
+        "eventsInclude": [
+          "ready",
+          "lifecycle trigger session-gone-new-stream-after-close",
+          "closed",
+          "post-close streams session-gone-new-stream-after-close"
+        ],
+        "postCloseOk": true,
+        "postCloseTestsInclude": [
+          "create-bidirectional-stream",
+          "create-unidirectional-stream"
+        ],
+        "server": {
+          "connectAcceptedMin": 1,
+          "optionalProtocolAccepted": 0,
+          "originMissing": 0,
+          "originRejected": 0,
+          "packetsReceivedMin": 1,
+          "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
+          "closeSessionSentMin": 1,
+          "closeSessionSentError42Min": 1
+        }
+      }
     }
   ]
 }

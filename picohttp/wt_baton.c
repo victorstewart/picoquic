@@ -117,10 +117,71 @@ int wt_baton_close_session(picoquic_cnx_t* cnx, wt_baton_ctx_t* baton_ctx, uint3
             }
         }
         ret = picowt_send_close_session_message(cnx, stream_ctx, err, err_msg);
+        if (ret == 0) {
+            size_t err_msg_len = (err_msg == NULL) ? 0 : strlen(err_msg);
+            picoquic_log_app_message(cnx,
+                "Sent WebTransport close session on stream: %" PRIu64
+                ", error: %" PRIu32 ", reason_len: %zu",
+                stream_ctx->stream_id, err, err_msg_len);
+        }
         baton_ctx->baton_state = wt_baton_state_closed;
     }
 
     return(ret);
+}
+
+static int wt_baton_send_lifecycle_close(picoquic_cnx_t* cnx,
+    wt_baton_ctx_t* baton_ctx)
+{
+    char long_reason[picowt_close_message_max + 1];
+    char const* reason = NULL;
+
+    if (baton_ctx->lifecycle_mode ==
+        wt_baton_lifecycle_server_close_long_reason) {
+        memset(long_reason, 'x', picowt_close_message_max);
+        long_reason[picowt_close_message_max] = 0;
+        reason = long_reason;
+    }
+    else if (baton_ctx->lifecycle_close_reason_present) {
+        baton_ctx->lifecycle_close_reason[
+            baton_ctx->lifecycle_close_reason_len] = 0;
+        reason = (char const*)baton_ctx->lifecycle_close_reason;
+    }
+
+    return wt_baton_close_session(cnx, baton_ctx,
+        (uint32_t)baton_ctx->lifecycle_close_error_code, reason);
+}
+
+static int wt_baton_send_lifecycle_drain(picoquic_cnx_t* cnx,
+    h3zero_stream_ctx_t* stream_ctx)
+{
+    int ret = picowt_send_drain_session_message(cnx, stream_ctx);
+
+    if (ret == 0) {
+        picoquic_log_app_message(cnx,
+            "Sent WebTransport drain session on stream: %" PRIu64,
+            stream_ctx->stream_id);
+    }
+
+    return ret;
+}
+
+static int wt_baton_send_lifecycle_fin(picoquic_cnx_t* cnx,
+    wt_baton_ctx_t* baton_ctx, h3zero_stream_ctx_t* stream_ctx)
+{
+    int ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id,
+        NULL, 0, 1, NULL);
+
+    if (ret == 0) {
+        stream_ctx->ps.stream_state.is_fin_sent = 1;
+        baton_ctx->baton_state = wt_baton_state_closed;
+        picoquic_log_app_message(cnx,
+            "Sent WebTransport control FIN without close capsule on stream: %"
+            PRIu64,
+            stream_ctx->stream_id);
+    }
+
+    return ret;
 }
 
 /* Update context when sending a connect request */
@@ -676,6 +737,30 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 }
             }
         }
+        else if (baton_ctx->lifecycle_mode ==
+            wt_baton_lifecycle_server_close_on_stream) {
+            if (length > 0 || is_fin) {
+                h3zero_stream_ctx_t* control_stream_ctx =
+                    h3zero_find_stream(baton_ctx->h3_ctx,
+                        baton_ctx->control_stream_id);
+
+                picoquic_log_app_message(cnx,
+                    "Received WebTransport lifecycle trigger on stream: %" PRIu64
+                    ", bytes: %zu, fin: %d",
+                    stream_ctx->stream_id, length, is_fin);
+                if (control_stream_ctx != NULL) {
+                    ret = wt_baton_send_lifecycle_close(cnx, baton_ctx);
+                }
+            }
+        }
+        else if (baton_ctx->lifecycle_mode != wt_baton_lifecycle_none) {
+            if (length > 0 || is_fin) {
+                picoquic_log_app_message(cnx,
+                    "Ignoring WebTransport lifecycle data on stream: %" PRIu64
+                    ", bytes: %zu, fin: %d",
+                    stream_ctx->stream_id, length, is_fin);
+            }
+        }
         else if (baton_ctx->stream_test_mode != wt_baton_stream_test_none) {
             ret = wt_baton_stream_test_data(cnx, bytes, length, is_fin,
                 stream_ctx, baton_ctx);
@@ -935,9 +1020,17 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         baton_ctx->stream_test_size = 0;
         baton_ctx->stream_test_count = 1;
         baton_ctx->stream_test_error_code = 123;
+        baton_ctx->lifecycle_mode = wt_baton_lifecycle_none;
+        baton_ctx->lifecycle_close_error_code = 0;
+        baton_ctx->lifecycle_close_reason_len = 0;
+        baton_ctx->lifecycle_close_reason[0] = 0;
+        baton_ctx->lifecycle_close_reason_present = 0;
         if (query_offset < path_length) {
             const uint8_t* queries = path + query_offset;
             size_t queries_length = path_length - query_offset;
+            baton_ctx->lifecycle_close_reason_present =
+                h3zero_query_parameter_position(queries, queries_length,
+                    "reason", 6) != 0;
 
             if (h3zero_query_parameter_number(queries, queries_length, "version", 7, &baton_ctx->version, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "baton", 5, &baton_ctx->initial_baton, 0) != 0 ||
@@ -950,6 +1043,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 h3zero_query_parameter_number(queries, queries_length, "stream_size", 11, &baton_ctx->stream_test_size, 0) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "stream_count", 12, &baton_ctx->stream_test_count, 1) != 0 ||
                 h3zero_query_parameter_number(queries, queries_length, "code", 4, &baton_ctx->stream_test_error_code, 123) != 0 ||
+                h3zero_query_parameter_number(queries, queries_length, "code", 4, &baton_ctx->lifecycle_close_error_code, 0) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "protocol", 8,
                     protocol_mode, sizeof(protocol_mode), &protocol_mode_length) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "datagram", 8,
@@ -957,7 +1051,11 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 h3zero_query_parameter_string(queries, queries_length, "client_datagram", 15,
                     client_datagram_mode, sizeof(client_datagram_mode), &client_datagram_mode_length) != 0 ||
                 h3zero_query_parameter_string(queries, queries_length, "stream", 6,
-                    stream_mode, sizeof(stream_mode), &stream_mode_length) != 0) {
+                    stream_mode, sizeof(stream_mode), &stream_mode_length) != 0 ||
+                h3zero_query_parameter_string(queries, queries_length, "reason", 6,
+                    baton_ctx->lifecycle_close_reason,
+                    sizeof(baton_ctx->lifecycle_close_reason) - 1,
+                    &baton_ctx->lifecycle_close_reason_len) != 0) {
                 ret = -1;
             }
             else if (baton_ctx->version != WT_BATON_VERSION ||
@@ -982,7 +1080,9 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             else if (baton_ctx->stream_test_size > WT_BATON_MAX_STREAM_TEST_SIZE ||
                 baton_ctx->stream_test_count < 1 ||
                 baton_ctx->stream_test_count > WT_BATON_MAX_STREAM_TEST_COUNT ||
-                baton_ctx->stream_test_error_code > UINT32_MAX) {
+                baton_ctx->stream_test_error_code > UINT32_MAX ||
+                baton_ctx->lifecycle_close_error_code > UINT32_MAX ||
+                baton_ctx->lifecycle_close_reason_len > picowt_close_message_max) {
                 ret = -1;
             }
             else if (protocol_mode_length > 0) {
@@ -1081,6 +1181,11 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             baton_ctx->stream_test_size = 0;
             baton_ctx->stream_test_count = 1;
             baton_ctx->stream_test_error_code = 123;
+            baton_ctx->lifecycle_mode = wt_baton_lifecycle_none;
+            baton_ctx->lifecycle_close_error_code = 0;
+            baton_ctx->lifecycle_close_reason_len = 0;
+            baton_ctx->lifecycle_close_reason[0] = 0;
+            baton_ctx->lifecycle_close_reason_present = 0;
         }
         if (ret == 0 && app_ctx != NULL &&
             app_ctx->stream_test_mode != wt_baton_stream_test_none) {
@@ -1090,6 +1195,12 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             else if (baton_ctx->stream_test_mode != app_ctx->stream_test_mode) {
                 ret = -1;
             }
+        }
+        if (ret == 0 && app_ctx != NULL &&
+            app_ctx->lifecycle_mode != wt_baton_lifecycle_none) {
+            baton_ctx->lifecycle_mode = app_ctx->lifecycle_mode;
+            baton_ctx->lifecycle_close_reason[
+                baton_ctx->lifecycle_close_reason_len] = 0;
         }
 
         return ret;
@@ -1126,7 +1237,41 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                 stream_ctx->path_callback = wt_baton_callback;
                 stream_ctx->path_callback_ctx = baton_ctx;
                 baton_ctx->connection_ready = 1;
-                if (baton_ctx->stream_test_mode ==
+                if (baton_ctx->lifecycle_mode ==
+                    wt_baton_lifecycle_server_close_immediate ||
+                    baton_ctx->lifecycle_mode ==
+                    wt_baton_lifecycle_server_close_long_reason) {
+                    ret = wt_baton_send_lifecycle_close(cnx, baton_ctx);
+                }
+                else if (baton_ctx->lifecycle_mode ==
+                    wt_baton_lifecycle_server_drain) {
+                    ret = wt_baton_send_lifecycle_drain(cnx, stream_ctx);
+                }
+                else if (baton_ctx->lifecycle_mode ==
+                    wt_baton_lifecycle_server_fin_no_capsule) {
+                    ret = wt_baton_send_lifecycle_fin(cnx, baton_ctx,
+                        stream_ctx);
+                }
+                else if (baton_ctx->lifecycle_mode ==
+                    wt_baton_lifecycle_server_drain_then_close) {
+                    ret = wt_baton_send_lifecycle_drain(cnx, stream_ctx);
+                    if (ret == 0) {
+                        ret = wt_baton_send_lifecycle_close(cnx, baton_ctx);
+                    }
+                }
+                else if (baton_ctx->lifecycle_mode ==
+                    wt_baton_lifecycle_wait_for_browser_close) {
+                    /* Browser-close rows only need an accepted session; the
+                     * browser will send CLOSE_WEBTRANSPORT_SESSION.
+                     */
+                }
+                else if (baton_ctx->lifecycle_mode !=
+                    wt_baton_lifecycle_none) {
+                    /* Wait for the browser to send a stream byte after
+                     * WebTransport.ready before closing the session.
+                     */
+                }
+                else if (baton_ctx->stream_test_mode ==
                     wt_baton_stream_test_server_uni ||
                     baton_ctx->stream_test_mode ==
                     wt_baton_stream_test_server_bidi ||
@@ -1147,7 +1292,9 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     baton_ctx->initial_baton = (uint8_t)picoquic_public_uniform_random(32) + 128;
                 }
 
-                if (ret == 0 && baton_ctx->stream_test_mode ==
+                if (ret == 0 &&
+                    baton_ctx->lifecycle_mode == wt_baton_lifecycle_none &&
+                    baton_ctx->stream_test_mode ==
                     wt_baton_stream_test_none) {
                     for (size_t lane_id = 0; ret == 0 && lane_id < baton_ctx->nb_lanes; lane_id++) {
                         baton_ctx->lanes[lane_id].baton = (uint8_t)baton_ctx->initial_baton;
@@ -1510,7 +1657,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             break;
         case picohttp_callback_drain:
             if (!stream_ctx->ps.stream_state.is_fin_sent) {
-                ret = picowt_send_drain_session_message(cnx, stream_ctx);
+                ret = wt_baton_send_lifecycle_drain(cnx, stream_ctx);
             }
             break;
         case picohttp_callback_free: /* Used during clean up the stream. Only cause the freeing of memory. */
