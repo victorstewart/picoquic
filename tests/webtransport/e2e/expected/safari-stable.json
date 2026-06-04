@@ -291,6 +291,21 @@
           "streamTestFinReceivedMin": 0
         }
       }
+    },
+    {
+      "scenario": "close.browser-close-long-reason",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI completed the browser-originated maximum-length close reason row but did not expose the browser close capsule to pico_baton's server summary. Keep the browser close API path active while not claiming server-observable close-capsule counters for Safari stable on this long-reason lane.",
+      "evidence": "GitHub WebTransportBrowser run 26925275375, Safari job 79433957451, passed Safari baton smoke and reached close.browser-close-long-reason after Chrome, Edge, Firefox, and WPT had passed. The row failed only because server.closeSessionReceived was 0 instead of >= 1; the stricter short close.browser-close row passed earlier in the same Safari run.",
+      "expect": {
+        "server": {
+          "closeSessionReceivedMin": null,
+          "closeSessionReceivedError42Min": null
+        }
+      }
     }
   ]
 }
