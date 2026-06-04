@@ -1,0 +1,22 @@
+# Persisted H3 DATA stream fuzz corpus for h3zero_stream_fuzz_message().
+# Values are deterministic trial ranks replayed by h3zero_wt_fuzz_corpus.
+0
+1
+2
+3
+4
+5
+31
+63
+64
+65
+126
+127
+128
+255
+512
+1024
+2047
+0xdeadbeef
+0x12345678
+0xabcdef01

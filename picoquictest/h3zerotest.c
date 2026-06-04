@@ -2128,6 +2128,208 @@ int h3zero_stream_fuzz_test(void)
     return ret;
 }
 
+static int h3zero_stream_fuzz_corpus_one(uint8_t* packet_buffer, size_t buffer_size, uint64_t trial_rank)
+{
+    h3zero_data_stream_state_t stream_state = { 0 };
+    uint64_t error_found = 0;
+    size_t available_data = 0;
+    size_t p_len = h3zero_stream_fuzz_message(packet_buffer, buffer_size, (size_t)trial_rank);
+    uint8_t* p = packet_buffer;
+    uint8_t* p_max = packet_buffer + p_len;
+
+    while (p != NULL && p < p_max) {
+        available_data = 0;
+        if ((p = h3zero_parse_data_stream(p, p_max, &stream_state, &available_data, &error_found)) != NULL) {
+            p += available_data;
+        }
+    }
+
+    h3zero_delete_data_stream_state(&stream_state);
+    return 0;
+}
+
+static int h3zero_qpack_fuzz_corpus_one(uint8_t* bytes, size_t buffer_size,
+    size_t test_case_index, size_t test_case_length, size_t flip_byte, int flip_bit, int do_flip)
+{
+    int ret = 0;
+    uint8_t* parsed = bytes;
+    uint8_t* bytes_max = bytes + test_case_length;
+
+    if (test_case_index >= nb_qpack_test_case ||
+        test_case_length > qpack_test_case[test_case_index].bytes_length ||
+        test_case_length > buffer_size ||
+        (do_flip && (flip_byte >= test_case_length || flip_bit < 0 || flip_bit > 7))) {
+        ret = -1;
+    }
+    else {
+        memcpy(bytes, qpack_test_case[test_case_index].bytes, test_case_length);
+        if (do_flip) {
+            bytes[flip_byte] ^= (uint8_t)(1 << flip_bit);
+        }
+
+        while (ret == 0 && parsed != NULL && parsed < bytes_max) {
+            h3zero_header_parts_t parts = { 0 };
+            parsed = h3zero_parse_qpack_header_frame(parsed, bytes_max, &parts);
+            h3zero_release_header_parts(&parts);
+        }
+    }
+
+    return ret;
+}
+
+static int h3zero_parse_u64(char const* text, uint64_t* value)
+{
+    char* end = NULL;
+
+    while (*text == ' ' || *text == '\t') {
+        text++;
+    }
+
+    if (*text == 0) {
+        return -1;
+    }
+
+    *value = strtoull(text, &end, 0);
+    return (end == text) ? -1 : 0;
+}
+
+static int h3zero_open_corpus_file(FILE** F, char const* file_name)
+{
+    char path[512];
+    int ret = picoquic_get_input_path(path, sizeof(path), picoquic_solution_dir, file_name);
+
+    if (ret == 0 && (*F = picoquic_file_open(path, "r")) == NULL) {
+        DBG_PRINTF("Cannot open fuzz corpus file <%s>", path);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static int h3zero_replay_stream_fuzz_corpus(uint8_t* packet_buffer, size_t buffer_size)
+{
+    FILE* F = NULL;
+    char line[256];
+    int ret = h3zero_open_corpus_file(&F, "tests/webtransport/fuzz/corpus/h3zero-stream-trials.txt");
+    size_t nb_cases = 0;
+
+    while (ret == 0 && fgets(line, sizeof(line), F) != NULL) {
+        char* text = line;
+        uint64_t trial_rank = 0;
+
+        while (*text == ' ' || *text == '\t') {
+            text++;
+        }
+        if (*text == 0 || *text == '\n' || *text == '#') {
+            continue;
+        }
+
+        if (h3zero_parse_u64(text, &trial_rank) != 0 ||
+            h3zero_stream_fuzz_corpus_one(packet_buffer, buffer_size, trial_rank) != 0) {
+            DBG_PRINTF("Bad stream fuzz corpus line: %s", line);
+            ret = -1;
+        }
+        else {
+            nb_cases++;
+        }
+    }
+
+    if (F != NULL) {
+        fclose(F);
+    }
+    if (ret == 0 && nb_cases == 0) {
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static int h3zero_replay_qpack_fuzz_corpus(uint8_t* bytes, size_t buffer_size)
+{
+    FILE* F = NULL;
+    char line[256];
+    int ret = h3zero_open_corpus_file(&F, "tests/webtransport/fuzz/corpus/h3zero-qpack-cases.txt");
+    size_t nb_cases = 0;
+
+    while (ret == 0 && fgets(line, sizeof(line), F) != NULL) {
+        unsigned long long test_case_index = 0;
+        unsigned long long test_case_length = 0;
+        unsigned long long flip_byte = 0;
+        int flip_bit = -1;
+        int parsed = 0;
+        char* text = line;
+
+        while (*text == ' ' || *text == '\t') {
+            text++;
+        }
+        if (*text == 0 || *text == '\n' || *text == '#') {
+            continue;
+        }
+
+        if (strncmp(text, "truncate", 8) == 0) {
+            parsed = sscanf(text + 8, "%llu %llu", &test_case_index, &test_case_length);
+            if (parsed != 2 ||
+                h3zero_qpack_fuzz_corpus_one(bytes, buffer_size,
+                    (size_t)test_case_index, (size_t)test_case_length, 0, -1, 0) != 0) {
+                ret = -1;
+            }
+        }
+        else if (strncmp(text, "flip", 4) == 0) {
+            parsed = sscanf(text + 4, "%llu %llu %llu %d",
+                &test_case_index, &test_case_length, &flip_byte, &flip_bit);
+            if (parsed != 4 ||
+                h3zero_qpack_fuzz_corpus_one(bytes, buffer_size,
+                    (size_t)test_case_index, (size_t)test_case_length,
+                    (size_t)flip_byte, flip_bit, 1) != 0) {
+                ret = -1;
+            }
+        }
+        else {
+            ret = -1;
+        }
+
+        if (ret != 0) {
+            DBG_PRINTF("Bad QPACK fuzz corpus line: %s", line);
+        }
+        else {
+            nb_cases++;
+        }
+    }
+
+    if (F != NULL) {
+        fclose(F);
+    }
+    if (ret == 0 && nb_cases == 0) {
+        ret = -1;
+    }
+
+    return ret;
+}
+
+int h3zero_wt_fuzz_corpus_test(void)
+{
+    size_t buffer_size = 0x10000;
+    uint8_t* packet_buffer = malloc(buffer_size);
+    uint8_t* qpack_buffer = malloc(PICOQUIC_MAX_PACKET_SIZE);
+    int ret = (packet_buffer == NULL || qpack_buffer == NULL) ? -1 : 0;
+
+    if (ret == 0) {
+        ret = h3zero_replay_stream_fuzz_corpus(packet_buffer, buffer_size);
+    }
+    if (ret == 0) {
+        ret = h3zero_replay_qpack_fuzz_corpus(qpack_buffer, PICOQUIC_MAX_PACKET_SIZE);
+    }
+
+    if (packet_buffer != NULL) {
+        free(packet_buffer);
+    }
+    if (qpack_buffer != NULL) {
+        free(qpack_buffer);
+    }
+
+    return ret;
+}
+
 /*
  * Test the scenario parsing function
  */

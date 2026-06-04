@@ -1,0 +1,19 @@
+# Persisted QPACK parser fuzz corpus replayed by h3zero_wt_fuzz_corpus.
+# Format:
+#   truncate <qpack_test_case_index> <length>
+#   flip <qpack_test_case_index> <length> <byte_offset> <bit_index>
+truncate 0 0
+truncate 0 1
+truncate 0 2
+truncate 1 3
+truncate 2 5
+truncate 3 7
+truncate 4 9
+flip 0 4 0 0
+flip 0 4 1 3
+flip 1 7 2 5
+flip 2 4 1 1
+flip 3 4 2 7
+flip 4 4 2 2
+flip 5 3 1 6
+flip 6 4 2 4

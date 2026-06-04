@@ -39,9 +39,9 @@ jobs:
         run: |
           ./build/picohttp_ct -S . -n -r h3zero_setting_error
 
-      - name: Run WebTransport native wire/strict tests
+      - name: Run WebTransport native wire/strict/fuzz tests
         run: |
-          ctest --test-dir build -L 'wt_wire|wt_strict' --output-on-failure -j$(nproc)
+          ctest --test-dir build -L 'wt_wire|wt_strict|wt_fuzz' --output-on-failure -j$(nproc)
 
   native-wire-strict-sanitizers:
     name: Native WebTransport wire/strict ASAN/UBSAN
@@ -75,6 +75,6 @@ jobs:
         run: |
           ./build-sanitize/picohttp_ct -S . -n -r h3zero_setting_error
 
-      - name: Run sanitizer WebTransport native wire/strict tests
+      - name: Run sanitizer WebTransport native wire/strict/fuzz tests
         run: |
-          ctest --test-dir build-sanitize -L 'wt_wire|wt_strict' --output-on-failure -j$(nproc)
+          ctest --test-dir build-sanitize -L 'wt_wire|wt_strict|wt_fuzz' --output-on-failure -j$(nproc)

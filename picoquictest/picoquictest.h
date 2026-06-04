@@ -414,6 +414,7 @@ int h3zero_null_sni_test(void);
 int h3zero_qpack_fuzz_test(void);
 int h3zero_stream_test(void);
 int h3zero_stream_fuzz_test(void);
+int h3zero_wt_fuzz_corpus_test(void);
 int parse_demo_scenario_test(void);
 int h3zero_server_test(void);
 int h3zero_migration_disabled_test(void);
