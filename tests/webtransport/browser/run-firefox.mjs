@@ -905,6 +905,7 @@ function isServerSummaryLine(line) {
     line.includes("Sent WebTransport close session on stream") ||
     line.includes("Sent WebTransport drain session on stream") ||
     line.includes("Sent WebTransport control FIN without close capsule") ||
+    line.includes("Received WebTransport lifecycle trigger on stream") ||
     line.includes("Received empty WebTransport datagram on stream") ||
     line.includes("Received baton WebTransport datagram on stream") ||
     line.includes("Received sized WebTransport datagram on stream") ||
