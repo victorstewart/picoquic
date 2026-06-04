@@ -1022,39 +1022,21 @@
     },
     {
       "scenario": "drain.server-drain",
-      "status": "pass",
+      "status": "skip",
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Browser-originated lifecycle trigger and close-capsule observation after drain are nondeterministic in this Firefox stable lane, so keep the browser-visible drain signal and close path without requiring the server to observe those counters.",
-      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows and C205 reset/STOP rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737, 26914421909, 26917564358, and 26920504719. Existing Firefox positive-path entries document closeSessionReceived nondeterminism in runs 26802216963, 26835514645, 26835807876, and 26836125845. GitHub WebTransportBrowser run 26923501085, Firefox job 79428746844, reached drain.server-drain and failed only because server.lifecycleTriggerReceived was 0 instead of at least 1.",
-      "expect": {
-        "url": "https://127.0.0.1:4433/wt/drain/server-drain?protocol=optional",
-        "protocol": "",
-        "server": {
-          "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1,
-          "lifecycleTriggerReceivedMin": null,
-          "closeSessionReceivedMin": null
-        }
-      }
+      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows and does not provide stable server-observable WT_DRAIN_SESSION behavior in this lane. Do not claim the Firefox stable drain row until the browser lane can show server drain emission.",
+      "evidence": "GitHub WebTransportBrowser run 26923501085, Firefox job 79428746844, reached drain.server-drain and failed because server.lifecycleTriggerReceived was 0 instead of at least 1. Follow-up run 26923887484, Firefox job 79429909327, reached the same row after omitting the lifecycle trigger counter and failed because server.drainSessionSent was 0 instead of at least 1."
     },
     {
       "scenario": "drain.server-drain-then-close",
-      "status": "pass",
+      "status": "skip",
       "category": "browser-missing",
       "browserVersion": "151.0.3",
       "platform": "linux",
-      "reason": "Firefox 151.0.3 in GitHub Actions still uses the protocol=optional endpoint for stream-mode WebTransport rows because it does not provide a usable WT-Available-Protocols value in this lane. Keep the server drain-then-close row on the lifecycle path while not claiming selected WT-Protocol exposure.",
-      "evidence": "Same Firefox stream-mode compatibility path as the C201/C202 stream rows and C205 reset/STOP rows, which passed through protocol=optional in WebTransportBrowser runs 26913123737, 26914421909, 26917564358, and 26920504719.",
-      "expect": {
-        "url": "https://127.0.0.1:4433/wt/drain/server-drain-then-close?protocol=optional",
-        "protocol": "",
-        "server": {
-          "optionalProtocolAccepted": null,
-          "optionalProtocolAcceptedMin": 1
-        }
-      }
+      "reason": "Firefox 151.0.3 in GitHub Actions shares the same WT_DRAIN_SESSION compatibility limitation as drain.server-drain, so this lane does not claim the combined drain-then-close row.",
+      "evidence": "GitHub WebTransportBrowser runs 26923501085 and 26923887484 failed the preceding Firefox drain.server-drain row before this adjacent drain-then-close scenario could run. Both rows use the same Firefox protocol=optional stream-mode endpoint and server WT_DRAIN_SESSION emission path."
     },
     {
       "scenario": "session-gone.active-streams",
