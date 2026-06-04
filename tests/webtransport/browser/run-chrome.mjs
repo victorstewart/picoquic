@@ -12,6 +12,7 @@ const BATON = process.env.PICO_BATON_BIN || join(ROOT, "build", "pico_baton");
 const WEB_ROOT = process.env.PICOQUIC_WT_WEB_ROOT || join(ROOT, "tests", "webtransport", "browser");
 const PORT = Number(process.env.PICOQUIC_WT_PORT || 4433);
 const PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
+const REQUIRE_PROTOCOL = process.env.PICOQUIC_WT_REQUIRE_PROTOCOL !== "0";
 const REQUIRE_DATAGRAM = process.env.PICOQUIC_WT_REQUIRE_DATAGRAM !== "0";
 const USE_BYOB = process.env.PICOQUIC_WT_USE_BYOB !== "0";
 const DATAGRAM_RECEIVE_MODE = process.env.PICOQUIC_WT_DATAGRAM_RECEIVE_MODE || "baton";
@@ -259,6 +260,9 @@ function buildPageUrl(certificateHash) {
   url.searchParams.set("timeoutMs", String(TIMEOUT_MS));
   url.searchParams.set("url", WT_URL);
   url.searchParams.set("protocol", PROTOCOL);
+  if (!REQUIRE_PROTOCOL) {
+    url.searchParams.set("requireProtocol", "0");
+  }
   url.searchParams.set("certHash", certificateHash);
   url.searchParams.set("certHashAlg", CERT_HASH_ALG);
   if (!REQUIRE_DATAGRAM) {
@@ -475,7 +479,7 @@ function assertHarnessResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser harness failed: ${JSON.stringify(result)}`);
   }
-  if (result.protocol !== PROTOCOL) {
+  if (REQUIRE_PROTOCOL && result.protocol !== PROTOCOL) {
     throw new Error(`unexpected protocol: ${result.protocol}`);
   }
   if (result.requireDatagram !== REQUIRE_DATAGRAM ||
@@ -911,6 +915,9 @@ function isServerSummaryLine(line) {
     line.includes("WebTransport CONNECT origin rejected") ||
     line.includes("Rejecting malformed baton WebTransport CONNECT parameters") ||
     line.includes("Received web transport session capsule") ||
+    line.includes("Sent WebTransport close session on stream") ||
+    line.includes("Sent WebTransport drain session on stream") ||
+    line.includes("Sent WebTransport control FIN without close capsule") ||
     line.includes("Received empty WebTransport datagram on stream") ||
     line.includes("Received baton WebTransport datagram on stream") ||
     line.includes("Received sized WebTransport datagram on stream") ||

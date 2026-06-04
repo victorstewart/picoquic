@@ -77,6 +77,7 @@ const RAW_WT_URL = process.env.PICOQUIC_WT_URL ||
 const WT_URL = firefoxWtUrl(RAW_WT_URL);
 const REQUESTED_PROTOCOL = process.env.PICOQUIC_WT_PROTOCOL || "devious-baton-00";
 const PROTOCOL = FIREFOX_PROTOCOL_OPTIONAL ? "" : REQUESTED_PROTOCOL;
+const REQUIRE_PROTOCOL = process.env.PICOQUIC_WT_REQUIRE_PROTOCOL !== "0";
 const PAGE_URL = process.env.PICOQUIC_WT_PAGE_URL || "";
 
 const geckoDriverNames = [
@@ -293,7 +294,7 @@ function buildPageUrl(pageUrl, certificateHash) {
   url.searchParams.set("timeoutMs", String(TIMEOUT_MS));
   url.searchParams.set("url", WT_URL);
   url.searchParams.set("protocol", REQUESTED_PROTOCOL);
-  if (useFirefoxProtocolOptionalEndpoint()) {
+  if (!REQUIRE_PROTOCOL || useFirefoxProtocolOptionalEndpoint()) {
     url.searchParams.set("requireProtocol", "0");
   }
   url.searchParams.set("certHash", certificateHash);
@@ -556,7 +557,7 @@ function assertHarnessResult(result) {
   if (!result || result.ok !== true) {
     throw new Error(`browser harness failed: ${JSON.stringify(result)}`);
   }
-  if (result.protocol !== PROTOCOL) {
+  if (REQUIRE_PROTOCOL && result.protocol !== PROTOCOL) {
     throw new Error(`unexpected protocol: ${result.protocol}`);
   }
   if (result.requireDatagram !== REQUIRE_DATAGRAM ||
@@ -901,6 +902,9 @@ function isServerSummaryLine(line) {
     line.includes("WebTransport CONNECT origin rejected") ||
     line.includes("Rejecting malformed baton WebTransport CONNECT parameters") ||
     line.includes("Received web transport session capsule") ||
+    line.includes("Sent WebTransport close session on stream") ||
+    line.includes("Sent WebTransport drain session on stream") ||
+    line.includes("Sent WebTransport control FIN without close capsule") ||
     line.includes("Received empty WebTransport datagram on stream") ||
     line.includes("Received baton WebTransport datagram on stream") ||
     line.includes("Received sized WebTransport datagram on stream") ||

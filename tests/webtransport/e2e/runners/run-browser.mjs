@@ -981,6 +981,7 @@ async function runScenario(browser, scenario, vars) {
     ...process.env,
     PICOQUIC_WT_URL: rendered.wtUrl,
     PICOQUIC_WT_PROTOCOL: rendered.protocol || "devious-baton-00",
+    PICOQUIC_WT_REQUIRE_PROTOCOL: hasExpectedValue(scenarioExpect, "protocol") ? "1" : "0",
     PICOQUIC_WT_REQUIRE_DATAGRAM: rendered.requireDatagram === false ? "0" : "1",
     PICOQUIC_WT_USE_BYOB: rendered.useByob === false ? "0" : "1",
     PICOQUIC_WT_DATAGRAM_RECEIVE_MODE: rendered.datagramReceiveMode || "baton",

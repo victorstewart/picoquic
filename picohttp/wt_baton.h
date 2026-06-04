@@ -198,6 +198,7 @@ extern "C" {
         size_t lifecycle_close_reason_len;
         uint8_t lifecycle_close_reason[picowt_close_message_max + 1];
         unsigned int lifecycle_close_reason_present : 1;
+        unsigned int lifecycle_control_sent : 1;
         char wt_protocol[256];
     } wt_baton_ctx_t;
 
