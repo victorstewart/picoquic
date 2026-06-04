@@ -917,7 +917,6 @@ static int picowt_coexist_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size_t l
             break;
         case picohttp_callback_connect:
             wt_ctx->server_connects++;
-            ret = picowt_select_wt_protocol(stream_ctx, PICOWT_BATON_ALPN_FILTER);
             break;
         case picohttp_callback_connect_accepted:
             wt_ctx->client_accepted++;
@@ -1111,7 +1110,7 @@ int picowt_h3_coexistence_test(void)
     if (ret == 0) {
         ret = picowt_connect(test_ctx->cnx_client, h3zero_cb, control_stream_ctx,
             PICOQUIC_TEST_SNI, "/coexist", picowt_coexist_callback, &wt_ctx,
-            PICOWT_BATON_ALPN_AVAILABLE);
+            NULL);
     }
     if (ret == 0) {
         phase = "run wt connect";
