@@ -211,6 +211,23 @@
       }
     },
     {
+      "scenario": "datagrams.server-lossy-one",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "26.4",
+      "platform": "macOS",
+      "reason": "Safari 26.4 CI delivered the loss-tolerant 64-attempt server datagram row but reported the client stream sent-baton values as [252,0,254]. Keep this lossy row active while not claiming strict browser-visible sent-baton ordering for Safari on the lossy datagram path.",
+      "evidence": "GitHub WebTransportBrowser run 26924878809, Safari job 79432797585, failed datagrams.server-lossy-one only because the sent array was [252,0,254] instead of [252,254,0]. The same result proved connectAccepted=1, a server-observed baton datagram, All ZERO baton on stream 1, and a server WT_CLOSE_SESSION.",
+      "expect": {
+        "sent": null,
+        "sentVariants": [
+          [252, 254, 0],
+          [252, 0, 254]
+        ],
+        "sequenceOrderMatters": false
+      }
+    },
+    {
       "scenario": "datagrams.server-burst-one",
       "status": "pass",
       "category": "browser-bug",
