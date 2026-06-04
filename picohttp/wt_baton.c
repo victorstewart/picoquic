@@ -1436,7 +1436,7 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
         h3zero_stream_ctx_t * control_stream_ctx,
         void* v_ctx)
     {
-        h3zero_callback_ctx_t* h3_ctx = (h3zero_callback_ctx_t*)picoquic_get_callback_context(cnx);
+        h3zero_callback_ctx_t* h3_ctx = control_stream_ctx->ps.stream_state.h3_ctx;
         wt_baton_ctx_t* baton_ctx = (wt_baton_ctx_t*)v_ctx;
 
         picowt_deregister(cnx, h3_ctx, control_stream_ctx);

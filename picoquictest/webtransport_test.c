@@ -832,6 +832,7 @@ typedef struct st_picowt_coexist_wt_ctx_t {
     int client_refused;
     int server_connects;
     int close_events;
+    int deregister_events;
 } picowt_coexist_wt_ctx_t;
 
 typedef struct st_picowt_coexist_client_ctx_t {
@@ -926,6 +927,10 @@ static int picowt_coexist_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size_t l
             break;
         case picohttp_callback_post_fin:
             wt_ctx->close_events++;
+            break;
+        case picohttp_callback_deregister:
+            wt_ctx->deregister_events++;
+            picowt_deregister(cnx, stream_ctx->ps.stream_state.h3_ctx, stream_ctx);
             break;
         default:
             break;
@@ -3753,11 +3758,8 @@ static int picowt_abort_session_callback(picoquic_cnx_t* cnx,
     (void)length;
 
     if (wt_event == picohttp_callback_deregister) {
-        h3zero_callback_ctx_t* h3_ctx =
-            (h3zero_callback_ctx_t*)picoquic_get_callback_context(cnx);
-
         test_ctx->nb_deregister++;
-        picowt_deregister(cnx, h3_ctx, stream_ctx);
+        picowt_deregister(cnx, stream_ctx->ps.stream_state.h3_ctx, stream_ctx);
     }
 
     return 0;
@@ -5217,11 +5219,8 @@ static int picowt_max_data_callback(picoquic_cnx_t* cnx,
         test_ctx->nb_reset++;
     }
     else if (wt_event == picohttp_callback_deregister) {
-        h3zero_callback_ctx_t* h3_ctx =
-            (h3zero_callback_ctx_t*)picoquic_get_callback_context(cnx);
-
         test_ctx->nb_deregister++;
-        picowt_deregister(cnx, h3_ctx, stream_ctx);
+        picowt_deregister(cnx, stream_ctx->ps.stream_state.h3_ctx, stream_ctx);
     }
 
     return 0;

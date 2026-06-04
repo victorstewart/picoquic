@@ -457,11 +457,7 @@ void h3zero_delete_stream_prefix(picoquic_cnx_t * cnx, h3zero_callback_ctx_t* ct
 		/* find stream context */
 		if (prefix_ctx->function_call != NULL) {
 			/* Find the control stream context */
-			h3zero_stream_ctx_t* stream_ctx = NULL;
-		    h3zero_callback_ctx_t* h3_ctx = (h3zero_callback_ctx_t*)picoquic_get_callback_context(cnx);
-			if (h3_ctx != NULL) {
-				stream_ctx = h3zero_find_stream(h3_ctx, prefix_ctx->prefix);
-			}
+			h3zero_stream_ctx_t* stream_ctx = h3zero_find_stream(ctx, prefix_ctx->prefix);
 			if (stream_ctx != NULL) {
 				prefix_ctx->function_call(cnx, NULL, 0, picohttp_callback_deregister, stream_ctx, prefix_ctx->function_ctx);
 			}
