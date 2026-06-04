@@ -814,6 +814,385 @@ static int picowt_accept_only_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size
     return 0;
 }
 
+typedef struct st_picowt_coexist_http_obs_t {
+    uint64_t stream_id;
+    uint64_t min_body;
+    int expected_status;
+    int header_seen;
+    int fin_seen;
+    int parse_error;
+    int status;
+    uint64_t body_received;
+    h3zero_data_stream_state_t parser;
+} picowt_coexist_http_obs_t;
+
+typedef struct st_picowt_coexist_wt_ctx_t {
+    int client_connecting;
+    int client_accepted;
+    int client_refused;
+    int server_connects;
+    int close_events;
+} picowt_coexist_wt_ctx_t;
+
+typedef struct st_picowt_coexist_client_ctx_t {
+    h3zero_callback_ctx_t* h3_ctx;
+    picowt_coexist_http_obs_t* http_obs;
+    size_t nb_http_obs;
+} picowt_coexist_client_ctx_t;
+
+static int picowt_coexist_http_done(const picowt_coexist_http_obs_t* obs)
+{
+    return (obs->parse_error == 0 && obs->header_seen && obs->fin_seen &&
+        obs->status == obs->expected_status && obs->body_received >= obs->min_body);
+}
+
+static void picowt_coexist_observe_response(picowt_coexist_http_obs_t* obs,
+    uint8_t* bytes, size_t length, picoquic_call_back_event_t fin_or_event)
+{
+    uint8_t* bytes_max = bytes + length;
+
+    while (!obs->parse_error && bytes < bytes_max) {
+        uint64_t error_found = 0;
+        size_t available_data = 0;
+        bytes = h3zero_parse_data_stream(bytes, bytes_max, &obs->parser,
+            &available_data, &error_found);
+        if (bytes == NULL) {
+            obs->parse_error = 1;
+        }
+        else {
+            if (!obs->header_seen && obs->parser.header_found) {
+                obs->header_seen = 1;
+                obs->status = obs->parser.header.status;
+            }
+            if (available_data > 0) {
+                obs->body_received += available_data;
+                bytes += available_data;
+            }
+        }
+    }
+    if (fin_or_event == picoquic_callback_stream_fin) {
+        obs->fin_seen = 1;
+    }
+}
+
+static int picowt_coexist_client_callback(picoquic_cnx_t* cnx,
+    uint64_t stream_id, uint8_t* bytes, size_t length,
+    picoquic_call_back_event_t fin_or_event, void* callback_ctx, void* v_stream_ctx)
+{
+    picowt_coexist_client_ctx_t* coexist_ctx = (picowt_coexist_client_ctx_t*)callback_ctx;
+
+    if ((fin_or_event == picoquic_callback_stream_data ||
+        fin_or_event == picoquic_callback_stream_fin) &&
+        coexist_ctx != NULL && bytes != NULL) {
+        for (size_t i = 0; i < coexist_ctx->nb_http_obs; i++) {
+            if (coexist_ctx->http_obs[i].stream_id == stream_id) {
+                picowt_coexist_observe_response(&coexist_ctx->http_obs[i],
+                    bytes, length, fin_or_event);
+                break;
+            }
+        }
+    }
+
+    return h3zero_callback(cnx, stream_id, bytes, length, fin_or_event,
+        coexist_ctx->h3_ctx, v_stream_ctx);
+}
+
+static int picowt_coexist_callback(picoquic_cnx_t* cnx, uint8_t* bytes, size_t length,
+    picohttp_call_back_event_t wt_event, h3zero_stream_ctx_t* stream_ctx, void* path_app_ctx)
+{
+    picowt_coexist_wt_ctx_t* wt_ctx = (picowt_coexist_wt_ctx_t*)path_app_ctx;
+    int ret = 0;
+
+    (void)bytes;
+    (void)length;
+
+    if (wt_ctx == NULL) {
+        ret = -1;
+    }
+    else {
+        switch (wt_event) {
+        case picohttp_callback_connecting:
+            wt_ctx->client_connecting++;
+            break;
+        case picohttp_callback_connect:
+            wt_ctx->server_connects++;
+            ret = picowt_select_wt_protocol(stream_ctx, PICOWT_BATON_ALPN_FILTER);
+            break;
+        case picohttp_callback_connect_accepted:
+            wt_ctx->client_accepted++;
+            break;
+        case picohttp_callback_connect_refused:
+            wt_ctx->client_refused++;
+            break;
+        case picohttp_callback_post_fin:
+            wt_ctx->close_events++;
+            break;
+        default:
+            break;
+        }
+    }
+
+    (void)cnx;
+    return ret;
+}
+
+static int picowt_coexist_queue_http(picoquic_cnx_t* cnx,
+    h3zero_callback_ctx_t* h3_ctx, picowt_coexist_http_obs_t* obs,
+    const char* path, uint64_t post_size, uint64_t min_body)
+{
+    uint8_t buffer[1024];
+    size_t consumed = 0;
+    uint64_t stream_id = picoquic_get_next_local_stream_id(cnx, 0);
+    h3zero_stream_ctx_t* stream_ctx = h3zero_find_or_create_stream(cnx,
+        stream_id, h3_ctx, 1, 1);
+    int ret = 0;
+
+    memset(obs, 0, sizeof(picowt_coexist_http_obs_t));
+    obs->stream_id = stream_id;
+    obs->expected_status = 200;
+    obs->min_body = min_body;
+
+    if (stream_ctx == NULL ||
+        picoquic_set_app_stream_ctx(cnx, stream_id, stream_ctx) != 0 ||
+        h3zero_client_create_stream_request(buffer, sizeof(buffer),
+            (const uint8_t*)path, strlen(path), post_size,
+            PICOQUIC_TEST_SNI, &consumed) != 0) {
+        ret = -1;
+    }
+    else {
+        stream_ctx->is_open = 1;
+        stream_ctx->post_size = post_size;
+        h3_ctx->nb_open_streams++;
+        ret = picoquic_add_to_stream_with_ctx(cnx, stream_id, buffer,
+            consumed, (post_size == 0), stream_ctx);
+        if (ret == 0 && post_size > 0) {
+            ret = picoquic_mark_active_stream(cnx, stream_id, 1, stream_ctx);
+        }
+    }
+
+    return ret;
+}
+
+static int picowt_coexist_drive(picoquic_test_tls_api_ctx_t* test_ctx,
+    uint64_t* simulated_time, picowt_coexist_http_obs_t* http_obs,
+    size_t nb_http_obs, picowt_coexist_wt_ctx_t* wt_ctx,
+    int min_client_accepted, int min_server_connects, int min_close_events)
+{
+    uint64_t time_out = *simulated_time + 30000000;
+    int nb_trials = 0;
+    int was_active = 0;
+    int ret = 0;
+
+    while (ret == 0 && picoquic_get_cnx_state(test_ctx->cnx_client) != picoquic_state_disconnected) {
+        int is_done = 1;
+
+        for (size_t i = 0; i < nb_http_obs; i++) {
+            is_done &= picowt_coexist_http_done(&http_obs[i]);
+        }
+        if (wt_ctx != NULL) {
+            is_done &= (wt_ctx->client_accepted >= min_client_accepted &&
+                wt_ctx->server_connects >= min_server_connects &&
+                wt_ctx->close_events >= min_close_events &&
+                wt_ctx->client_refused == 0);
+        }
+        if (is_done) {
+            break;
+        }
+
+        ret = tls_api_one_sim_round(test_ctx, simulated_time, time_out, &was_active);
+        if (ret != 0) {
+            DBG_PRINTF("Coexistence simulation error after %d trials", nb_trials);
+            break;
+        }
+        if (++nb_trials > 100000) {
+            DBG_PRINTF("%s", "Coexistence simulation did not converge");
+            ret = -1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
+static int picowt_coexist_no_connection_error(picoquic_test_tls_api_ctx_t* test_ctx)
+{
+    return (test_ctx != NULL && test_ctx->cnx_client != NULL &&
+        test_ctx->cnx_client->remote_error == 0 &&
+        test_ctx->cnx_client->local_error == 0 &&
+        test_ctx->cnx_client->application_error == 0);
+}
+
+static void picowt_coexist_release_http_obs(picowt_coexist_http_obs_t* obs, size_t nb_obs)
+{
+    for (size_t i = 0; i < nb_obs; i++) {
+        h3zero_delete_data_stream_state(&obs[i].parser);
+    }
+}
+
+int picowt_h3_coexistence_test(void)
+{
+    uint64_t simulated_time = 0;
+    uint64_t loss_mask = 0;
+    picoquic_test_tls_api_ctx_t* test_ctx = NULL;
+    h3zero_callback_ctx_t* h3zero_cb = NULL;
+    h3zero_stream_ctx_t* control_stream_ctx = NULL;
+    picohttp_server_parameters_t server_param = { 0 };
+    picowt_coexist_http_obs_t http_obs[4] = { 0 };
+    picowt_coexist_wt_ctx_t wt_ctx = { 0 };
+    picowt_coexist_client_ctx_t client_ctx = { 0 };
+    picohttp_server_path_item_t path_table[1] = {
+        { "/coexist", 8, picowt_coexist_callback, &wt_ctx,
+            H3ZERO_WEBTRANSPORT_H3_PROTOCOL,
+            sizeof(H3ZERO_WEBTRANSPORT_H3_PROTOCOL) - 1, 0,
+            h3zero_origin_validator_allow_all, NULL }
+    };
+    picoquic_connection_id_t initial_cid = { { 0x77, 0x74, 0xba, 0x23, 0, 0, 0, 0 }, 8 };
+    const char* phase = "init";
+    int ret = tls_api_init_ctx_ex(&test_ctx,
+        PICOQUIC_INTERNAL_TEST_VERSION_1, PICOQUIC_TEST_SNI, "h3",
+        &simulated_time, NULL, NULL, 0, 1, 0, &initial_cid);
+
+    phase = "prepare contexts";
+    if (ret == 0) {
+        picowt_set_default_transport_parameters(test_ctx->qserver);
+        picowt_set_transport_parameters(test_ctx->cnx_client);
+        ret = picowt_prepare_client_cnx(test_ctx->qclient, (struct sockaddr*)NULL,
+            &test_ctx->cnx_client, &h3zero_cb, &control_stream_ctx,
+            simulated_time, PICOQUIC_TEST_SNI);
+    }
+    phase = "configure callbacks";
+    if (ret == 0) {
+        h3zero_cb->no_disk = 1;
+        h3zero_cb->no_print = 1;
+        client_ctx.h3_ctx = h3zero_cb;
+        client_ctx.http_obs = http_obs;
+        client_ctx.nb_http_obs = 4;
+        picoquic_set_callback(test_ctx->cnx_client,
+            picowt_coexist_client_callback, &client_ctx);
+
+        server_param.path_table = path_table;
+        server_param.path_table_nb = 1;
+        picoquic_set_alpn_select_fn_v2(test_ctx->qserver,
+            picoquic_demo_server_callback_select_alpn);
+        picoquic_set_default_callback(test_ctx->qserver, h3zero_callback,
+            &server_param);
+        ret = picoquic_start_client_cnx(test_ctx->cnx_client);
+    }
+    phase = "h3 settings";
+    if (ret == 0) {
+        ret = tls_api_connection_loop(test_ctx, &loss_mask, 0, &simulated_time);
+    }
+    if (ret == 0 && !h3zero_cb->settings.settings_received) {
+        ret = -1;
+    }
+
+    phase = "queue pre-wt get";
+    if (ret == 0) {
+        ret = picowt_coexist_queue_http(test_ctx->cnx_client, h3zero_cb,
+            &http_obs[0], "/128", 0, 128);
+    }
+    phase = "run pre-wt get";
+    if (ret == 0) {
+        ret = picowt_coexist_drive(test_ctx, &simulated_time,
+            &http_obs[0], 1, NULL, 0, 0, 0);
+    }
+    if (ret == 0 && !picowt_coexist_no_connection_error(test_ctx)) {
+        phase = "after pre-wt get";
+        ret = -1;
+    }
+    if (ret == 0) {
+        phase = "queue wt connect";
+    }
+    if (ret == 0) {
+        ret = picowt_connect(test_ctx->cnx_client, h3zero_cb, control_stream_ctx,
+            PICOQUIC_TEST_SNI, "/coexist", picowt_coexist_callback, &wt_ctx,
+            PICOWT_BATON_ALPN_AVAILABLE);
+    }
+    if (ret == 0) {
+        phase = "run wt connect";
+    }
+    if (ret == 0) {
+        ret = picowt_coexist_drive(test_ctx, &simulated_time, NULL, 0,
+            &wt_ctx, 1, 1, 0);
+    }
+    if (ret == 0 && !picowt_coexist_no_connection_error(test_ctx)) {
+        phase = "after wt connect";
+        ret = -1;
+    }
+    if (ret == 0) {
+        phase = "queue concurrent get";
+    }
+    if (ret == 0) {
+        ret = picowt_coexist_queue_http(test_ctx->cnx_client, h3zero_cb,
+            &http_obs[1], "/256", 0, 256);
+    }
+    if (ret == 0) {
+        phase = "queue concurrent post";
+    }
+    if (ret == 0) {
+        ret = picowt_coexist_queue_http(test_ctx->cnx_client, h3zero_cb,
+            &http_obs[2], "/post", 17, 1);
+    }
+    if (ret == 0) {
+        phase = "run concurrent http";
+    }
+    if (ret == 0) {
+        ret = picowt_coexist_drive(test_ctx, &simulated_time,
+            &http_obs[1], 2, &wt_ctx, 1, 1, 0);
+    }
+    if (ret == 0 && !picowt_coexist_no_connection_error(test_ctx)) {
+        phase = "after concurrent http";
+        ret = -1;
+    }
+    if (ret == 0) {
+        phase = "queue follow-up get";
+    }
+    if (ret == 0) {
+        ret = picowt_coexist_queue_http(test_ctx->cnx_client, h3zero_cb,
+            &http_obs[3], "/64", 0, 64);
+    }
+    if (ret == 0) {
+        phase = "run follow-up get";
+    }
+    if (ret == 0) {
+        ret = picowt_coexist_drive(test_ctx, &simulated_time,
+            &http_obs[3], 1, &wt_ctx, 1, 1, 0);
+    }
+    if (ret == 0 && !picowt_coexist_no_connection_error(test_ctx)) {
+        phase = "after follow-up get";
+        ret = -1;
+    }
+    if (ret == 0) {
+        phase = "verify errors";
+    }
+    if (ret == 0 && (test_ctx->cnx_client->remote_error != 0 ||
+        test_ctx->cnx_client->local_error != 0 ||
+        test_ctx->cnx_client->application_error != 0)) {
+        ret = -1;
+    }
+    if (ret != 0) {
+        DBG_PRINTF("C35 coexistence failed in phase %s: ret=%d, app=%" PRIu64
+            ", local=%" PRIu64 ", remote=%" PRIu64,
+            phase, ret,
+            (test_ctx == NULL || test_ctx->cnx_client == NULL) ? 0 : test_ctx->cnx_client->application_error,
+            (test_ctx == NULL || test_ctx->cnx_client == NULL) ? 0 : test_ctx->cnx_client->local_error,
+            (test_ctx == NULL || test_ctx->cnx_client == NULL) ? 0 : test_ctx->cnx_client->remote_error);
+    }
+
+    if (test_ctx != NULL && test_ctx->cnx_client != NULL) {
+        picoquic_set_callback(test_ctx->cnx_client, NULL, NULL);
+    }
+    picowt_coexist_release_http_obs(http_obs, 4);
+    if (h3zero_cb != NULL) {
+        h3zero_callback_delete_context(test_ctx->cnx_client, h3zero_cb);
+    }
+    if (test_ctx != NULL) {
+        tls_api_delete_ctx(test_ctx);
+    }
+
+    return ret;
+}
+
 int picowt_baton_protocol_test(void)
 {
     int ret = picowt_baton_test_one_ex(10, "/baton?baton=240", 0, 2000000, NULL, NULL,

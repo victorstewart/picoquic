@@ -796,6 +796,7 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     add_picohttp_labeled_test(picowt_baton_protocol wt_strict)
     add_picohttp_labeled_test(picowt_baton_protocol_compat wt_compat)
     add_picohttp_labeled_test(picowt_chrome_legacy_connect wt_compat)
+    add_picohttp_labeled_test(picowt_h3_coexistence wt_strict wt_wire)
 
     find_program(NODE_EXECUTABLE node)
     if(NODE_EXECUTABLE)
