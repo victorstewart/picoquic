@@ -38,6 +38,21 @@
       "platform": "linux",
       "reason": "Edge stable does not currently claim repeated browser-to-server datagram delivery. The one-byte repeated row delivered only one server-observable datagram before timeout, so the stricter large repeated row remains unclaimed in this lane.",
       "evidence": "GitHub WebTransportBrowser run 26863452355, Edge job 79221931483, timed out on datagrams.client-repeat-one before datagrams.client-repeat-large could run. The large row depends on the same repeated browser-to-server datagram write behavior."
+    },
+    {
+      "scenario": "reset.browser-cancel-incoming-uni",
+      "status": "pass",
+      "category": "browser-bug",
+      "browserVersion": "148.0.3967.83",
+      "platform": "linux",
+      "reason": "Edge stable completed the browser-visible incoming unidirectional cancel row, but did not reliably produce a server-observable WebTransport-mapped STOP_SENDING frame in consecutive full core runs. Keep the row active while not claiming the server STOP_SENDING counter in this lane.",
+      "evidence": "GitHub WebTransportBrowser run 26921803310, Edge job 79423629250, and run 26922447204, Edge job 79425550524, both failed reset.browser-cancel-incoming-uni only because server.stopSendingReceived was 0 instead of at least 1.",
+      "expect": {
+        "server": {
+          "stopSendingReceivedMin": null,
+          "stopSendingAppError123Min": null
+        }
+      }
     }
   ]
 }

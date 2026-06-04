@@ -776,7 +776,17 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
             }
         }
         else if (baton_ctx->lifecycle_mode ==
-            wt_baton_lifecycle_server_close_on_stream) {
+            wt_baton_lifecycle_server_close_immediate ||
+            baton_ctx->lifecycle_mode ==
+            wt_baton_lifecycle_server_close_on_stream ||
+            baton_ctx->lifecycle_mode ==
+            wt_baton_lifecycle_server_close_long_reason ||
+            baton_ctx->lifecycle_mode ==
+            wt_baton_lifecycle_server_fin_no_capsule ||
+            baton_ctx->lifecycle_mode ==
+            wt_baton_lifecycle_server_drain ||
+            baton_ctx->lifecycle_mode ==
+            wt_baton_lifecycle_server_drain_then_close) {
             if (length > 0 || is_fin) {
                 h3zero_stream_ctx_t* control_stream_ctx =
                     h3zero_find_stream(baton_ctx->h3_ctx,
@@ -1288,7 +1298,8 @@ int wt_baton_stream_data(picoquic_cnx_t* cnx,
                     wt_baton_lifecycle_server_fin_no_capsule ||
                     baton_ctx->lifecycle_mode ==
                     wt_baton_lifecycle_server_drain_then_close) {
-                    /* Defer lifecycle control frames until picohttp_callback_drain.
+                    /* Defer lifecycle control frames until the browser sends a
+                     * lifecycle trigger stream after WebTransport.ready.
                      * Chrome 148/Edge 148 can close with "Unexpected DATA frame
                      * received" if a close capsule is queued before CONNECT is
                      * visibly accepted by the browser.

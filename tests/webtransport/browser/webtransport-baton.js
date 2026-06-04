@@ -1330,7 +1330,7 @@
         var stopUni = await transport.createUnidirectionalStream();
         await writeByteAndExpectStop(stopUni, "server-stop-uni");
       } else if (result.streamMode === "server-close-immediate") {
-        note("server close wait server-close-immediate");
+        await writeLifecycleTrigger("server-close-immediate");
       } else if (result.streamMode === "server-close-after-ready") {
         await writeLifecycleTrigger("server-close-after-ready");
       } else if (result.streamMode === "browser-close") {
@@ -1340,13 +1340,15 @@
         transport.close({ closeCode: 42, reason: closeReason(1024) });
         note("browser close called browser-close-long-reason");
       } else if (result.streamMode === "server-close-long-reason") {
-        note("server close wait server-close-long-reason");
+        await writeLifecycleTrigger("server-close-long-reason");
       } else if (result.streamMode === "fin-no-capsule") {
-        note("server fin wait fin-no-capsule");
+        await writeLifecycleTrigger("fin-no-capsule");
       } else if (result.streamMode === "server-drain") {
+        await writeLifecycleTrigger("server-drain");
         await waitForDrainingSignal("server-drain");
         transport.close({ closeCode: 0, reason: "drain-complete" });
       } else if (result.streamMode === "server-drain-then-close") {
+        await writeLifecycleTrigger("server-drain-then-close");
         await waitForDrainingSignal("server-drain-then-close");
       } else if (result.streamMode === "session-gone-active-streams") {
         await writeLifecycleTrigger("session-gone-active-streams");

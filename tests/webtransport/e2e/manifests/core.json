@@ -4822,6 +4822,7 @@
         "useByob": false,
         "streamMode": "server-close-immediate",
         "eventsInclude": [
+          "lifecycle trigger server-close-immediate",
           "closed"
         ],
         "server": {
@@ -4831,6 +4832,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
           "closeSessionSentMin": 1
         }
       }
@@ -4993,6 +4995,7 @@
         "useByob": false,
         "streamMode": "server-close-long-reason",
         "eventsInclude": [
+          "lifecycle trigger server-close-long-reason",
           "closed"
         ],
         "server": {
@@ -5002,6 +5005,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
           "closeSessionSentMin": 1
         }
       }
@@ -5030,6 +5034,7 @@
         "useByob": false,
         "streamMode": "fin-no-capsule",
         "eventsInclude": [
+          "lifecycle trigger fin-no-capsule",
           "closed"
         ],
         "server": {
@@ -5039,6 +5044,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
           "controlFinNoCapsuleSentMin": 1
         }
       }
@@ -5070,6 +5076,7 @@
         "streamMode": "server-drain",
         "eventsInclude": [
           "ready",
+          "lifecycle trigger server-drain",
           "draining checked server-drain",
           "closed"
         ],
@@ -5080,6 +5087,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
           "drainSessionSentMin": 1,
           "closeSessionReceivedMin": 1
         }
@@ -5110,6 +5118,7 @@
         "useByob": false,
         "streamMode": "server-drain-then-close",
         "eventsInclude": [
+          "lifecycle trigger server-drain-then-close",
           "draining checked server-drain-then-close",
           "closed"
         ],
@@ -5120,6 +5129,7 @@
           "originRejected": 0,
           "packetsReceivedMin": 1,
           "packetsSentMin": 1,
+          "lifecycleTriggerReceivedMin": 1,
           "drainSessionSentMin": 1,
           "closeSessionSentMin": 1
         }
