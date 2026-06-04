@@ -1159,9 +1159,16 @@
           result.streamFinSent += 1;
           note("lifecycle trigger fin " + label);
         } catch (error) {
-          if (!isSessionClosedError(error)) {
+          var text = errorText(error).toLowerCase();
+          if (!isSessionClosedError(error) &&
+            text.indexOf("writable stream that is closed or errored") < 0) {
             throw error;
           }
+          /* Safari 26.4 in GitHub Actions run 26924318861 job 79431177366
+           * delivered the lifecycle trigger to pico_baton and received the
+           * server WT_CLOSE_SESSION before writer.close() settled, then
+           * rejected writer.close() because the stream was already closed.
+           */
           note("lifecycle trigger closed " + label);
         }
       } finally {
