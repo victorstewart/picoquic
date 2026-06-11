@@ -110,9 +110,15 @@ extern "C" {
         picohttp_post_data_cb_fn path_callback;
         void* path_callback_ctx;
         uint8_t frame[PICOHTTP_SERVER_FRAME_MAX];
+        char* pending_connect_authority;
+        char* pending_connect_path;
+        char* pending_connect_wt_available_protocols;
+        uint8_t* pending_connect_extra;
+        size_t pending_connect_extra_length;
         /* Client state management */
         unsigned int is_open : 1; /* The client has initiated this stream */
         unsigned int flow_opened : 1; /* Flow control parameters updated to allow receiving expected data */
+        unsigned int is_connect_pending : 1;
         uint64_t received_length;
         uint64_t post_size;
         uint64_t post_sent;
@@ -143,6 +149,7 @@ extern "C" {
 
     void* picohttp_stream_node_value(picosplay_node_t* node);
     void h3zero_init_stream_tree(picosplay_tree_t* h3_stream_tree);
+    void h3zero_clear_pending_connect(h3zero_stream_ctx_t* stream_ctx);
 
     /* Handling of capsules */
 #define h3zero_capsule_type_datagram 0x00

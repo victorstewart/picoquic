@@ -53,6 +53,9 @@ extern "C" {
 #define H3ZERO_WEBTRANSPORT_APPLICATION_ERROR(code) (0x52e4a40fa8dbull + code) /* see spec for skipping grease points when mapping codes */
 #define H3ZERO_USER_AGENT_STRING "H3Zero/1.0"
 
+#define H3ZERO_WEBTRANSPORT_H3_PROTOCOL "webtransport-h3"
+#define H3ZERO_WEBTRANSPORT_H3_PROTOCOL_OLD "webtransport"
+
 #define H3ZERO_WT_AVAILABLE_PROTOCOLS "wt-available-protocols"
 #define H3ZERO_WT_PROTOCOL "wt-protocol"
 
@@ -222,6 +225,7 @@ typedef struct st_h3zero_header_parts_t {
 #define h3zero_setting_grease_mask 0x0f0f
 #define h3zero_settings_enable_connect_protocol 0x8
 #define h3zero_setting_h3_datagram 0x33
+#define h3zero_settings_wt_enabled 0x2c7cf000
 #define h3zero_settings_webtransport_max_sessions 0x14e9cd29
 #define h3zero_settings_webtransport_max_sessions_old 0xc671706aull
 /* Chrome compatibility: SETTINGS_ENABLE_WEBTRANSPORT from older draft */
@@ -235,6 +239,7 @@ typedef struct st_h3zero_settings_t {
     unsigned int enable_connect_protocol : 1;
     unsigned int h3_datagram : 1;
     unsigned int settings_received : 1;
+    unsigned int webtransport_draft_15 : 1;
 } h3zero_settings_t;
 
 extern uint8_t const * h3zero_default_setting_frame;

@@ -60,8 +60,32 @@ void * picohttp_stream_node_value(picosplay_node_t * node)
 	return (void*)((char*)node - offsetof(struct st_h3zero_stream_ctx_t, http_stream_node));
 }
 
+void h3zero_clear_pending_connect(h3zero_stream_ctx_t* stream_ctx)
+{
+	if (stream_ctx->pending_connect_authority != NULL) {
+		free(stream_ctx->pending_connect_authority);
+		stream_ctx->pending_connect_authority = NULL;
+	}
+	if (stream_ctx->pending_connect_path != NULL) {
+		free(stream_ctx->pending_connect_path);
+		stream_ctx->pending_connect_path = NULL;
+	}
+	if (stream_ctx->pending_connect_wt_available_protocols != NULL) {
+		free(stream_ctx->pending_connect_wt_available_protocols);
+		stream_ctx->pending_connect_wt_available_protocols = NULL;
+	}
+	if (stream_ctx->pending_connect_extra != NULL) {
+		free(stream_ctx->pending_connect_extra);
+		stream_ctx->pending_connect_extra = NULL;
+	}
+	stream_ctx->pending_connect_extra_length = 0;
+	stream_ctx->is_connect_pending = 0;
+}
+
 static void picohttp_clear_stream_ctx(h3zero_stream_ctx_t* stream_ctx)
 {
+	h3zero_clear_pending_connect(stream_ctx);
+
 	if (stream_ctx->file_path != NULL) {
 		free(stream_ctx->file_path);
 		stream_ctx->file_path = NULL;
@@ -280,6 +304,7 @@ int h3zero_protocol_init(picoquic_cnx_t* cnx)
 	 */
 	if (cnx->local_parameters.max_datagram_frame_size > 0) {
 		settings.h3_datagram = 1;
+		settings.webtransport_draft_15 = 1;
 		settings.webtransport_max_sessions = 1;
 	}
 
@@ -1631,6 +1656,97 @@ int h3zero_prepare_to_send(int client_mode, void* context, size_t space,
 	return ret;
 }
 
+static const char* h3zero_webtransport_protocol_from_settings(h3zero_callback_ctx_t* ctx)
+{
+	return (ctx != NULL && ctx->settings.webtransport_draft_15) ?
+		H3ZERO_WEBTRANSPORT_H3_PROTOCOL : H3ZERO_WEBTRANSPORT_H3_PROTOCOL_OLD;
+}
+
+static int h3zero_format_pending_connect(h3zero_stream_ctx_t* stream_ctx,
+	const char* connect_protocol, size_t* connect_length)
+{
+	int ret = 0;
+	uint8_t* bytes = stream_ctx->frame;
+	uint8_t* bytes_max = stream_ctx->frame + sizeof(stream_ctx->frame);
+
+	*bytes++ = h3zero_frame_header;
+	bytes += 2; /* reserve two bytes for frame length */
+
+	bytes = h3zero_create_connect_header_frame(bytes, bytes_max,
+		stream_ctx->pending_connect_authority, (const uint8_t*)stream_ctx->pending_connect_path,
+		strlen(stream_ctx->pending_connect_path), connect_protocol, NULL,
+		H3ZERO_USER_AGENT_STRING, stream_ctx->pending_connect_wt_available_protocols);
+
+	if (bytes == NULL) {
+		ret = -1;
+	}
+	else {
+		size_t header_length = bytes - &stream_ctx->frame[3];
+		if (header_length < 64) {
+			stream_ctx->frame[1] = (uint8_t)(header_length);
+			memmove(&stream_ctx->frame[2], &stream_ctx->frame[3], header_length);
+			bytes--;
+		}
+		else {
+			stream_ctx->frame[1] = (uint8_t)((header_length >> 8) | 0x40);
+			stream_ctx->frame[2] = (uint8_t)(header_length & 0xFF);
+		}
+
+		*connect_length = bytes - stream_ctx->frame;
+		stream_ctx->ps.stream_state.is_upgrade_requested = 1;
+
+		if (stream_ctx->pending_connect_extra != NULL &&
+			stream_ctx->pending_connect_extra_length > 0) {
+			if (*connect_length + stream_ctx->pending_connect_extra_length > sizeof(stream_ctx->frame)) {
+				ret = -1;
+			}
+			else {
+				memcpy(stream_ctx->frame + *connect_length,
+					stream_ctx->pending_connect_extra,
+					stream_ctx->pending_connect_extra_length);
+				*connect_length += stream_ctx->pending_connect_extra_length;
+			}
+		}
+	}
+
+	return ret;
+}
+
+static int h3zero_prepare_pending_connect(picoquic_cnx_t* cnx,
+	h3zero_stream_ctx_t* stream_ctx, void* context, size_t space,
+	h3zero_callback_ctx_t* ctx)
+{
+	int ret = 0;
+	size_t connect_length = 0;
+
+	if (!ctx->settings.settings_received) {
+		if (picoquic_provide_stream_data_buffer(context, 0, 0, 1) == NULL) {
+			ret = -1;
+		}
+	}
+	else if (h3zero_format_pending_connect(stream_ctx,
+		h3zero_webtransport_protocol_from_settings(ctx), &connect_length) != 0) {
+		ret = picoquic_reset_stream(cnx, stream_ctx->stream_id, H3ZERO_INTERNAL_ERROR);
+	}
+	else if (connect_length > space) {
+		if (picoquic_provide_stream_data_buffer(context, 0, 0, 1) == NULL) {
+			ret = -1;
+		}
+	}
+	else {
+		uint8_t* buffer = picoquic_provide_stream_data_buffer(context, connect_length, 0, 0);
+		if (buffer == NULL) {
+			ret = -1;
+		}
+		else {
+			memcpy(buffer, stream_ctx->frame, connect_length);
+			h3zero_clear_pending_connect(stream_ctx);
+		}
+	}
+
+	return ret;
+}
+
 int h3zero_callback_prepare_to_send(picoquic_cnx_t* cnx,
 	uint64_t stream_id, h3zero_stream_ctx_t * stream_ctx,
 	void * context, size_t space, h3zero_callback_ctx_t* ctx)
@@ -1645,7 +1761,10 @@ int h3zero_callback_prepare_to_send(picoquic_cnx_t* cnx,
 		ret = picoquic_reset_stream(cnx, stream_id, H3ZERO_INTERNAL_ERROR);
 	}
 	else {
-		if (stream_ctx->path_callback != NULL) {
+		if (stream_ctx->is_connect_pending) {
+			ret = h3zero_prepare_pending_connect(cnx, stream_ctx, context, space, ctx);
+		}
+		else if (stream_ctx->path_callback != NULL) {
 			/* TODO: should we do that in the case of "post" ? */
 			/* Get data from callback context of specific URL */
 			ret = stream_ctx->path_callback(cnx, context, space, picohttp_callback_provide_data, stream_ctx, stream_ctx->path_callback_ctx);
@@ -2033,6 +2152,7 @@ uint8_t* h3zero_settings_encode(uint8_t* bytes, const uint8_t* bytes_max, const 
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_qpack_blocked_streams, settings->blocked_streams, UINT64_MAX)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_enable_connect_protocol, settings->enable_connect_protocol, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_setting_h3_datagram, settings->h3_datagram, 0)) != NULL &&
+				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_wt_enabled, settings->webtransport_draft_15, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions, settings->webtransport_max_sessions, 0)) != NULL &&
 				(bytes = h3zero_settings_component_encode(bytes, bytes_max, h3zero_settings_webtransport_max_sessions_old, settings->webtransport_max_sessions, 0)) != NULL &&
 				/* Chrome compatibility: also send SETTINGS_ENABLE_WEBTRANSPORT (0x2b603742) */
@@ -2074,6 +2194,12 @@ const uint8_t* h3zero_settings_components_decode(const uint8_t* bytes, const uin
 			break;
 		case h3zero_setting_h3_datagram:
 			settings->h3_datagram = (unsigned int)component_value;
+			break;
+		case h3zero_settings_wt_enabled:
+			settings->webtransport_draft_15 = (component_value > 0);
+			if (component_value > 0 && settings->webtransport_max_sessions == 0) {
+				settings->webtransport_max_sessions = 1;
+			}
 			break;
 		case h3zero_settings_webtransport_max_sessions:
 		case h3zero_settings_webtransport_max_sessions_old:

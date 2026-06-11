@@ -108,6 +108,7 @@ static int picowt_baton_test_one_ex(
     picohttp_server_parameters_t server_param = { 0 };
     picoquic_connection_id_t initial_cid = { {0x77, 0x74, 0xba, 0, 0, 0, 0, 0}, 8 };
     h3zero_callback_ctx_t* h3zero_cb = NULL;
+    h3zero_stream_ctx_t* control_stream_ctx = NULL;
     int reset_needed = (test_id == 9);
 
     initial_cid.id[3] = test_id;
@@ -146,8 +147,6 @@ static int picowt_baton_test_one_ex(
     if (ret == 0) {
         /* Set the client callback context using as much as possible
         * the generic picowt calls. */
-        h3zero_stream_ctx_t* control_stream_ctx = NULL;
-
         ret = picowt_prepare_client_cnx(test_ctx->qclient, (struct sockaddr*)NULL,
             &test_ctx->cnx_client, &h3zero_cb, &control_stream_ctx, simulated_time, PICOQUIC_TEST_SNI);
 
@@ -168,6 +167,12 @@ static int picowt_baton_test_one_ex(
                     baton_ctx.authority, baton_ctx.server_path,
                     wt_baton_callback, &baton_ctx, PICOWT_BATON_ALPN_AVAILABLE);
             }
+        }
+
+        if (ret == 0 && (!control_stream_ctx->is_connect_pending ||
+            control_stream_ctx->ps.stream_state.is_upgrade_requested)) {
+            DBG_PRINTF("%s", "WebTransport CONNECT was not deferred until settings.\n");
+            ret = -1;
         }
 
         if (ret == 0) {
@@ -250,6 +255,15 @@ static int picowt_baton_test_one_ex(
     if (ret == 0 && !h3zero_cb->settings.settings_received) {
         DBG_PRINTF("Settings not received at t: %llu", simulated_time);
         ret = -1;
+    }
+    if (ret == 0) {
+        h3zero_stream_ctx_t* sent_control_stream_ctx = h3zero_find_stream(h3zero_cb, baton_ctx.control_stream_id);
+        if (sent_control_stream_ctx != NULL &&
+            (sent_control_stream_ctx->is_connect_pending ||
+                !sent_control_stream_ctx->ps.stream_state.is_upgrade_requested)) {
+            DBG_PRINTF("%s", "Deferred WebTransport CONNECT was not sent after settings.\n");
+            ret = -1;
+        }
     }
     /* verify that the execution time is as expected */
     if (ret == 0 && completion_target != 0) {

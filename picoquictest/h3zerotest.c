@@ -3605,11 +3605,17 @@ int h3zero_settings_decode_test(const uint8_t* bytes, size_t length, h3zero_sett
     else if (decoded.webtransport_max_sessions != ref->webtransport_max_sessions) {
         ret = -1;
     }
+    else if (decoded.webtransport_draft_15 != ref->webtransport_draft_15) {
+        ret = -1;
+    }
     return ret;
 }
 
 h3zero_settings_t default_setting_expected = {
-    1, 0, 0, 0, 1, 1, 0
+    .webtransport_max_sessions = 1,
+    .enable_connect_protocol = 1,
+    .h3_datagram = 1,
+    .webtransport_draft_15 = 1
 };
 
 int h3zero_settings_test(void)
