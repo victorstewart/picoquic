@@ -1,0 +1,18 @@
+{
+  "commit": "1d81a730ebbc0f4598f8127a7f43260a71a9ac7d",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+  "machine": "Apple M2 Max",
+  "memory": "103079215104",
+  "picotls": "f06553b877ada93c860dd1db9002eabf7365292d",
+  "flags": "CMAKE_BUILD_TYPE=Release; -O3 -DNDEBUG -arch arm64; WITH_OPENSSL=ON; WITH_FUSION=OFF",
+  "openssl": "3.6.2",
+  "binary_sha256": {
+    "libpicohttp-core.a": "303814b5841fd5a038e7f58b37f6dd4c9bbcf74747ad73661f2cf1a5851d0894",
+    "libpicoquic-log.a": "9f8db8538389e213c5ed0e8cffb2ae4ab79dfc61a499dd9d633bbdbb0a2469f8",
+    "picohttp_ct": "e37f6fb9117c433cb33b54edf64cce7e1632fe0352cbd8235cca5eceb1788c73",
+    "libpicoquic-test.a": "1b97c0169aa5a32f5a1f7809c0d2edfd9f8ccc44f78e8aa6e3c53d5c400fb9dd",
+    "picoquic_ct": "afcba2c2c6ecca2996f94a4cc12f895e5fdf3174e9e2917e94d69e16b8c9c93c",
+    "libpicoquic-core.a": "b08b19a543e7c29fd06f5cfd27a7ab54f11afd55c58f97358a321a1197dc16ef"
+  }
+}

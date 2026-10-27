@@ -1,0 +1,330 @@
+--- a/picoquic/quicctx.c
++++ b/picoquic/quicctx.c
+@@ -526,97 +526,196 @@
+     return ret;
+ }
+ 
+-/* Token reuse management */
+-
+-static int64_t picoquic_registered_token_compare(void* l, void* r)
+-{
+-    /* STream values are from 0 to 2^62-1, which means we are not worried with rollover */
+-    picoquic_registered_token_t* rt_l = (picoquic_registered_token_t*)l;
+-    picoquic_registered_token_t* rt_r = (picoquic_registered_token_t*)r;
+-    int64_t ret = 0;
+-    if (rt_l->token_time == rt_r->token_time) {
+-        if (rt_l->token_hash > rt_r->token_hash) {
+-            ret = 1;
+-        }
+-        else if (rt_l->token_hash < rt_r->token_hash) {
+-            ret = -1;
+-        }
+-    }
+-    else if (rt_l->token_time > rt_r->token_time) {
+-        ret = 1;
+-    }
+-    else {
+-        ret = -1;
+-    }
+-    return ret;
+-}
+-
+-static picosplay_node_t* picoquic_registered_token_create(void* value)
+-{
+-    return &((picoquic_registered_token_t*)value)->registered_token_node;
+-}
+-
+-
+-static void* picoquic_registered_token_value(picosplay_node_t* node)
+-{
+-    return (void*)((node == NULL)?NULL:((char*)node - offsetof(struct st_picoquic_registered_token_t, registered_token_node)));
+-}
+-
+-static void picoquic_registered_token_delete(void* UNUSED(tree), picosplay_node_t* node)
+-{
+-    picoquic_registered_token_t* rt = (picoquic_registered_token_t*)picoquic_registered_token_value(node);
+-    free(rt);
+-}
+-
+-int picoquic_registered_token_check_reuse(picoquic_quic_t * quic,
+-    const uint8_t * token, size_t token_length, uint64_t expiry_time)
++/* Token reuse management. Experimental packed index, ordered by expiry/hash. */
++#define PICOQUIC_TOKEN_PAGE_SIZE 32
++struct st_picoquic_token_page_t {
++    uint64_t time[PICOQUIC_TOKEN_PAGE_SIZE];
++    uint64_t hash[PICOQUIC_TOKEN_PAGE_SIZE];
++    picoquic_registered_token_t* token[PICOQUIC_TOKEN_PAGE_SIZE];
++    size_t count;
++};
++struct st_picoquic_token_directory_t {
++    uint64_t time;
++    uint64_t hash;
++    picoquic_token_page_t* page;
++};
++
++static int picoquic_token_key_compare(uint64_t at, uint64_t ah, uint64_t bt, uint64_t bh)
++{
++    if (at != bt) return at < bt ? -1 : 1;
++    return ah == bh ? 0 : (ah < bh ? -1 : 1);
++}
++
++static size_t picoquic_token_page_find(picoquic_token_index_t* index, uint64_t time, uint64_t hash)
++{
++    size_t lo = 0, hi = index->page_count;
++    while (lo < hi) {
++        size_t mid = lo + (hi - lo) / 2;
++        if (picoquic_token_key_compare(index->directory[mid].time, index->directory[mid].hash, time, hash) < 0) lo = mid + 1;
++        else hi = mid;
++    }
++    return lo == index->page_count && lo != 0 ? lo - 1 : lo;
++}
++
++static size_t picoquic_token_leaf_find(picoquic_token_page_t* page, uint64_t time, uint64_t hash)
++{
++    size_t lo = 0, hi = page->count;
++    while (lo < hi) {
++        size_t mid = lo + (hi - lo) / 2;
++        if (picoquic_token_key_compare(page->time[mid], page->hash[mid], time, hash) < 0) lo = mid + 1;
++        else hi = mid;
++    }
++    return lo;
++}
++
++static void picoquic_token_page_refresh(picoquic_token_index_t* index, size_t page_id)
++{
++    picoquic_token_page_t* page = index->directory[page_id].page;
++    index->directory[page_id].time = page->time[page->count - 1];
++    index->directory[page_id].hash = page->hash[page->count - 1];
++}
++
++static int picoquic_token_directory_reserve(picoquic_token_index_t* index, size_t required)
++{
++    if (required > index->page_capacity) {
++        size_t capacity = index->page_capacity == 0 ? 8 : index->page_capacity;
++        picoquic_token_directory_t* directory;
++        while (capacity < required) {
++            if (capacity > SIZE_MAX / 2) return -1;
++            capacity *= 2;
++        }
++        if (capacity > SIZE_MAX / sizeof(*directory)) return -1;
++        directory = (picoquic_token_directory_t*)realloc(index->directory, capacity * sizeof(*directory));
++        if (directory == NULL) return -1;
++        index->directory = directory;
++        index->page_capacity = capacity;
++    }
++    return 0;
++}
++
++static picoquic_registered_token_t* picoquic_token_index_find(picoquic_token_index_t* index, uint64_t time, uint64_t hash)
++{
++    picoquic_token_page_t* page;
++    size_t at;
++    if (index->page_count == 0) return NULL;
++    page = index->directory[picoquic_token_page_find(index, time, hash)].page;
++    at = picoquic_token_leaf_find(page, time, hash);
++    return at < page->count && page->time[at] == time && page->hash[at] == hash ? page->token[at] : NULL;
++}
++
++static int picoquic_token_index_insert(picoquic_token_index_t* index, picoquic_registered_token_t* token)
++{
++    size_t page_id = picoquic_token_page_find(index, token->token_time, token->token_hash);
++    picoquic_token_page_t* page = index->page_count == 0 ? NULL : index->directory[page_id].page;
++    size_t at;
++    if (page == NULL || page->count == PICOQUIC_TOKEN_PAGE_SIZE) {
++        picoquic_token_page_t* fresh = (picoquic_token_page_t*)calloc(1, sizeof(*fresh));
++        if (fresh == NULL) return -1;
++        /* Acquire every allocation before mutating any indexed key. */
++        if (picoquic_token_directory_reserve(index, index->page_count + 1) != 0) {
++            free(fresh);
++            return -1;
++        }
++        if (page == NULL) {
++            page = fresh;
++            index->directory[0].page = page;
++            index->page_count = 1;
++        }
++        else {
++            size_t half = PICOQUIC_TOKEN_PAGE_SIZE / 2;
++            memcpy(fresh->time, page->time + half, half * sizeof(*page->time));
++            memcpy(fresh->hash, page->hash + half, half * sizeof(*page->hash));
++            memcpy(fresh->token, page->token + half, half * sizeof(*page->token));
++            fresh->count = half;
++            page->count = half;
++            memmove(index->directory + page_id + 2, index->directory + page_id + 1,
++                (index->page_count - page_id - 1) * sizeof(*index->directory));
++            index->directory[page_id + 1].page = fresh;
++            index->page_count++;
++            picoquic_token_page_refresh(index, page_id);
++            picoquic_token_page_refresh(index, page_id + 1);
++            if (picoquic_token_key_compare(token->token_time, token->token_hash, fresh->time[0], fresh->hash[0]) >= 0) {
++                page_id++;
++                page = fresh;
++            }
++        }
++    }
++    at = picoquic_token_leaf_find(page, token->token_time, token->token_hash);
++    memmove(page->time + at + 1, page->time + at, (page->count - at) * sizeof(*page->time));
++    memmove(page->hash + at + 1, page->hash + at, (page->count - at) * sizeof(*page->hash));
++    memmove(page->token + at + 1, page->token + at, (page->count - at) * sizeof(*page->token));
++    page->time[at] = token->token_time;
++    page->hash[at] = token->token_hash;
++    page->token[at] = token;
++    page->count++;
++    index->size++;
++    picoquic_token_page_refresh(index, page_id);
++    return 0;
++}
++
++static void picoquic_token_index_free(picoquic_token_index_t* index)
++{
++    for (size_t i = 0; i < index->page_count; i++) {
++        picoquic_token_page_t* page = index->directory[i].page;
++        for (size_t j = 0; j < page->count; j++) free(page->token[j]);
++        free(page);
++    }
++    free(index->directory);
++    memset(index, 0, sizeof(*index));
++}
++
++int picoquic_registered_token_check_reuse(picoquic_quic_t* quic,
++    const uint8_t* token, size_t token_length, uint64_t expiry_time)
+ {
+     int ret = -1;
+     if (token_length >= 8) {
+-        picoquic_registered_token_t* rt = (picoquic_registered_token_t*)malloc(sizeof(picoquic_registered_token_t));
+-        if (rt != NULL) {
+-            picosplay_node_t* rt_n = NULL;
+-            memset(rt, 0, sizeof(picoquic_registered_token_t));
+-            rt->token_time = expiry_time;
+-            rt->token_hash = PICOPARSE_64(token + token_length - 8);
+-            rt->count = 1;
+-            rt_n = picosplay_find(&quic->token_reuse_tree, rt);
+-            if (rt_n != NULL) {
+-                free(rt);
+-                rt = (picoquic_registered_token_t*)picoquic_registered_token_value(rt_n);
+-                rt->count++;
+-                DBG_PRINTF("Token reuse detected, count=%d", rt->count);
+-            }
+-            else {
+-                /* Set an arbitrary limit to size of token tree to avoid infinite growth. */
+-                if ((size_t)quic->token_reuse_tree.size < quic->max_number_connections*32) {
+-                    (void)picosplay_insert(&quic->token_reuse_tree, rt);
+-                    ret = 0;
+-                }
+-                else {
+-                    /* If the reuse store is full, consider the token as invalid. */
+-                    free(rt);
+-                }
+-            }
+-        }
+-    }
+-
++        picoquic_registered_token_t* candidate = (picoquic_registered_token_t*)malloc(sizeof(*candidate));
++        if (candidate != NULL) {
++            picoquic_registered_token_t* found;
++            candidate->token_time = expiry_time;
++            candidate->token_hash = PICOPARSE_64(token + token_length - 8);
++            candidate->count = 1;
++            found = picoquic_token_index_find(&quic->token_reuse_tree, candidate->token_time, candidate->token_hash);
++            if (found != NULL) {
++                found->count++;
++                DBG_PRINTF("Token reuse detected, count=%d", found->count);
++            }
++            else if ((size_t)quic->token_reuse_tree.size < quic->max_number_connections * 32 &&
++                picoquic_token_index_insert(&quic->token_reuse_tree, candidate) == 0) {
++                candidate = NULL;
++                ret = 0;
++            }
++            free(candidate);
++        }
++    }
+     return ret;
+ }
+ 
+ void picoquic_registered_token_clear(picoquic_quic_t* quic, uint64_t expiry_time_max)
+ {
+-    int end_reached = 0;
+-    do {
+-        picoquic_registered_token_t* rt_first = (picoquic_registered_token_t*)
+-            picoquic_registered_token_value(picosplay_first(&quic->token_reuse_tree));
+-        if (rt_first == NULL || rt_first->token_time >= expiry_time_max) {
+-            end_reached = 1;
++    picoquic_token_index_t* index = &quic->token_reuse_tree;
++    while (index->page_count != 0) {
++        picoquic_token_page_t* page = index->directory[0].page;
++        size_t count = 0;
++        while (count < page->count && page->time[count] < expiry_time_max) {
++            free(page->token[count]);
++            count++;
++        }
++        index->size -= (int)count;
++        if (count == page->count) {
++            free(page);
++            index->page_count--;
++            memmove(index->directory, index->directory + 1, index->page_count * sizeof(*index->directory));
+         }
+         else {
+-            picosplay_delete_hint(&quic->token_reuse_tree, &rt_first->registered_token_node);
+-        }
+-    } while (!end_reached);
++            page->count -= count;
++            memmove(page->time, page->time + count, page->count * sizeof(*page->time));
++            memmove(page->hash, page->hash + count, page->count * sizeof(*page->hash));
++            memmove(page->token, page->token + count, page->count * sizeof(*page->token));
++            /* The page maximum did not change. */
++            break;
++        }
++    }
+ }
+ 
+ int picoquic_adjust_max_connections(picoquic_quic_t * quic, uint32_t max_nb_connections)
+@@ -730,8 +829,6 @@
+                 DBG_PRINTF("%s", "Cannot initialize hash tables\n");
+             }
+             else {
+-                picosplay_init_tree(&quic->token_reuse_tree, picoquic_registered_token_compare,
+-                    picoquic_registered_token_create, picoquic_registered_token_delete, picoquic_registered_token_value);
+                 if (picoquic_master_tlscontext(quic, cert_file_name, key_file_name, cert_root_file_name, ticket_encryption_key, ticket_encryption_key_length) != 0) {
+                     ret = -1;
+                     DBG_PRINTF("%s", "Cannot create TLS context \n");
+@@ -1108,7 +1205,7 @@
+         picoquic_free_tokens(&quic->p_first_token);
+ 
+         /* Deelete the reused tokens tree */
+-        picosplay_empty_tree(&quic->token_reuse_tree);
++        picoquic_token_index_free(&quic->token_reuse_tree);
+ 
+         /* delete packets in pool */
+         while (quic->p_first_packet != NULL) {
+--- a/picoquic/picoquic_internal.h
++++ b/picoquic/picoquic_internal.h
+@@ -390,11 +390,19 @@
+  */
+ 
+ typedef struct st_picoquic_registered_token_t {
+-    picosplay_node_t registered_token_node;
+     uint64_t token_time;
+     uint64_t token_hash; /* The last 8 bytes of the token, normally taken from AEAD checksum */
+     int count;
+ } picoquic_registered_token_t;
++
++typedef struct st_picoquic_token_page_t picoquic_token_page_t;
++typedef struct st_picoquic_token_directory_t picoquic_token_directory_t;
++typedef struct st_picoquic_token_index_t {
++    picoquic_token_directory_t* directory;
++    size_t page_count;
++    size_t page_capacity;
++    int size;
++} picoquic_token_index_t;
+ 
+ /*
+  * Definition of the session ticket store and connection token
+@@ -545,7 +553,7 @@
+     char const* token_file_name;
+     picoquic_stored_ticket_t * p_first_ticket;
+     picoquic_stored_token_t * p_first_token;
+-    picosplay_tree_t token_reuse_tree; /* detection of token reuse */
++    picoquic_token_index_t token_reuse_tree; /* detection of token reuse */
+     uint8_t local_cnxid_length;
+     uint8_t default_stream_priority;
+     uint8_t default_datagram_priority;

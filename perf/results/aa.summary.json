@@ -1,0 +1,38 @@
+{
+  "perf_loopback_multiconn": {
+    "metric": "loopback_us",
+    "pairs": 4,
+    "a_median": 558645.0,
+    "b_median": 547768.5,
+    "median_reduction_percent": 3.023579838456719,
+    "bootstrap_95_percent": [
+      -3.099478685557644,
+      7.614214109911432
+    ],
+    "paired_reductions_percent": [
+      4.607249570966876,
+      1.4399101059465624,
+      7.614214109911432,
+      -3.099478685557644
+    ],
+    "equivalence_mismatches": []
+  },
+  "perf_loopback_loss": {
+    "metric": "loopback_us",
+    "pairs": 4,
+    "a_median": 326629.0,
+    "b_median": 325505.5,
+    "median_reduction_percent": 0.11925737493762578,
+    "bootstrap_95_percent": [
+      -0.6486252301598272,
+      0.6789106874963702
+    ],
+    "paired_reductions_percent": [
+      0.6238274636609087,
+      -0.6486252301598272,
+      0.6789106874963702,
+      -0.3853127137856571
+    ],
+    "equivalence_mismatches": []
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "admit-sequential-1",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/token_bench",
+        "admit-sequential",
+        "1",
+        "500000"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/token-compact/token_bench",
+        "admit-sequential",
+        "1",
+        "500000"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "admit-sequential-8",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/token_bench",
+        "admit-sequential",
+        "8",
+        "100000"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/token-compact/token_bench",
+        "admit-sequential",
+        "8",
+        "100000"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "admit-sequential-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/token_bench",
+        "admit-sequential",
+        "10000",
+        "100"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/token-compact/token_bench",
+        "admit-sequential",
+        "10000",
+        "100"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "admit-shuffled-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/token_bench",
+        "admit-shuffled",
+        "10000",
+        "100"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/token-compact/token_bench",
+        "admit-shuffled",
+        "10000",
+        "100"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "lookup-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/token_bench",
+        "lookup",
+        "10000",
+        "1000000"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/token-compact/token_bench",
+        "lookup",
+        "10000",
+        "1000000"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "hot-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/token_bench",
+        "hot",
+        "10000",
+        "1000000"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/token-compact/token_bench",
+        "hot",
+        "10000",
+        "1000000"
+      ],
+      "metric": "cpu_ns_op"
+    }
+  ]
+}

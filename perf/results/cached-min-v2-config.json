@@ -1,0 +1,301 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "timer-query-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "query",
+        "10000",
+        "2000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "query",
+        "10000",
+        "2000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-update-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "update",
+        "10000",
+        "500000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "update",
+        "10000",
+        "500000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-randomized-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "randomized",
+        "10000",
+        "500000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "randomized",
+        "10000",
+        "500000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-monotonic-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "monotonic",
+        "10000",
+        "500000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "monotonic",
+        "10000",
+        "500000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-ready-only-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "ready-only",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "ready-only",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-ready-mixed-random-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "ready-mixed-random",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "ready-mixed-random",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-ready-mixed-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "ready-mixed",
+        "10000",
+        "200000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "ready-mixed",
+        "10000",
+        "200000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-query-1000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "query",
+        "1000",
+        "2000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "query",
+        "1000",
+        "2000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-query-static-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "query-static",
+        "10000",
+        "20000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "query-static",
+        "10000",
+        "20000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-query-random-static-10000",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/timer_bench-v2",
+        "query-random-static",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/timer_bench",
+        "query-random-static",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "perf_loopback_multiconn",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multiconn"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multiconn"
+      ],
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      }
+    },
+    {
+      "name": "perf_loopback",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback"
+      ],
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      }
+    },
+    {
+      "name": "perf_loopback_loss",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_loss"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_loss"
+      ],
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      }
+    },
+    {
+      "name": "perf_loopback_multistream",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multistream"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cached-min-v2/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multistream"
+      ],
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      }
+    }
+  ]
+}

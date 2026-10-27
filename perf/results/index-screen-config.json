@@ -1,0 +1,275 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "stream-small2-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "stream-small2",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "stream-small2",
+        "compact",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "stream-hot2-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "stream-hot2",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "stream-hot2",
+        "compact",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "stream-large4096-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "stream-large4096",
+        "splay",
+        "500000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "stream-large4096",
+        "compact",
+        "500000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "reassembly-4-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "reassembly-4",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "reassembly-4",
+        "compact",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "reassembly-1024-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "reassembly-1024",
+        "splay",
+        "500000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "reassembly-1024",
+        "compact",
+        "500000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "ack-1-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1",
+        "compact",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "ack-1-ack-inline",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1",
+        "ack-inline",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "ack-8-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-8",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-8",
+        "compact",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "ack-8-ack-inline",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-8",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-8",
+        "ack-inline",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "ack-1024-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1024",
+        "splay",
+        "500000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1024",
+        "compact",
+        "500000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "ack-1024-ack-inline",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1024",
+        "splay",
+        "500000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "ack-1024",
+        "ack-inline",
+        "500000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "lost-8-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "lost-8",
+        "splay",
+        "3000000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "lost-8",
+        "compact",
+        "3000000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "lost-1024-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "lost-1024",
+        "splay",
+        "500000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "lost-1024",
+        "compact",
+        "500000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "token-10000-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "token-10000",
+        "splay",
+        "500000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "token-10000",
+        "compact",
+        "500000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timers-10000-compact",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "timers-10000",
+        "splay",
+        "500000",
+        "42"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/index-screen",
+        "timers-10000",
+        "compact",
+        "500000",
+        "42"
+      ],
+      "metric": "cpu_ns_op"
+    }
+  ]
+}

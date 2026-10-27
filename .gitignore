@@ -31,3 +31,7 @@ Release
 /coverage-report/
 *.gcda
 *.gcno
+
+/build-perf/
+/build-perf-sanitize/
+/perf/__pycache__/

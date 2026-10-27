@@ -1,0 +1,4 @@
+Starting test number 128, perf_loopback_multiconn
+Perf loopback: 20000000000 app bytes, 20522763583 wire bytes, 14896817 packets (669617 client, 14227200 server, 0 lost), 1559018 batches, 889931 stall jumps, in 17422736 us.
+Perf loopback: 17.423 seconds, 1147.9 MB/s, 855022 packets/s, 1.170 us/packet, 9.56 packets/batch.
+    Success.

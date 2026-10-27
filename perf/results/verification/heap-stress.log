@@ -1,0 +1,3 @@
+Many connection stress (cnx_stress) succeeds:
+Processed 1000 connections for 60.000001s (simulated) in 0.824459s (wall time).
+Processed 1000 messages, delays min/avg/max= 0.010008s, 0.010008s, 0.010008s.

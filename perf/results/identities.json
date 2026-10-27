@@ -1,0 +1,61 @@
+{
+  "upstream_commit": "1d81a730ebbc0f4598f8127a7f43260a71a9ac7d",
+  "remote_master_rechecked": "2026-10-26 America/New_York; same commit",
+  "artifact_root": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts",
+  "sha256_binaries_and_snapshot_headers": {
+    "cached-min/picohttp_ct": "75d49841584193200ebac095d67de149ac310ef779ae9664c2ecc8d86c036595",
+    "cached-min/timer_bench": "92f502b486bcff19af235391b63f5e247ab5c384fe2b03bdf5750a8779280c15",
+    "cached-min-v2/picohttp_ct": "0fa2696f06a809dbc7655098bca388bf4fe4e9811cbdb826f13bf49848fba558",
+    "cached-min-v2/timer_bench": "3cc90b5fd49b472a00e573f27185d119d3150ef5e16c29c0f8866b7069e4117a",
+    "cached-min-v2/timer_bench-separate": "a1d39d177d2357e99e83960834fa6b5f583d2c3774fc493425e3e3589156f556",
+    "heap/picohttp_ct": "a9e221b2e1f968498b7a0523134eee0a15691e492f82512dd972f8d63e9a86c4",
+    "heap/timer_bench": "57fb9769a5b7d5b623f7b83c35dce3c6812816501807724eff7da561e91cf01a",
+    "heap/timer_bench-separate": "54d798ee45ba5b1bb483edc79312c07fbe7ee1ba9a05cd131e203bea2a5d9751",
+    "index-screen": "f96f85f823a8d3683516e4383eb60e155be75b892d511ed5d488977cd4b9be4b",
+    "token-compact/token_bench": "bb944119bc7bd181bc68bf8cf6cd0b69e581e8446b2e931fab39bd4a0834779f",
+    "upstream/picohttp_ct": "e37f6fb9117c433cb33b54edf64cce7e1632fe0352cbd8235cca5eceb1788c73",
+    "upstream/timer_bench": "17369afe3e6cb945fc6d9435faf5bd40e61d4e52dfd0147da0440583f8cf019c",
+    "upstream/timer_bench-separate": "39ee86f22d073f91042c5184bc237caa91d3f816556541c393ae4daa672631aa",
+    "upstream/timer_bench-v2": "fd9d1f251fe49335a3af8abd63ac3520db1bb751a28ffeb48268dda20b460d18",
+    "upstream/token_bench": "44d94f4545f6f97e974fb9c42b7b3c0c2cdfc5893caad98e22810aac57c8b14f",
+    "upstream/libpicoquic-core.a": "b08b19a543e7c29fd06f5cfd27a7ab54f11afd55c58f97358a321a1197dc16ef",
+    "upstream/libpicoquic-log.a": "9f8db8538389e213c5ed0e8cffb2ae4ab79dfc61a499dd9d633bbdbb0a2469f8",
+    "upstream/include/picoquic_internal.h": "dbf2086566a32dbe67008b9fcd90059e504c2313f07979c0f535316bda221e8d",
+    "cached-min/libpicoquic-core.a": "7c1ea11ca1e6fd2c44a5b9e86c660550c558cce4bc312ad8c5122c3fb8c9aa95",
+    "cached-min/libpicoquic-log.a": "6175ced5561a677ffa8a6a3e4943ae0dedbd51b55c97743f54204cacb10d3a96",
+    "cached-min/include/picoquic_internal.h": "1e1c0eba360b9a04cf4dbc7c21584378e0d0bb37b5b5a3bfac5994a04a36ba4e",
+    "cached-min-v2/libpicoquic-core.a": "d78d7d35575db13b5b19ccf921bc3e20fa322d0de05e0e485f75f081c060a43b",
+    "cached-min-v2/libpicoquic-log.a": "6175ced5561a677ffa8a6a3e4943ae0dedbd51b55c97743f54204cacb10d3a96",
+    "cached-min-v2/include/picoquic_internal.h": "1e1c0eba360b9a04cf4dbc7c21584378e0d0bb37b5b5a3bfac5994a04a36ba4e",
+    "heap/libpicoquic-core.a": "c2abdad569428d5bf6137edd97584b4572e38f8b895856278e60639db4557dec",
+    "heap/libpicoquic-log.a": "3392e83e6d9b46a131f4d3b17ade46eb5eb55b05ef64567330fce2d1322e9423",
+    "heap/include/picoquic_internal.h": "f178db4854a9a401886f4bfa2f54e18f50c1252edd0790b0535abc527c582598",
+    "token-compact/libpicoquic-core.a": "948835cdfe0d88e118ba7594db7227373802ba82c7de2983ff374cb1464ee533",
+    "token-compact/libpicoquic-log.a": "88e2d028f1adc1d57158e43911039a38773fcd48829b8214c251c245898f1ca9",
+    "token-compact/include/picoquic_internal.h": "8ff98ff2d8e665e395d407e854a8f03755cc5612a24b7e9b741164e2fff396d3"
+  },
+  "sha256_experiment_sources_and_patches": {
+    "perf/index_screen.c": "8dbbe9f84a8109fc8957b0c74318e52abd80911e507474668c2dae4af2a7d48b",
+    "perf/timer_bench.c": "eaa2d88a86cb43aea99c8ef1e98ff41e83466549000b7bc42c228828cdb4ed47",
+    "perf/timer_bench_contiguous.c": "5c7a9dea4599032083a527a547d410b7c83d8288566c5e97155b8aa32eaff542",
+    "perf/token_bench.c": "5b8630422e8367cc15afdd4ed9f38a732ea5d2e5606e3150010802fbe6b311ef",
+    "perf/build_timer.py": "23c2aaafc9ea7b05d5b9af2f42c352f72ae8860356229b883501b5906b006ae0",
+    "perf/run_ab.py": "7373073ac9c6852b8d2ae35909db8035a0b50c4621ac0464af767b98941e43f4",
+    "perf/patches/cached-min-v1.patch": "91dbb4fe992ca0b57d316b48e9a596a60fb5f4bc766600ee1ed9cb7e167be541",
+    "perf/patches/cached-min-v2.patch": "8181ef01298e1944222bff625f2e01c030755e7866bca60a2b77d0af87421295",
+    "perf/timer_heap.patch": "65047e0dc979de1b3b9c58dbfb0797dd6bac9445c69cf65ebfa7c671c80f9e21",
+    "perf/token_compact.patch": "b44728e28ab057ac063c9dd6865613889008e461ba2c43083971fd8f19875e28"
+  },
+  "sha256_retained_heap_production_sources": {
+    "picoquic/quicctx.c": "b1cc1acdb1d940292d8a1c0c3e8f922dbaaebd93522689ff22e4574b454366d5",
+    "picoquic/picoquic_internal.h": "f178db4854a9a401886f4bfa2f54e18f50c1252edd0790b0535abc527c582598"
+  },
+  "candidate_source_definitions": {
+    "upstream": "upstream_commit",
+    "cached-min": "upstream_commit + perf/patches/cached-min-v1.patch",
+    "cached-min-v2": "upstream_commit + perf/patches/cached-min-v2.patch",
+    "heap": "upstream_commit + perf/timer_heap.patch",
+    "token-compact": "upstream_commit + perf/token_compact.patch"
+  },
+  "note": "Core source identities exclude tests. The registered wake_queue test is shared by candidate test binaries. Original v1 timer binary is exploratory; contiguous.c preserves v2, timer_bench.c is final separate-allocation fixture."
+}

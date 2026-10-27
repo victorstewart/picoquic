@@ -1,0 +1,17 @@
+Starting test number 128, perf_loopback_multiconn
+Perf loopback: 10000000 app bytes, 12214520 wire bytes, 10800 packets (1600 client, 9200 server, 0 lost), 2400 batches, 1000 stall jumps, in 207059 us.
+Perf loopback: 0.207 seconds, 48.3 MB/s, 52159 packets/s, 19.172 us/packet, 4.50 packets/batch.
+    Success.
+Starting test number 125, perf_loopback
+Perf loopback: 10000000 app bytes, 10263165 wire bytes, 7356 packets (234 client, 7122 server, 0 lost), 680 batches, 447 stall jumps, in 11830 us.
+Perf loopback: 0.012 seconds, 845.3 MB/s, 621809 packets/s, 1.608 us/packet, 10.82 packets/batch.
+    Success.
+Starting test number 126, perf_loopback_loss
+Perf loopback: 10000000 app bytes, 10424561 wire bytes, 7473 packets (239 client, 7234 server, 117 lost), 693 batches, 450 stall jumps, in 12451 us.
+Perf loopback: 0.012 seconds, 803.1 MB/s, 600193 packets/s, 1.666 us/packet, 10.78 packets/batch.
+    Success.
+Starting test number 127, perf_loopback_multistream
+Perf loopback: 10000000 app bytes, 10776274 wire bytes, 7759 packets (589 client, 7170 server, 0 lost), 693 batches, 429 stall jumps, in 15021 us.
+Perf loopback: 0.015 seconds, 665.7 MB/s, 516544 packets/s, 1.936 us/packet, 11.20 packets/batch.
+    Success.
+Tried 4 tests, 0 fails.
