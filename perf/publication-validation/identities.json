@@ -1,0 +1,45 @@
+{
+  "original_source_commit": "42a740c8ce1c20e73fc47ac8652ed0835ae1776b",
+  "change": "Remove three unused heap-member stores in picoquic_free; update stale test comment. All other production/test source unchanged.",
+  "harness_source_commit": "42a740c8ce1c20e73fc47ac8652ed0835ae1776b",
+  "harness_source_path": "perf/followup/scheduler_controls.c",
+  "comparison": "original final combined vs minimal final combined; 12 alternating pairs, discarded warmup; create/reschedule/delete churn 1000 iterations, batch 64",
+  "files": {
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/publication-2026-10-27/minimal/scheduler_controls.c": {
+      "sha256": "1499a5547ff83ebb0ee42bb27a6a36acd5b6edb36f0f6ba921344178be659cb4",
+      "bytes": 7786
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/publication-2026-10-27/minimal/scheduler_controls": {
+      "sha256": "ee0521b1cbe50d656490a0b1fd486560ef098815764beb19f7514d165ef12140",
+      "bytes": 679792
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/publication-2026-10-27/minimal/scheduler_controls_sanitize": {
+      "sha256": "072c2f6f02e4963f38ffce37f29c7e6476b2ae733c5d4c40ea61f71840b7028c",
+      "bytes": 1662792
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/build-perf/libpicoquic-core.a": {
+      "sha256": "97f4109c227ab914bc0f0e45c51a58180e062c52dfcaedeb6e696450bd733fac",
+      "bytes": 777912
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/build-perf-sanitize/libpicoquic-core.a": {
+      "sha256": "0ba8b7859ff4da912adddca7eda8df98ba480b0620c6252e7f223ff954ca78cb",
+      "bytes": 6487184
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/picoquic/quicctx.c": {
+      "sha256": "3786c8fdecfb3d1f40a011d97ed969de8b92ee41bc84a9afe1e6ce153bd58055",
+      "bytes": 199954
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/picoquic/picoquic_internal.h": {
+      "sha256": "f3082ceaf1297427c6906584fe4c574781e755ef177f2e70d83f6d896408f5f0",
+      "bytes": 117636
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls": {
+      "sha256": "c4a6e95ddc9532f566eadcee86b43f673315b1211a5da4233cdf9cd2ffd8575e",
+      "bytes": 679792
+    },
+    "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/publication-2026-10-27/minimal/source-delta.patch": {
+      "sha256": "98e8f307199c418587553fe684ad852434214b632d5b7c295873beeeecc6289c",
+      "bytes": 1168
+    }
+  }
+}

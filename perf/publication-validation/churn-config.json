@@ -1,0 +1,25 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "minimal-teardown-churn",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "operations"
+      ],
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls",
+        "churn",
+        "1000",
+        "64"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/publication-2026-10-27/minimal/scheduler_controls",
+        "churn",
+        "1000",
+        "64"
+      ]
+    }
+  ]
+}

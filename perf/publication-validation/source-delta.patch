@@ -1,0 +1,27 @@
+diff --git a/picoquic/quicctx.c b/picoquic/quicctx.c
+index a4934c03..e3a98bbe 100644
+--- a/picoquic/quicctx.c
++++ b/picoquic/quicctx.c
+@@ -1087,9 +1087,6 @@ void picoquic_free(picoquic_quic_t* quic)
+             picoquic_delete_cnx(quic->cnx_list);
+         }
+         free(quic->cnx_wake_heap);
+-        quic->cnx_wake_heap = NULL;
+-        quic->cnx_wake_heap_size = 0;
+-        quic->cnx_wake_heap_capacity = 0;
+ 
+         /* Delete ECH context if it was created */
+         picoquic_release_quic_ech_ctx(quic);
+diff --git a/picoquictest/cnx_creation_test.c b/picoquictest/cnx_creation_test.c
+index 4c6a561a..3f810117 100644
+--- a/picoquictest/cnx_creation_test.c
++++ b/picoquictest/cnx_creation_test.c
+@@ -430,7 +430,7 @@ int wake_queue_test(void)
+         }
+     }
+     /* Move the minimum to ready and back; then promote and delete all entries
+-     * in deadline/insertion order. Deletion includes the final cached minimum. */
++     * in deadline/insertion order. Deletion includes the final future timer. */
+     if (ret == 0) {
+         picoquic_reinsert_by_wake_time(quic, cnx[0], now);
+         if (picoquic_get_earliest_cnx_to_wake(quic, now) != cnx[0]) {

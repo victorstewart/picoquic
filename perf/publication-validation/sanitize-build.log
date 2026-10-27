@@ -1,0 +1,155 @@
+[  3%] Built target picotls-core
+[  4%] Built target picotls-openssl
+[ 18%] Built target picotls-minicrypto
+[ 18%] Building C object CMakeFiles/picoquic-core.dir/picoquic/bbr.c.o
+[ 18%] Building C object CMakeFiles/picoquic-core.dir/picoquic/bbr1.c.o
+[ 18%] Building C object CMakeFiles/picoquic-core.dir/picoquic/c4.c.o
+[ 19%] Building C object CMakeFiles/picoquic-core.dir/picoquic/cubic.c.o
+[ 19%] Building C object CMakeFiles/picoquic-core.dir/picoquic/bytestream.c.o
+[ 21%] Building C object CMakeFiles/picoquic-core.dir/picoquic/dualq_aqm.c.o
+[ 21%] Building C object CMakeFiles/picoquic-core.dir/picoquic/cc_common.c.o
+[ 22%] Building C object CMakeFiles/picoquic-core.dir/picoquic/config.c.o
+[ 22%] Building C object CMakeFiles/picoquic-core.dir/picoquic/ech.c.o
+[ 22%] Building C object CMakeFiles/picoquic-core.dir/picoquic/error_names.c.o
+[ 24%] Building C object CMakeFiles/picoquic-core.dir/picoquic/fastcc.c.o
+[ 24%] Building C object CMakeFiles/picoquic-core.dir/picoquic/frames.c.o
+[ 24%] Building C object CMakeFiles/picoquic-core.dir/picoquic/frame_names.c.o
+[ 24%] Building C object CMakeFiles/picoquic-core.dir/picoquic/logger.c.o
+[ 25%] Building C object CMakeFiles/picoquic-core.dir/picoquic/logwriter.c.o
+[ 25%] Building C object CMakeFiles/picoquic-core.dir/picoquic/loss_recovery.c.o
+[ 25%] Building C object CMakeFiles/picoquic-core.dir/picoquic/newreno.c.o
+[ 27%] Building C object CMakeFiles/picoquic-core.dir/picoquic/pacing.c.o
+[ 27%] Building C object CMakeFiles/picoquic-core.dir/picoquic/packet.c.o
+[ 27%] Building C object CMakeFiles/picoquic-core.dir/picoquic/packet_names.c.o
+[ 28%] Building C object CMakeFiles/picoquic-core.dir/picoquic/paths.c.o
+[ 28%] Building C object CMakeFiles/picoquic-core.dir/picoquic/performance_log.c.o
+[ 30%] Building C object CMakeFiles/picoquic-core.dir/picoquic/picoquic_lb.c.o
+[ 30%] Building C object CMakeFiles/picoquic-core.dir/picoquic/port_blocking.c.o
+[ 31%] Building C object CMakeFiles/picoquic-core.dir/picoquic/prague.c.o
+[ 31%] Building C object CMakeFiles/picoquic-core.dir/picoquic/qmux.c.o
+[ 31%] Building C object CMakeFiles/picoquic-core.dir/picoquic/quicctx.c.o
+[ 31%] Building C object CMakeFiles/picoquic-core.dir/picoquic/sacks.c.o
+[ 33%] Building C object CMakeFiles/picoquic-core.dir/picoquic/scone.c.o
+[ 33%] Building C object CMakeFiles/picoquic-core.dir/picoquic/sender.c.o
+[ 33%] Building C object CMakeFiles/picoquic-core.dir/picoquic/sim_link.c.o
+[ 33%] Building C object CMakeFiles/picoquic-core.dir/picoquic/sockloop.c.o
+[ 33%] Building C object CMakeFiles/picoquic-core.dir/picoquic/spinbit.c.o
+[ 34%] Building C object CMakeFiles/picoquic-core.dir/picoquic/streams.c.o
+[ 34%] Building C object CMakeFiles/picoquic-core.dir/picoquic/ticket_store.c.o
+[ 34%] Building C object CMakeFiles/picoquic-core.dir/picoquic/timing.c.o
+[ 36%] Building C object CMakeFiles/picoquic-core.dir/picoquic/token_store.c.o
+[ 36%] Building C object CMakeFiles/picoquic-core.dir/picoquic/tls_api.c.o
+[ 36%] Building C object CMakeFiles/picoquic-core.dir/picoquic/transport.c.o
+[ 36%] Building C object CMakeFiles/picoquic-core.dir/picoquic/unified_log.c.o
+[ 37%] Building C object CMakeFiles/picoquic-core.dir/picoquic/util.c.o
+[ 37%] Linking C static library libpicoquic-core.a
+[ 48%] Built target picoquic-core
+[ 50%] Building C object CMakeFiles/picoquic-log.dir/loglib/cidset.c.o
+[ 50%] Building C object CMakeFiles/picoquic-log.dir/loglib/csv.c.o
+[ 50%] Building C object CMakeFiles/picoquic-log.dir/loglib/qlog_frames.c.o
+[ 50%] Building C object CMakeFiles/picoquic-log.dir/loglib/autoqlog.c.o
+[ 50%] Building C object CMakeFiles/picoquic-log.dir/loglib/logconvert.c.o
+[ 51%] Building C object CMakeFiles/picoquic-log.dir/loglib/qlog.c.o
+[ 51%] Building C object CMakeFiles/picoquic-log.dir/loglib/memory_log.c.o
+[ 53%] Building C object CMakeFiles/picoquic-log.dir/loglib/logreader.c.o
+[ 53%] Building C object CMakeFiles/picoquic-log.dir/loglib/qlog_fns.c.o
+[ 54%] Building C object CMakeFiles/picoquic-log.dir/loglib/svg.c.o
+[ 54%] Linking C static library libpicoquic-log.a
+[ 54%] Built target picoquic-log
+[ 54%] Building C object CMakeFiles/picohttp-core.dir/picohttp/demoserver.c.o
+[ 56%] Building C object CMakeFiles/picohttp-core.dir/picohttp/democlient.c.o
+[ 57%] Building C object CMakeFiles/picohttp-core.dir/picohttp/h3zero_client.c.o
+[ 59%] Building C object CMakeFiles/picohttp-core.dir/picohttp/picomask.c.o
+[ 59%] Building C object CMakeFiles/picohttp-core.dir/picohttp/h3zero_common.c.o
+[ 60%] Building C object CMakeFiles/picohttp-core.dir/picohttp/h3zero_server.c.o
+[ 60%] Building C object CMakeFiles/picohttp-core.dir/picohttp/picoquic_ns.c.o
+[ 62%] Building C object CMakeFiles/picohttp-core.dir/picohttp/webtransport.c.o
+[ 62%] Linking C static library libpicohttp-core.a
+[ 62%] Built target picohttp-core
+[ 65%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/ack_frequency_test.c.o
+[ 65%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/cc_compete_test.c.o
+[ 65%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/app_limited.c.o
+[ 65%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/ack_of_ack_test.c.o
+[ 65%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/config_test.c.o
+[ 66%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/cleartext_aead_test.c.o
+[ 66%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/cert_verify_test.c.o
+[ 66%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/bytestream_test.c.o
+[ 68%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/congestion_test.c.o
+[ 68%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/cnx_creation_test.c.o
+[ 68%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/cnxstress.c.o
+[ 69%] Building CXX object CMakeFiles/picoquic-test.dir/picoquictest/cplusplus.cpp.o
+[ 69%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/cpu_limited.c.o
+[ 69%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/datagram_tests.c.o
+[ 71%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/delay_tolerant_test.c.o
+[ 71%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/dualq_aqm_test.c.o
+[ 72%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/ech_test.c.o
+[ 72%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/edge_cases.c.o
+[ 72%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/flow_control_test.c.o
+[ 74%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/getter_test.c.o
+[ 74%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/hashtest.c.o
+[ 74%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/high_latency_test.c.o
+[ 75%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/intformattest.c.o
+[ 75%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/l4s_test.c.o
+[ 75%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/mbedtls_test.c.o
+[ 77%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/mediatest.c.o
+[ 77%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/memlog_test.c.o
+[ 78%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/minicrypto_test.c.o
+[ 78%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/multipath_test.c.o
+[ 78%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/netperf_test.c.o
+[ 80%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/pacing_test.c.o
+[ 80%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/openssl_test.c.o
+[ 80%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/p2p_test.c.o
+[ 81%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/packet_names_test.c.o
+[ 81%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/parseheadertest.c.o
+[ 81%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/performance_log_test.c.o
+[ 83%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/picolog_test.c.o
+[ 83%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/picoquic_lb_test.c.o
+[ 84%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/picoquic_ptls_fusion_test.c.o
+[ 84%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/pn2pn64test.c.o
+[ 84%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/qlog_frame_test.c.o
+[ 86%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/qlog_test.c.o
+[ 86%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/qmux_test.c.o
+[ 86%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/quic_tester.c.o
+[ 87%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/quicctx_test.c.o
+[ 87%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/red_aqm.c.o
+[ 87%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/rctl_aqm.c.o
+[ 89%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/sacktest.c.o
+[ 89%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/satellite_test.c.o
+[ 89%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/scone_test.c.o
+[ 90%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/skip_frame_test.c.o
+[ 92%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/sockloop_test.c.o
+[ 92%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/af_xdp_test.c.o
+[ 92%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/spinbit_test.c.o
+[ 92%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/stream0_frame_test.c.o
+[ 92%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/stresstest.c.o
+[ 93%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/ticket_store_test.c.o
+[ 93%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/tls_api_test.c.o
+[ 93%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/transport_param_test.c.o
+[ 95%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/util_test.c.o
+[ 95%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/warptest.c.o
+[ 96%] Building C object CMakeFiles/picoquic-test.dir/picoquictest/wifitest.c.o
+[ 96%] Linking CXX static library libpicoquic-test.a
+[ 98%] Built target picoquic-test
+[ 98%] Building C object CMakeFiles/picoquic_ct.dir/picoquic_t/picoquic_t.c.o
+[100%] Linking CXX executable picoquic_ct
+ld: warning: ignoring duplicate libraries: '_deps/picotls-build/libpicotls-core.a', '_deps/picotls-build/libpicotls-minicrypto.a', '_deps/picotls-build/libpicotls-openssl.a', 'libpicoquic-core.a', 'libpicoquic-log.a'
+[100%] Built target picoquic_ct
+[  2%] Built target picotls-core
+[  4%] Built target picotls-openssl
+[ 17%] Built target picotls-minicrypto
+[ 46%] Built target picoquic-core
+[ 52%] Built target picoquic-log
+[ 59%] Built target picohttp-core
+[ 59%] Building C object CMakeFiles/wt_baton.dir/picohttp/wt_baton.c.o
+[ 94%] Built target picoquic-test
+[ 95%] Linking C static library libwt_baton.a
+[ 95%] Built target wt_baton
+[ 95%] Building C object CMakeFiles/picohttp_ct.dir/picoquictest/h3zero_stream_test.c.o
+[ 97%] Building C object CMakeFiles/picohttp_ct.dir/picohttp_t/picohttp_t.c.o
+[ 97%] Building C object CMakeFiles/picohttp_ct.dir/picoquictest/h3zerotest.c.o
+[ 97%] Building C object CMakeFiles/picohttp_ct.dir/picoquictest/quicperf_test.c.o
+[ 98%] Building C object CMakeFiles/picohttp_ct.dir/picoquictest/webtransport_test.c.o
+[ 98%] Building C object CMakeFiles/picohttp_ct.dir/picoquictest/picomask_test.c.o
+[ 98%] Linking CXX executable picohttp_ct
+ld: warning: ignoring duplicate libraries: '_deps/picotls-build/libpicotls-core.a', '_deps/picotls-build/libpicotls-minicrypto.a', '_deps/picotls-build/libpicotls-openssl.a', 'libpicohttp-core.a', 'libpicoquic-core.a', 'libpicoquic-log.a'
+[100%] Built target picohttp_ct

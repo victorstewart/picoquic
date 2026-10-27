@@ -1,0 +1,65 @@
+COMMAND ['build-perf-sanitize/picoquic_ct', '-n', 'create_cnx', 'wake_queue', 'create_quic', 'add_to_stream_fin_only_wakes_cnx', 'getter', 'packet_enc_dec', 'padding_test', 'padding_null', 'padding_zero_min', 'mtu_discovery', 'mtu_required', 'mtu_max', 'stream_retransmit_copy', 'frames_format', 'stream_splay', 'stream_output']
+Starting test number 52, create_cnx
+    Success.
+Starting test number 53, wake_queue
+    Success.
+Starting test number 54, create_quic
+    Success.
+Starting test number 80, frames_format
+    Success.
+Starting test number 91, stream_splay
+    Success.
+Starting test number 92, stream_output
+    Success.
+Starting test number 93, stream_retransmit_copy
+    Success.
+Starting test number 242, mtu_discovery
+    Success.
+Starting test number 245, mtu_required
+    Success.
+Starting test number 246, mtu_max
+    Success.
+Starting test number 294, packet_enc_dec
+    Success.
+Starting test number 350, padding_test
+    Success.
+Starting test number 351, padding_null
+    Success.
+Starting test number 352, padding_zero_min
+    Success.
+Starting test number 449, add_to_stream_fin_only_wakes_cnx
+    Success.
+Starting test number 698, getter
+    Success.
+Tried 16 tests, 0 fails.
+COMMAND ['build-perf-sanitize/picohttp_ct', '-n', 'quicperf_datagram', 'quicperf_datagram_multiflow', 'quicperf_multipath_race', 'quicperf_multipath_race_delayed', 'quicperf_multipath_settled']
+Starting test number 109, quicperf_datagram
+    Success.
+Starting test number 110, quicperf_datagram_multiflow
+    Success.
+Starting test number 122, quicperf_multipath_race
+    Success.
+Starting test number 123, quicperf_multipath_race_delayed
+    Success.
+Starting test number 124, quicperf_multipath_settled
+    Success.
+Tried 5 tests, 0 fails.
+COMMAND ['build-perf-sanitize/picoquic_ct', '-n', 'direct_receive', 'reset_loop_test', 'reset_after_fin_received', 'ready_to_zfin', 'cnx_limit', 'cnx_stress']
+Starting test number 438, reset_after_fin_received
+    Success.
+Starting test number 440, reset_loop_test
+    Success.
+Starting test number 454, ready_to_zfin
+    Success.
+Starting test number 550, direct_receive
+    Success.
+Starting test number 583, cnx_limit
+    Success.
+Starting test number 708, cnx_stress
+    Success.
+Tried 6 tests, 0 fails.
+COMMAND ['/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/publication-2026-10-27/minimal/scheduler_controls_sanitize', 'poll', '1000', '1']
+mode=poll iterations=1000 batch=1 operations=4000 cpu_ns=21000 wall_ns=22000 cpu_ns_op=5.250 wall_ns_op=5.500 checksum=1806000
+COMMAND ['/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/publication-2026-10-27/minimal/scheduler_controls_sanitize', 'churn', '10', '64']
+mode=churn iterations=10 batch=64 operations=2580 cpu_ns=13590000 wall_ns=13610000 cpu_ns_op=5267.442 wall_ns_op=5275.194 checksum=3540160
+ALL MINIMAL-SERIES SANITIZER CHECKS PASSED
