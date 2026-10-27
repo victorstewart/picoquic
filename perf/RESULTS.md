@@ -1,5 +1,7 @@
 # Native Mac ordered-index experiment results
 
+Published branch and original-to-published revision mapping: [publication record](PUBLICATION.md).
+
 The subsequent [persistent-connection and queue/pool experiments](followup/RESULTS.md)
 add targeted workloads and three further mechanisms. This report preserves the
 original ordered-index sweep and its measurements.

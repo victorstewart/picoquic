@@ -1,5 +1,7 @@
 # Native Mac follow-up: persistent connections and three mechanisms
 
+Published branch and original-to-published revision mapping: [publication record](../PUBLICATION.md).
+
 **Outcome:** retain constant-time send-queue append and metadata-only packet
 initialization, each with its own proof commit. Reject in-place heap updates
 because they slow monotonic updates. The previously retained timer heap remains.
