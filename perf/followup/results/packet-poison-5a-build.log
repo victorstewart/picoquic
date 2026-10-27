@@ -1,0 +1,23 @@
+[  3%] Built target picotls-core
+[  4%] Built target picotls-openssl
+[ 18%] Built target picotls-minicrypto
+[ 18%] Building C object CMakeFiles/picoquic-core.dir/picoquic/sender.c.o
+[ 18%] Linking C static library libpicoquic-core.a
+[ 48%] Built target picoquic-core
+[ 54%] Built target picoquic-log
+[ 62%] Built target picohttp-core
+[ 98%] Built target picoquic-test
+[100%] Linking CXX executable picoquic_ct
+ld: warning: ignoring duplicate libraries: '_deps/picotls-build/libpicotls-core.a', '_deps/picotls-build/libpicotls-minicrypto.a', '_deps/picotls-build/libpicotls-openssl.a', 'libpicoquic-core.a', 'libpicoquic-log.a'
+[100%] Built target picoquic_ct
+[  2%] Built target picotls-core
+[  4%] Built target picotls-openssl
+[ 17%] Built target picotls-minicrypto
+[ 46%] Built target picoquic-core
+[ 52%] Built target picoquic-log
+[ 59%] Built target picohttp-core
+[ 60%] Built target wt_baton
+[ 95%] Built target picoquic-test
+[ 95%] Linking CXX executable picohttp_ct
+ld: warning: ignoring duplicate libraries: '_deps/picotls-build/libpicotls-core.a', '_deps/picotls-build/libpicotls-minicrypto.a', '_deps/picotls-build/libpicotls-openssl.a', 'libpicohttp-core.a', 'libpicoquic-core.a', 'libpicoquic-log.a'
+[100%] Built target picohttp_ct

@@ -1,0 +1,76 @@
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct', '1', 'quicperf_datagram']
+tests_passed=1 repetitions=1 cpu_ns_op=13175000.000 wall_ns_op=27137791.000
+successful_child_output_sha256=3a32d16dda8ed6f4866f40a5513c88f2d8a814c0e6b5fda13ed7a77a9266cffe
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct', '1', 'quicperf_datagram']
+tests_passed=1 repetitions=1 cpu_ns_op=12153000.000 wall_ns_op=14744458.000
+successful_child_output_sha256=3a32d16dda8ed6f4866f40a5513c88f2d8a814c0e6b5fda13ed7a77a9266cffe
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct', '1', 'quicperf_datagram_multiflow']
+tests_passed=1 repetitions=1 cpu_ns_op=16470000.000 wall_ns_op=20459875.000
+successful_child_output_sha256=5ad09d961a5f22f07f17951ab343eb8732fd6a90512fa2e83b2f7c918d6fa056
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct', '1', 'quicperf_datagram_multiflow']
+tests_passed=1 repetitions=1 cpu_ns_op=15546000.000 wall_ns_op=18012625.000
+successful_child_output_sha256=5ad09d961a5f22f07f17951ab343eb8732fd6a90512fa2e83b2f7c918d6fa056
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct', '1', 'quicperf_multipath_race', 'quicperf_multipath_race_delayed', 'quicperf_multipath_settled']
+tests_passed=3 repetitions=1 cpu_ns_op=16425000.000 wall_ns_op=21913292.000
+successful_child_output_sha256=f1d9c03b2d56fd8646a2081a098be55c3712cd56abf48a8883fa455a5bed8f04
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct', '1', 'quicperf_multipath_race', 'quicperf_multipath_race_delayed', 'quicperf_multipath_settled']
+tests_passed=3 repetitions=1 cpu_ns_op=16647000.000 wall_ns_op=19695000.000
+successful_child_output_sha256=f1d9c03b2d56fd8646a2081a098be55c3712cd56abf48a8883fa455a5bed8f04
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct', '1', 'direct_receive']
+tests_passed=1 repetitions=1 cpu_ns_op=11210000.000 wall_ns_op=23135083.000
+successful_child_output_sha256=e0c1df2213897078fb139c2bd70bbb3737ccbddd57d988488b732ca259dc6e21
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct', '1', 'direct_receive']
+tests_passed=1 repetitions=1 cpu_ns_op=10884000.000 wall_ns_op=22080084.000
+successful_child_output_sha256=4d58880de8e754940955d3e24c28497528db4a501ca8c87f03d9dc6dd1b98bfb
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct', '1', 'reset_loop_test', 'reset_after_fin_received', 'ready_to_zfin']
+Starting test number 437, reset_after_fin_received
+    Success.
+Starting test number 439, reset_loop_test
+    Success.
+Starting test number 453, ready_to_zfin
+    Success.
+Tried 3 tests, 0 fails.
+CORRECTED: accept test-table order, require all named successes.
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct', '1', 'quicperf_datagram']
+tests_passed=1 repetitions=1 cpu_ns_op=11252000.000 wall_ns_op=13312458.000
+successful_child_output_sha256=3a32d16dda8ed6f4866f40a5513c88f2d8a814c0e6b5fda13ed7a77a9266cffe
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct', '1', 'quicperf_datagram']
+tests_passed=1 repetitions=1 cpu_ns_op=11922000.000 wall_ns_op=13901709.000
+successful_child_output_sha256=3a32d16dda8ed6f4866f40a5513c88f2d8a814c0e6b5fda13ed7a77a9266cffe
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct', '1', 'quicperf_datagram_multiflow']
+tests_passed=1 repetitions=1 cpu_ns_op=15637000.000 wall_ns_op=17791416.000
+successful_child_output_sha256=5ad09d961a5f22f07f17951ab343eb8732fd6a90512fa2e83b2f7c918d6fa056
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct', '1', 'quicperf_datagram_multiflow']
+tests_passed=1 repetitions=1 cpu_ns_op=16491000.000 wall_ns_op=18794541.000
+successful_child_output_sha256=5ad09d961a5f22f07f17951ab343eb8732fd6a90512fa2e83b2f7c918d6fa056
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct', '1', 'quicperf_multipath_race', 'quicperf_multipath_race_delayed', 'quicperf_multipath_settled']
+tests_passed=3 repetitions=1 cpu_ns_op=16381000.000 wall_ns_op=18554875.000
+successful_child_output_sha256=f1d9c03b2d56fd8646a2081a098be55c3712cd56abf48a8883fa455a5bed8f04
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct', '1', 'quicperf_multipath_race', 'quicperf_multipath_race_delayed', 'quicperf_multipath_settled']
+tests_passed=3 repetitions=1 cpu_ns_op=15376000.000 wall_ns_op=17692334.000
+successful_child_output_sha256=f1d9c03b2d56fd8646a2081a098be55c3712cd56abf48a8883fa455a5bed8f04
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct', '1', 'direct_receive']
+tests_passed=1 repetitions=1 cpu_ns_op=9284000.000 wall_ns_op=11272750.000
+successful_child_output_sha256=e0c1df2213897078fb139c2bd70bbb3737ccbddd57d988488b732ca259dc6e21
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct', '1', 'direct_receive']
+tests_passed=1 repetitions=1 cpu_ns_op=9289000.000 wall_ns_op=11230833.000
+successful_child_output_sha256=4d58880de8e754940955d3e24c28497528db4a501ca8c87f03d9dc6dd1b98bfb
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct', '1', 'reset_loop_test', 'reset_after_fin_received', 'ready_to_zfin']
+tests_passed=3 repetitions=1 cpu_ns_op=15024000.000 wall_ns_op=17142250.000
+successful_child_output_sha256=01c7fd20ea496853044cac8dddff735b78c5d93510f4666c63565708baaa7e94
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct', '1', 'reset_loop_test', 'reset_after_fin_received', 'ready_to_zfin']
+tests_passed=3 repetitions=1 cpu_ns_op=15521000.000 wall_ns_op=18608875.000
+successful_child_output_sha256=e4bd2caacbe7245e8b56180686ba279e661bbe8dbd8dca2c5ed4ba69c2dc7eb0
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct', '1', 'mtu_discovery', 'mtu_max']
+tests_passed=2 repetitions=1 cpu_ns_op=9410000.000 wall_ns_op=11307625.000
+successful_child_output_sha256=613f4f2d11bd6753826991b07c7709c7f4d52831123b2eb5f931dad88fba189b
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct', '1', 'mtu_discovery', 'mtu_max']
+tests_passed=2 repetitions=1 cpu_ns_op=9058000.000 wall_ns_op=10975000.000
+successful_child_output_sha256=6fed7ea37c3095e3f2d9a7e87f126cac5b5b21f2bbc40e6c864b105892c6f04d
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct', '1', 'cnx_limit', 'cnx_stress']
+tests_passed=2 repetitions=1 cpu_ns_op=104113000.000 wall_ns_op=106850083.000
+successful_child_output_sha256=07c770c81aca64fa773475b0a97503048db171df1c01557d38f7162a578344a8
+COMMAND ['python3', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py', '/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct', '1', 'cnx_limit', 'cnx_stress']
+tests_passed=2 repetitions=1 cpu_ns_op=101938000.000 wall_ns_op=104284958.000
+successful_child_output_sha256=70b820f30ee131044f1f096daefc4e7038be2dd420bd2d845c307568e72baa5d
+ALL SINGLE AND MULTIPLE TEST PARSER CHECKS PASSED

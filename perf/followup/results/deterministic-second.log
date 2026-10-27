@@ -1,0 +1,2 @@
+TEST ONLY: deterministic crypto randomness enabled
+population=1000 streams=1 rounds=16 payload_bytes=64 burst=64 loss=0 seed=42 setup_cpu_ns=923839000 setup_wall_ns=930818000 cpu_ns_op=4961.957 wall_ns_op=4967.391 checksum=363182434549956 delivered_messages=184 delivered_bytes=11776 simulated_p99_delivery_us=64 rss_max_bytes=89980928 packets=12593 measured_packets=584

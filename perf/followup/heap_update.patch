@@ -1,0 +1,39 @@
+diff --git a/picoquic/quicctx.c b/picoquic/quicctx.c
+index 92e0285e..f6afbbb1 100644
+--- a/picoquic/quicctx.c
++++ b/picoquic/quicctx.c
+@@ -1713,6 +1713,21 @@ void picoquic_reinsert_by_wake_time(picoquic_quic_t* quic, picoquic_cnx_t* cnx,
+         /* Already at the tail of the ready list: no change needed. */
+         cnx->next_wake_time = next_time;
+     }
++    else if (cnx->is_wake_tree && next_time > picoquic_get_quic_time(quic)) {
++        /* A future-to-future update retains its slot. Refresh the sequence just
++         * like removal/reinsertion, preserving FIFO order for equal deadlines. */
++        uint64_t sequence = picoquic_wake_list_next_sequence(quic);
++        size_t index = cnx->cnx_wake_heap_index;
++        cnx->next_wake_time = next_time;
++        cnx->cnx_wake_heap_sequence = sequence;
++        if (index != 0 && picoquic_wake_heap_before(cnx,
++            quic->cnx_wake_heap[(index - 1) / 2])) {
++            picoquic_wake_heap_sift_up(quic, index);
++        }
++        else {
++            picoquic_wake_heap_sift_down(quic, index);
++        }
++    }
+     else {
+         picoquic_remove_cnx_from_wake_list(cnx);
+         cnx->next_wake_time = next_time;
+diff --git a/picoquictest/cnx_creation_test.c b/picoquictest/cnx_creation_test.c
+index 4c6a561a..c4c02ec2 100644
+--- a/picoquictest/cnx_creation_test.c
++++ b/picoquictest/cnx_creation_test.c
+@@ -411,6 +411,8 @@ int wake_queue_test(void)
+             order[i] = serial++;
+         }
+     }
++    /* Force sequence renumbering while updating connections already indexed. */
++    quic->cnx_wake_heap_next_sequence = UINT64_MAX - 3;
+     for (int step = 0; ret == 0 && step < 1024; step++) {
+         int i = (step * 13) % count;
+         uint64_t deadline = (step % 31 == 0) ? UINT64_MAX : 1100 + ((step * 7) % 17);

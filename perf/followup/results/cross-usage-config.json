@@ -1,0 +1,341 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "perf_loopback",
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      },
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/picohttp_ct",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback"
+      ]
+    },
+    {
+      "name": "perf_loopback_multistream",
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      },
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/picohttp_ct",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multistream"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multistream"
+      ]
+    },
+    {
+      "name": "datagram-small",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "tests_passed",
+        "repetitions"
+      ],
+      "a": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct",
+        "100",
+        "quicperf_datagram"
+      ],
+      "b": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct",
+        "100",
+        "quicperf_datagram"
+      ]
+    },
+    {
+      "name": "datagram-large",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "tests_passed",
+        "repetitions"
+      ],
+      "a": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct",
+        "30",
+        "quicperf_datagram_multiflow"
+      ],
+      "b": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct",
+        "30",
+        "quicperf_datagram_multiflow"
+      ]
+    },
+    {
+      "name": "multipath",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "tests_passed",
+        "repetitions"
+      ],
+      "a": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picohttp_ct",
+        "30",
+        "quicperf_multipath_race",
+        "quicperf_multipath_race_delayed",
+        "quicperf_multipath_settled"
+      ],
+      "b": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct",
+        "30",
+        "quicperf_multipath_race",
+        "quicperf_multipath_race_delayed",
+        "quicperf_multipath_settled"
+      ]
+    },
+    {
+      "name": "direct-receive",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "tests_passed",
+        "repetitions"
+      ],
+      "a": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct",
+        "20",
+        "direct_receive"
+      ],
+      "b": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct",
+        "20",
+        "direct_receive"
+      ]
+    },
+    {
+      "name": "terminal-queues",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "tests_passed",
+        "repetitions"
+      ],
+      "a": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct",
+        "50",
+        "reset_loop_test",
+        "reset_after_fin_received",
+        "ready_to_zfin"
+      ],
+      "b": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct",
+        "50",
+        "reset_loop_test",
+        "reset_after_fin_received",
+        "ready_to_zfin"
+      ]
+    },
+    {
+      "name": "mtu",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "tests_passed",
+        "repetitions"
+      ],
+      "a": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct",
+        "30",
+        "mtu_discovery",
+        "mtu_max"
+      ],
+      "b": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct",
+        "30",
+        "mtu_discovery",
+        "mtu_max"
+      ]
+    },
+    {
+      "name": "context-lifecycle",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "tests_passed",
+        "repetitions"
+      ],
+      "a": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/picoquic_ct",
+        "10",
+        "cnx_limit",
+        "cnx_stress"
+      ],
+      "b": [
+        "python3",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic/perf/followup/test_batch.py",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picoquic_ct",
+        "10",
+        "cnx_limit",
+        "cnx_stress"
+      ]
+    },
+    {
+      "name": "scheduler-poll",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "operations"
+      ],
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/scheduler_controls",
+        "poll",
+        "25000000",
+        "1"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls",
+        "poll",
+        "25000000",
+        "1"
+      ]
+    },
+    {
+      "name": "scheduler-poll-empty",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "operations"
+      ],
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/scheduler_controls",
+        "poll-empty",
+        "100000000",
+        "1"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls",
+        "poll-empty",
+        "100000000",
+        "1"
+      ]
+    },
+    {
+      "name": "scheduler-poll-future",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "operations"
+      ],
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/scheduler_controls",
+        "poll-future",
+        "100000000",
+        "1"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls",
+        "poll-future",
+        "100000000",
+        "1"
+      ]
+    },
+    {
+      "name": "scheduler-poll-ready",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "operations"
+      ],
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/scheduler_controls",
+        "poll-ready",
+        "100000000",
+        "1"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls",
+        "poll-ready",
+        "100000000",
+        "1"
+      ]
+    },
+    {
+      "name": "scheduler-poll-capped",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "operations"
+      ],
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/scheduler_controls",
+        "poll-capped",
+        "100000000",
+        "1"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls",
+        "poll-capped",
+        "100000000",
+        "1"
+      ]
+    },
+    {
+      "name": "scheduler-churn",
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "operations"
+      ],
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/scheduler_controls",
+        "churn",
+        "1000",
+        "64"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/scheduler_controls",
+        "churn",
+        "1000",
+        "64"
+      ]
+    }
+  ]
+}

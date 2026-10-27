@@ -1,0 +1,200 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "timer-query",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/timer_bench",
+        "query",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/timer_bench",
+        "query",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-update",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/timer_bench",
+        "update",
+        "10000",
+        "3000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/timer_bench",
+        "update",
+        "10000",
+        "3000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-randomized",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/timer_bench",
+        "randomized",
+        "10000",
+        "3000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/timer_bench",
+        "randomized",
+        "10000",
+        "3000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-monotonic",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/timer_bench",
+        "monotonic",
+        "10000",
+        "3000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/timer_bench",
+        "monotonic",
+        "10000",
+        "3000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-ready-only",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/timer_bench",
+        "ready-only",
+        "10000",
+        "10000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/timer_bench",
+        "ready-only",
+        "10000",
+        "10000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "timer-ready-mixed-random",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/timer_bench",
+        "ready-mixed-random",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/timer_bench",
+        "ready-mixed-random",
+        "10000",
+        "5000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    },
+    {
+      "name": "persistent-10000-one",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench",
+        "10000",
+        "1",
+        "4096",
+        "64",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/persistent_bench",
+        "10000",
+        "1",
+        "4096",
+        "64",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "persistent-1000-loss",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "1",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/persistent_bench",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "1",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "perf_loopback_multiconn",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multiconn"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multiconn"
+      ],
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      }
+    }
+  ]
+}

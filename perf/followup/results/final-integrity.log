@@ -1,0 +1,7 @@
+send_queue_tail.patch: every file diff exactly matches benchmarked patch (file order ignored).
+packet_init.patch: every file diff exactly matches benchmarked patch (file order ignored).
+All 59 recorded snapshot file hashes verified.
+Generated protocol logs preserved in /Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/cross-usage-generated-logs
+git diff --check passed.
+Staged source/docs/data whitespace check passed excluding *.patch; unified-diff blank context lines require their leading space.
+Original checkout remains on master at ef22f170 with only the pre-existing SECURITY_AUDIT_2026-09-02.md untracked.

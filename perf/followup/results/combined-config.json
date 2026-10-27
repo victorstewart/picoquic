@@ -1,0 +1,63 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "persistent-10000-four",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "10000",
+        "4",
+        "2048",
+        "1024",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/persistent_bench_diagnostic",
+        "10000",
+        "4",
+        "2048",
+        "1024",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "perf_loopback_loss",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_loss"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-combined/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_loss"
+      ],
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      }
+    }
+  ]
+}

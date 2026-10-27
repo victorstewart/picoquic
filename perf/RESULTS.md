@@ -1,5 +1,9 @@
 # Native Mac ordered-index experiment results
 
+The subsequent [persistent-connection and queue/pool experiments](followup/RESULTS.md)
+add targeted workloads and three further mechanisms. This report preserves the
+original ordered-index sweep and its measurements.
+
 The final production choice is an **indexed future-timer heap**, retaining the
 existing ready FIFO. The smaller cached-minimum alternative also wins and is
 preserved in commit `7714e4c0`; the heap replaces it, so their percentages
@@ -85,8 +89,9 @@ stream each; multistream uses 500 streams. Loss uses the existing 1/64 drop mask
 | `perf_loopback_loss` | +0.32% [-0.21, +1.12] | -0.15% [-0.83, +0.23] |
 | `perf_loopback_multistream` | +0.33% [-0.55, +5.88] | +1.26% [-0.23, +1.67] |
 
-No whole-protocol speedup meets the 5% target. The gains above are confined to
-scheduler CPU cost. Application bytes match exactly. Initial strict packet/wire
+No whole-protocol speedup in this original bulk sweep meets the 5% target. The
+gains above are confined to scheduler CPU cost. Application bytes match exactly.
+Initial strict packet/wire
 matching rejected some runs; an upstream-vs-upstream four-pair calibration
 reproduced handshake-related variation. Later comparisons permit <=0.001%
 packet/wire variation while requiring exact application bytes. All later pairs

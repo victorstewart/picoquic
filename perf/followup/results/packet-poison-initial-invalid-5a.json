@@ -1,0 +1,338 @@
+[
+  {
+    "case": "small",
+    "variant": "followup-base",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "0",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=0 seed=42 setup_cpu_ns=895101000 setup_wall_ns=900685000 cpu_ns_op=5024.457 wall_ns_op=5043.478 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=64 rss_max_bytes=90472448 packets=13089 measured_packets=1080\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/small.wire.bin",
+    "wire_bytes": 9075471,
+    "wire_sha256": "baf8f649b977318f10b3b5083960f694c848a691ed8873191ded23d63ed3a95c",
+    "binary_sha256": "4c23ae7782812666cbddd79b85dce4a355ef53efbba07ad345bb050d4f5fd88a"
+  },
+  {
+    "case": "small",
+    "variant": "packet-init",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "0",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=0 seed=42 setup_cpu_ns=916355000 setup_wall_ns=918856000 cpu_ns_op=5804.348 wall_ns_op=5807.065 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=64 rss_max_bytes=91471872 packets=13089 measured_packets=1080\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/small.wire.bin",
+    "wire_bytes": 9075471,
+    "wire_sha256": "baf8f649b977318f10b3b5083960f694c848a691ed8873191ded23d63ed3a95c",
+    "binary_sha256": "3d5b6b83df9e898f9fc9b3ebe01fa00d1100319c28de5169e55fb883bea01d53"
+  },
+  {
+    "case": "small",
+    "variant": "packet-poison-a5",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "0",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=0 seed=42 setup_cpu_ns=943213000 setup_wall_ns=946466000 cpu_ns_op=4793.478 wall_ns_op=4804.348 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=64 rss_max_bytes=89899008 packets=13089 measured_packets=1080\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/small.wire.bin",
+    "wire_bytes": 9075471,
+    "wire_sha256": "baf8f649b977318f10b3b5083960f694c848a691ed8873191ded23d63ed3a95c",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  },
+  {
+    "case": "small",
+    "variant": "packet-poison-5a",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "0",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=0 seed=42 setup_cpu_ns=932852000 setup_wall_ns=942380000 cpu_ns_op=4894.022 wall_ns_op=4891.304 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=64 rss_max_bytes=91537408 packets=13089 measured_packets=1080\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/small.wire.bin",
+    "wire_bytes": 9075471,
+    "wire_sha256": "baf8f649b977318f10b3b5083960f694c848a691ed8873191ded23d63ed3a95c",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  },
+  {
+    "case": "small-loss",
+    "variant": "followup-base",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=1 seed=42 setup_cpu_ns=896350000 setup_wall_ns=897866000 cpu_ns_op=5084.239 wall_ns_op=5086.957 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=12950 rss_max_bytes=88309760 packets=13112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/small-loss.wire.bin",
+    "wire_bytes": 9099770,
+    "wire_sha256": "c11f26acdff223eda866fdaf9896da0bd453c5818499959e0b5c37b139b05b57",
+    "binary_sha256": "4c23ae7782812666cbddd79b85dce4a355ef53efbba07ad345bb050d4f5fd88a"
+  },
+  {
+    "case": "small-loss",
+    "variant": "packet-init",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=1 seed=42 setup_cpu_ns=906975000 setup_wall_ns=909183000 cpu_ns_op=4888.587 wall_ns_op=4918.478 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=12950 rss_max_bytes=90275840 packets=13112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/small-loss.wire.bin",
+    "wire_bytes": 9099770,
+    "wire_sha256": "c11f26acdff223eda866fdaf9896da0bd453c5818499959e0b5c37b139b05b57",
+    "binary_sha256": "3d5b6b83df9e898f9fc9b3ebe01fa00d1100319c28de5169e55fb883bea01d53"
+  },
+  {
+    "case": "small-loss",
+    "variant": "packet-poison-a5",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=1 seed=42 setup_cpu_ns=913457000 setup_wall_ns=915700000 cpu_ns_op=5646.739 wall_ns_op=5676.630 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=12950 rss_max_bytes=90554368 packets=13112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/small-loss.wire.bin",
+    "wire_bytes": 9099770,
+    "wire_sha256": "c11f26acdff223eda866fdaf9896da0bd453c5818499959e0b5c37b139b05b57",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  },
+  {
+    "case": "small-loss",
+    "variant": "packet-poison-5a",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/persistent_deterministic",
+      "1000",
+      "1",
+      "32",
+      "64",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=32 payload_bytes=64 burst=64 loss=1 seed=42 setup_cpu_ns=916965000 setup_wall_ns=919381000 cpu_ns_op=6149.457 wall_ns_op=6173.913 checksum=756120402526674 delivered_messages=368 delivered_bytes=23552 simulated_p99_delivery_us=12950 rss_max_bytes=90112000 packets=13112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/small-loss.wire.bin",
+    "wire_bytes": 9099770,
+    "wire_sha256": "c11f26acdff223eda866fdaf9896da0bd453c5818499959e0b5c37b139b05b57",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  },
+  {
+    "case": "four-stream-loss",
+    "variant": "followup-base",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_deterministic",
+      "1000",
+      "4",
+      "32",
+      "1024",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=4 rounds=32 payload_bytes=1024 burst=64 loss=1 seed=42 setup_cpu_ns=921928000 setup_wall_ns=923891000 cpu_ns_op=10668.478 wall_ns_op=10717.391 checksum=756120402526754 delivered_messages=368 delivered_bytes=376832 simulated_p99_delivery_us=12950 rss_max_bytes=96452608 packets=16112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/four-stream-loss.wire.bin",
+    "wire_bytes": 13722650,
+    "wire_sha256": "20a70b29f0c140eb883dc5e43f3c0104a052f57f4d9d4dfab4ae63d3dd820701",
+    "binary_sha256": "4c23ae7782812666cbddd79b85dce4a355ef53efbba07ad345bb050d4f5fd88a"
+  },
+  {
+    "case": "four-stream-loss",
+    "variant": "packet-init",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/persistent_deterministic",
+      "1000",
+      "4",
+      "32",
+      "1024",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=4 rounds=32 payload_bytes=1024 burst=64 loss=1 seed=42 setup_cpu_ns=919958000 setup_wall_ns=921459000 cpu_ns_op=8521.739 wall_ns_op=8554.348 checksum=756120402526754 delivered_messages=368 delivered_bytes=376832 simulated_p99_delivery_us=12950 rss_max_bytes=95666176 packets=16112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/four-stream-loss.wire.bin",
+    "wire_bytes": 13722650,
+    "wire_sha256": "20a70b29f0c140eb883dc5e43f3c0104a052f57f4d9d4dfab4ae63d3dd820701",
+    "binary_sha256": "3d5b6b83df9e898f9fc9b3ebe01fa00d1100319c28de5169e55fb883bea01d53"
+  },
+  {
+    "case": "four-stream-loss",
+    "variant": "packet-poison-a5",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/persistent_deterministic",
+      "1000",
+      "4",
+      "32",
+      "1024",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=4 rounds=32 payload_bytes=1024 burst=64 loss=1 seed=42 setup_cpu_ns=915611000 setup_wall_ns=916749000 cpu_ns_op=10334.239 wall_ns_op=10415.761 checksum=756120402526754 delivered_messages=368 delivered_bytes=376832 simulated_p99_delivery_us=12950 rss_max_bytes=96911360 packets=16112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/four-stream-loss.wire.bin",
+    "wire_bytes": 13722650,
+    "wire_sha256": "20a70b29f0c140eb883dc5e43f3c0104a052f57f4d9d4dfab4ae63d3dd820701",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  },
+  {
+    "case": "four-stream-loss",
+    "variant": "packet-poison-5a",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/persistent_deterministic",
+      "1000",
+      "4",
+      "32",
+      "1024",
+      "64",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=4 rounds=32 payload_bytes=1024 burst=64 loss=1 seed=42 setup_cpu_ns=932841000 setup_wall_ns=939838000 cpu_ns_op=9377.717 wall_ns_op=9421.196 checksum=756120402526754 delivered_messages=368 delivered_bytes=376832 simulated_p99_delivery_us=12950 rss_max_bytes=97206272 packets=16112 measured_packets=1103\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/four-stream-loss.wire.bin",
+    "wire_bytes": 13722650,
+    "wire_sha256": "20a70b29f0c140eb883dc5e43f3c0104a052f57f4d9d4dfab4ae63d3dd820701",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  },
+  {
+    "case": "full-packet-loss",
+    "variant": "followup-base",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_deterministic",
+      "1000",
+      "1",
+      "16",
+      "1200",
+      "32",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=16 payload_bytes=1200 burst=32 loss=1 seed=42 setup_cpu_ns=907186000 setup_wall_ns=908999000 cpu_ns_op=9228.261 wall_ns_op=9239.130 checksum=187621351358556 delivered_messages=92 delivered_bytes=110400 simulated_p99_delivery_us=14119 rss_max_bytes=91308032 packets=12321 measured_packets=312\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/full-packet-loss.wire.bin",
+    "wire_bytes": 10258003,
+    "wire_sha256": "9e040ddcc9701a02f562bd9d7bd08790124de1ea92537b72109cf6ac1adaf7ce",
+    "binary_sha256": "4c23ae7782812666cbddd79b85dce4a355ef53efbba07ad345bb050d4f5fd88a"
+  },
+  {
+    "case": "full-packet-loss",
+    "variant": "packet-init",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/persistent_deterministic",
+      "1000",
+      "1",
+      "16",
+      "1200",
+      "32",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=16 payload_bytes=1200 burst=32 loss=1 seed=42 setup_cpu_ns=914791000 setup_wall_ns=920605000 cpu_ns_op=7978.261 wall_ns_op=8032.609 checksum=187621351358556 delivered_messages=92 delivered_bytes=110400 simulated_p99_delivery_us=14119 rss_max_bytes=89063424 packets=12321 measured_packets=312\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-init/full-packet-loss.wire.bin",
+    "wire_bytes": 10258003,
+    "wire_sha256": "9e040ddcc9701a02f562bd9d7bd08790124de1ea92537b72109cf6ac1adaf7ce",
+    "binary_sha256": "3d5b6b83df9e898f9fc9b3ebe01fa00d1100319c28de5169e55fb883bea01d53"
+  },
+  {
+    "case": "full-packet-loss",
+    "variant": "packet-poison-a5",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/persistent_deterministic",
+      "1000",
+      "1",
+      "16",
+      "1200",
+      "32",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=16 payload_bytes=1200 burst=32 loss=1 seed=42 setup_cpu_ns=907623000 setup_wall_ns=911545000 cpu_ns_op=8021.739 wall_ns_op=8043.478 checksum=187621351358556 delivered_messages=92 delivered_bytes=110400 simulated_p99_delivery_us=14119 rss_max_bytes=89915392 packets=12321 measured_packets=312\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-a5/full-packet-loss.wire.bin",
+    "wire_bytes": 10258003,
+    "wire_sha256": "9e040ddcc9701a02f562bd9d7bd08790124de1ea92537b72109cf6ac1adaf7ce",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  },
+  {
+    "case": "full-packet-loss",
+    "variant": "packet-poison-5a",
+    "command": [
+      "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/persistent_deterministic",
+      "1000",
+      "1",
+      "16",
+      "1200",
+      "32",
+      "1",
+      "42"
+    ],
+    "returncode": 0,
+    "stdout": "population=1000 streams=1 rounds=16 payload_bytes=1200 burst=32 loss=1 seed=42 setup_cpu_ns=931971000 setup_wall_ns=941505000 cpu_ns_op=8706.522 wall_ns_op=8717.391 checksum=187621351358556 delivered_messages=92 delivered_bytes=110400 simulated_p99_delivery_us=14119 rss_max_bytes=89931776 packets=12321 measured_packets=312\n",
+    "stderr": "TEST ONLY: deterministic crypto randomness enabled\n",
+    "capture": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/packet-poison-5a/full-packet-loss.wire.bin",
+    "wire_bytes": 10258003,
+    "wire_sha256": "9e040ddcc9701a02f562bd9d7bd08790124de1ea92537b72109cf6ac1adaf7ce",
+    "binary_sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9"
+  }
+]

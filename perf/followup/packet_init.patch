@@ -1,0 +1,18 @@
+diff --git a/picoquic/sender.c b/picoquic/sender.c
+index b3c065da..585bd5e3 100644
+--- a/picoquic/sender.c
++++ b/picoquic/sender.c
+@@ -222,10 +222,9 @@ picoquic_packet_t* picoquic_create_packet(picoquic_quic_t * quic)
+     }
+ 
+     if (packet != NULL) {
+-        /* It might be sufficient to zero the metadata, but zeroing everything
+-         * appears safer, and does not confuse checkers like valgrind.
+-         */
+-        memset(packet, 0, sizeof(picoquic_packet_t));
++        /* Formatters initialize payload bytes through packet->length, including
++         * explicit padding. Reused payload storage does not need clearing. */
++        memset(packet, 0, offsetof(struct st_picoquic_packet_t, bytes));
+     }
+ 
+     return packet;

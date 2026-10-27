@@ -1,0 +1,287 @@
+{
+  "recorded_at_utc": "2026-10-27T04:09:55.384514+00:00",
+  "baseline_commit": "bc3793cbf481f13e6f424cfa70679f7b225c4df7",
+  "upstream_commit": "1d81a730ebbc0f4598f8127a7f43260a71a9ac7d",
+  "initial_persistent_source_sha256": "5ab12389dada6eb092b00b95120abdf03321dbfa811aa758b9746d51e14c3b00",
+  "source_files": {
+    "perf/followup/build.py": "0fd41d418329bf61640a33e99311a86300de903ff55b1a72a2a67669ddbcafa9",
+    "perf/followup/scheduler_controls.c": "1499a5547ff83ebb0ee42bb27a6a36acd5b6edb36f0f6ba921344178be659cb4",
+    "perf/followup/persistent_diagnostics.patch": "8d4a7d19e143a470e7059c850a00234942d4dfb31c7b6d1a4943a5dc5ee07541",
+    "perf/followup/poison_check.py": "370b8bde313d7aba4595d6cbb7b818e46793a05de8fab03c73220fd77ecf34cc",
+    "perf/followup/packet_bench.c": "9db84c19d921095eb8b08e29c4626137b41cc514513e870a0c3862f108357b8e",
+    "perf/followup/persistent_bench.c": "58e47ea58c009f186c4a847c9de0553e8cce69048c5d79143a8bf1bef948537c",
+    "perf/followup/deterministic_random.h": "6b290a1085c189e325dae609dfa7b952423c39817719db0a2006999a25d0ab56",
+    "perf/followup/summarize_completed.py": "ec2194f712b0cab098b2b72dda26201df645107724e4c406d772e331a15bd8dc",
+    "perf/followup/packet_init.patch": "80dd2616e1138094563f409ddeb11a723d595237eda057554637184f254aa3bb",
+    "perf/followup/packet-poison-5a.patch": "89ed5caad859857522e0ebd79708c3e8181a6ef710b95e9f475d60ea69db89d1",
+    "perf/followup/heap_update.patch": "8147273a1dfb1dfaadd8adc98febd0a73ffb02c510c19038dd08c99ea5d65073",
+    "perf/followup/analyze_controls.py": "f1d46f468bc53fd244bfc4900f3ccf98ed20f3c08c4b46295086fbfda2b20c9e",
+    "perf/followup/packet-poison-a5.patch": "3270926db19df4e082a0a5146cac769accc8f5f36574d501fff83c5de0606718",
+    "perf/followup/test_batch.py": "281341ba86ef2856c5d1e4c12b8d1d705a05bcd35e0d0bd3fe9aa1fdbc095d6c",
+    "perf/followup/send_queue_tail.patch": "8a385d9034e5625465c7a5b36bf3afd1843197c411efe0947f9f522f4a883aa3",
+    "perf/followup/send_queue_bench.c": "d2479b000130d2ebd745cda73c92f298106ab4225a82dd542c60fa1a510aca26",
+    "perf/run_ab.py": "36bfe99015d21525df73072caf821a3f39e6f93ef04965a0418e318144800005"
+  },
+  "variants": {
+    "upstream": {
+      "persistent_bench_diagnostic": {
+        "sha256": "4694c97f859509d2ffbb5ed82c660b9d3cb5d1dacfd9b0d29587506f35eaebd4",
+        "bytes": 696728
+      },
+      "libpicohttp-core.a": {
+        "sha256": "303814b5841fd5a038e7f58b37f6dd4c9bbcf74747ad73661f2cf1a5851d0894",
+        "bytes": 181920
+      },
+      "libpicoquic-log.a": {
+        "sha256": "9f8db8538389e213c5ed0e8cffb2ae4ab79dfc61a499dd9d633bbdbb0a2469f8",
+        "bytes": 126680
+      },
+      "picohttp_ct": {
+        "sha256": "e37f6fb9117c433cb33b54edf64cce7e1632fe0352cbd8235cca5eceb1788c73",
+        "bytes": 1535352
+      },
+      "timer_bench": {
+        "sha256": "17369afe3e6cb945fc6d9435faf5bd40e61d4e52dfd0147da0440583f8cf019c",
+        "bytes": 679976
+      },
+      "libpicoquic-test.a": {
+        "sha256": "1b97c0169aa5a32f5a1f7809c0d2edfd9f8ccc44f78e8aa6e3c53d5c400fb9dd",
+        "bytes": 1398584
+      },
+      "picoquic_ct": {
+        "sha256": "afcba2c2c6ecca2996f94a4cc12f895e5fdf3174e9e2917e94d69e16b8c9c93c",
+        "bytes": 1753320
+      },
+      "persistent_bench": {
+        "sha256": "d207c66198d78516ec3774bcc17bb05fb6c012f7dc6d4d356fac7d874e8b0de0",
+        "bytes": 696720
+      },
+      "libpicoquic-core.a": {
+        "sha256": "b08b19a543e7c29fd06f5cfd27a7ab54f11afd55c58f97358a321a1197dc16ef",
+        "bytes": 776808
+      },
+      "header_sha256": "dbf2086566a32dbe67008b9fcd90059e504c2313f07979c0f535316bda221e8d",
+      "scheduler_controls": {
+        "sha256": "3b6f86dddb5758b19e6450ae5d9517f84f54928f1ac26845480af154096ac167",
+        "bytes": 679840
+      }
+    },
+    "followup-base": {
+      "persistent_bench_diagnostic": {
+        "sha256": "ea7ca48fd7f65b6c253881f269ade08954aa1a288a61bbdf119c8523d6a6e399",
+        "bytes": 696664
+      },
+      "send_queue_bench": {
+        "sha256": "b106056e12e4c4bbdfa19b014bedb6753fd14534f6d044f098ff3c1c22954e90",
+        "bytes": 697824
+      },
+      "libpicoquic-log.a": {
+        "sha256": "bc9c7c009258563e711d8d11e85ad506289b7ab84632b2615afa6dd24e3c1d88",
+        "bytes": 126688
+      },
+      "picohttp_ct": {
+        "sha256": "a9e221b2e1f968498b7a0523134eee0a15691e492f82512dd972f8d63e9a86c4",
+        "bytes": 1535320
+      },
+      "timer_bench": {
+        "sha256": "e68a348d2c8f37f3bede3602bf38c49a0dfe474ea707149249543333afc648c9",
+        "bytes": 696328
+      },
+      "persistent_deterministic": {
+        "sha256": "4c23ae7782812666cbddd79b85dce4a355ef53efbba07ad345bb050d4f5fd88a",
+        "bytes": 697080
+      },
+      "packet_bench": {
+        "sha256": "550917e504aa5b8be7830452c7ce7afb87fefff961b6e0398609c57c5b347fba",
+        "bytes": 679600
+      },
+      "picoquic_ct": {
+        "sha256": "e33a92afc369ddd730b3013a4452c390c35027a496e40b4271a8701090f3e5ac",
+        "bytes": 1769800
+      },
+      "persistent_bench": {
+        "sha256": "6336e0041966d5657c04e67a05e837a788191c5c839229ca24ef0790591afe62",
+        "bytes": 696656
+      },
+      "libpicoquic-core.a": {
+        "sha256": "56a6f97bdafc04834bc1d6f4339b30ea4da0664b84d1b1dc41352e72e2a9b29f",
+        "bytes": 778000
+      },
+      "header_sha256": "f178db4854a9a401886f4bfa2f54e18f50c1252edd0790b0535abc527c582598"
+    },
+    "send-queue-tail": {
+      "persistent_bench_diagnostic": {
+        "sha256": "822aef9e7c7503b256f3c6619139c8622702d0d5eec7c3ec4bc5244790297ff4",
+        "bytes": 696664
+      },
+      "send_queue_bench": {
+        "sha256": "a7c73e7fa0a7120e3431fa07770de4b7fc8f30e50a41b0d1964754286c0748ab",
+        "bytes": 698144
+      },
+      "libpicoquic-log.a": {
+        "sha256": "b0041c33c75b96abd550c94fe999fb48d3d44e5f06ab3f1b54231959672d4772",
+        "bytes": 126688
+      },
+      "picohttp_ct": {
+        "sha256": "df4748465f732131df8065218df52d10e145d1b30a4016a053dc995cb9da7fc6",
+        "bytes": 1535320
+      },
+      "picoquic_ct": {
+        "sha256": "24e0e3dd5494eec71e3808e9f96fba27e895ead61f3d0a4707b1c7fb300b0b9d",
+        "bytes": 1769800
+      },
+      "persistent_bench": {
+        "sha256": "370060cc75057c17e040d0dadba6e4e4e053755320d115d0ffb3b113c55336e9",
+        "bytes": 696656
+      },
+      "libpicoquic-core.a": {
+        "sha256": "216fe8a8176f67956055c4dc4af7ee41d2031dc80820e97738b8cc332fcb3c97",
+        "bytes": 777832
+      },
+      "header_sha256": "f3082ceaf1297427c6906584fe4c574781e755ef177f2e70d83f6d896408f5f0"
+    },
+    "heap-update": {
+      "persistent_bench_diagnostic": {
+        "sha256": "50879733739e51e21177328047a9fc8f308677aadf61f7b40de0bf0dc58e608c",
+        "bytes": 696664
+      },
+      "libpicoquic-log.a": {
+        "sha256": "bc9c7c009258563e711d8d11e85ad506289b7ab84632b2615afa6dd24e3c1d88",
+        "bytes": 126688
+      },
+      "picohttp_ct": {
+        "sha256": "6b14685b570ad7f2049205164d6ec37592f338ca7c26be6fe8b11be32c5db68e",
+        "bytes": 1551832
+      },
+      "timer_bench": {
+        "sha256": "777fd92fa2c0c8792a57332cab33ba1fcc2dbd11aaaada6f6e2cc1c773dbdb5c",
+        "bytes": 696328
+      },
+      "picoquic_ct": {
+        "sha256": "05a9551765d094a0c8a0c9a87a94f31df50fa4fbc630938b8263681583d919ce",
+        "bytes": 1769800
+      },
+      "persistent_bench": {
+        "sha256": "4c5409e984c33772cfd3e6d9430efa10084640f44795a956124882b193f6d90e",
+        "bytes": 696656
+      },
+      "libpicoquic-core.a": {
+        "sha256": "e0dd8d226b1820ce17ea00f34b0bd9a5be9668d4b95365093fbd7e6ad2854be7",
+        "bytes": 779456
+      },
+      "header_sha256": "f178db4854a9a401886f4bfa2f54e18f50c1252edd0790b0535abc527c582598"
+    },
+    "packet-init": {
+      "persistent_bench_diagnostic": {
+        "sha256": "17b11573239a641a8fecc318cd9cda0e33a29c63457083a1a4b17d187199fbf9",
+        "bytes": 696664
+      },
+      "libpicoquic-log.a": {
+        "sha256": "2d7df3725c4bf4aa668293c9723d232845422b77229d2a2a265138517cefad4c",
+        "bytes": 126688
+      },
+      "picohttp_ct": {
+        "sha256": "64048178eb208fade9292da4e3be5eed8bf11e07e5bb569edcbccdae0b5b619c",
+        "bytes": 1535320
+      },
+      "persistent_deterministic": {
+        "sha256": "3d5b6b83df9e898f9fc9b3ebe01fa00d1100319c28de5169e55fb883bea01d53",
+        "bytes": 697080
+      },
+      "packet_bench": {
+        "sha256": "8db417d86a1458fe0a40b200f8e5abafddbe4c0be3d54cb1ff3fe5cdbdc48e6a",
+        "bytes": 679616
+      },
+      "picoquic_ct": {
+        "sha256": "7ef85867a6f86e38a5bc28d7a18294ee94a11b45274d241b012dc9b28bf1c12e",
+        "bytes": 1769800
+      },
+      "persistent_bench": {
+        "sha256": "653070d74be01341dd8d5a5d110a6e8ceeffd4538b80a0e7d5e30a189e2d286b",
+        "bytes": 696656
+      },
+      "libpicoquic-core.a": {
+        "sha256": "b72d0358583d1425f39737d65935eb7296d7bd198b210ff2f9a0890db10e0ea0",
+        "bytes": 778080
+      },
+      "header_sha256": "f178db4854a9a401886f4bfa2f54e18f50c1252edd0790b0535abc527c582598"
+    },
+    "packet-poison-a5": {
+      "libpicoquic-log.a": {
+        "sha256": "2d7df3725c4bf4aa668293c9723d232845422b77229d2a2a265138517cefad4c",
+        "bytes": 126688
+      },
+      "persistent_deterministic": {
+        "sha256": "3eadd08b7e1c3ba1b294e272baa0df3b25906cb8475dd4a7833c2b8b57be49b9",
+        "bytes": 697080
+      },
+      "picoquic_ct": {
+        "sha256": "33b1a1cd960c3a4eeda0a62a8fb4b0581c2533a8355632154a4882dcc54123a3",
+        "bytes": 1769800
+      },
+      "libpicoquic-core.a": {
+        "sha256": "6b771ed24555e5d9f0b85a65f29aa0744352fd6fe6500ff60100cb5784f1db83",
+        "bytes": 778136
+      },
+      "header_sha256": "f178db4854a9a401886f4bfa2f54e18f50c1252edd0790b0535abc527c582598"
+    },
+    "packet-poison-5a": {
+      "libpicoquic-log.a": {
+        "sha256": "2d7df3725c4bf4aa668293c9723d232845422b77229d2a2a265138517cefad4c",
+        "bytes": 126688
+      },
+      "picohttp_ct": {
+        "sha256": "bc0663dd5f5aef557039009160093b1200913756a8978480f47955a35ce1ce36",
+        "bytes": 1535320
+      },
+      "persistent_deterministic": {
+        "sha256": "d8feba6e14267b4065c816977fad9f5ad6df3dfca1f46e9c79d8743be7015afd",
+        "bytes": 697080
+      },
+      "picoquic_ct": {
+        "sha256": "3f04ea3dfe58c3ce149d58b7f09c708987479859d4cad3ccf8727dc5ab06e14b",
+        "bytes": 1769800
+      },
+      "libpicoquic-core.a": {
+        "sha256": "70c16b9b2f2cb9bc1042fc096c6ca465702aea7b5abd1c5cd496c3d0f3d7fce7",
+        "bytes": 778136
+      },
+      "header_sha256": "f178db4854a9a401886f4bfa2f54e18f50c1252edd0790b0535abc527c582598"
+    },
+    "followup-combined": {
+      "persistent_bench_diagnostic": {
+        "sha256": "32ce8a9db80afd6195748823d909adb7949453baa42b9374f0bf5276a67b5272",
+        "bytes": 696664
+      },
+      "send_queue_bench": {
+        "sha256": "2220663edff1c0865b4769a0e08f5eb8cf7e181c1ecf23012a0390ac1cf468ba",
+        "bytes": 698144
+      },
+      "libpicoquic-log.a": {
+        "sha256": "d7b3696651cb3303f66b666af0a606f0aca2757f45b372e254f8a57d2b367e1d",
+        "bytes": 126688
+      },
+      "picohttp_ct": {
+        "sha256": "0f4d3246291c2173826d5ffd2e2e2d2b64cf807b91d915cf89f0b2df27d816d5",
+        "bytes": 1535320
+      },
+      "packet_bench": {
+        "sha256": "ac2443b5d8fdab84fb805980cf463efb01592c2ecea474fc4ab57bf8db579a92",
+        "bytes": 679616
+      },
+      "picoquic_ct": {
+        "sha256": "c8361a57b793b49dcd80bf4acbfd1e0a38148fe5afb86eb41c888b8c3a29f877",
+        "bytes": 1769800
+      },
+      "libpicoquic-core.a": {
+        "sha256": "a3d9f07ff699e1057a4754b5602f08d270cd80fa6cc20a9906fec76533b0f221",
+        "bytes": 777912
+      },
+      "header_sha256": "f3082ceaf1297427c6906584fe4c574781e755ef177f2e70d83f6d896408f5f0",
+      "scheduler_controls": {
+        "sha256": "c4a6e95ddc9532f566eadcee86b43f673315b1211a5da4233cdf9cd2ffd8575e",
+        "bytes": 679792
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "timer-monotonic-long",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/timer_bench",
+        "monotonic",
+        "10000",
+        "30000000",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/heap-update/timer_bench",
+        "monotonic",
+        "10000",
+        "30000000",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+COMMAND ['build-perf-sanitize/scheduler_controls', 'poll', '1000', '1']
+mode=poll iterations=1000 batch=1 operations=4000 cpu_ns=29000 wall_ns=24000 cpu_ns_op=7.250 wall_ns_op=6.000 checksum=1806000
+COMMAND ['build-perf-sanitize/scheduler_controls', 'churn', '10', '64']
+mode=churn iterations=10 batch=64 operations=2580 cpu_ns=14439000 wall_ns=14464000 cpu_ns_op=5596.512 wall_ns_op=5606.202 checksum=3540160
+COMMAND ['python3', 'perf/followup/test_batch.py', 'build-perf-sanitize/picohttp_ct', '1', 'quicperf_datagram', 'quicperf_datagram_multiflow', 'quicperf_multipath_race', 'quicperf_multipath_race_delayed', 'quicperf_multipath_settled']
+tests_passed=5 repetitions=1 cpu_ns_op=64809000.000 wall_ns_op=81241875.000
+successful_child_output_sha256=57df39131b1f1c4b899eae0d2040a18b6465fa6f0b583c200298deff13e3b6c3
+COMMAND ['python3', 'perf/followup/test_batch.py', 'build-perf-sanitize/picoquic_ct', '1', 'direct_receive', 'reset_loop_test', 'reset_after_fin_received', 'ready_to_zfin', 'mtu_discovery', 'mtu_max', 'cnx_limit', 'cnx_stress']
+tests_passed=8 repetitions=1 cpu_ns_op=166181000.000 wall_ns_op=185474375.000
+successful_child_output_sha256=cf4f8e412b0390d5f4f37c996f45b0aff1d9ff5c399ac2c3ce597204f8d5f9e8
+ALL CROSS-USAGE SANITIZER CHECKS PASSED

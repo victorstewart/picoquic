@@ -1,0 +1,19 @@
+Starting test number 80, frames_format
+    Success.
+Starting test number 93, stream_retransmit_copy
+    Success.
+Starting test number 242, mtu_discovery
+    Success.
+Starting test number 245, mtu_required
+    Success.
+Starting test number 246, mtu_max
+    Success.
+Starting test number 294, packet_enc_dec
+    Success.
+Starting test number 350, padding_test
+    Success.
+Starting test number 351, padding_null
+    Success.
+Starting test number 352, padding_zero_min
+    Success.
+Tried 9 tests, 0 fails.

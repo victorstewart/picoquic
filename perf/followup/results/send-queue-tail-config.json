@@ -1,0 +1,156 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "queue-1000-depth1",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/send_queue_bench",
+        "1000",
+        "1",
+        "2000"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/send-queue-tail/send_queue_bench",
+        "1000",
+        "1",
+        "2000"
+      ],
+      "metric": "cpu_ns_append"
+    },
+    {
+      "name": "queue-1000-depth8",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/send_queue_bench",
+        "1000",
+        "8",
+        "300"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/send-queue-tail/send_queue_bench",
+        "1000",
+        "8",
+        "300"
+      ],
+      "metric": "cpu_ns_append"
+    },
+    {
+      "name": "queue-1000-depth64",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/send_queue_bench",
+        "1000",
+        "64",
+        "30"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/send-queue-tail/send_queue_bench",
+        "1000",
+        "64",
+        "30"
+      ],
+      "metric": "cpu_ns_append"
+    },
+    {
+      "name": "queue-1000-depth256",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/send_queue_bench",
+        "1000",
+        "256",
+        "8"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/send-queue-tail/send_queue_bench",
+        "1000",
+        "256",
+        "8"
+      ],
+      "metric": "cpu_ns_append"
+    },
+    {
+      "name": "persistent-10000-four",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench",
+        "10000",
+        "4",
+        "2048",
+        "1024",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/send-queue-tail/persistent_bench",
+        "10000",
+        "4",
+        "2048",
+        "1024",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "persistent-1000-loss",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "1",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/send-queue-tail/persistent_bench",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "1",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "perf_loopback_multiconn",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multiconn"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/send-queue-tail/picohttp_ct",
+        "-S",
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+        "-n",
+        "-p",
+        "500000000",
+        "perf_loopback_multiconn"
+      ],
+      "metric": "loopback_us",
+      "equal": [
+        "app_bytes"
+      ],
+      "tolerance_percent": {
+        "wire_bytes": 0.001,
+        "packets": 0.001
+      }
+    }
+  ]
+}

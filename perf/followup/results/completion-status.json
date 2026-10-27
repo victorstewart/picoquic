@@ -1,0 +1,94 @@
+{
+  "combined": {
+    "persistent-10000-four": "complete; inspect equivalence_mismatches before use",
+    "perf_loopback_loss": "complete; inspect equivalence_mismatches before use"
+  },
+  "cross-usage-remaining": {
+    "datagram-small": "complete; inspect equivalence_mismatches before use",
+    "datagram-large": "complete; inspect equivalence_mismatches before use",
+    "multipath": "complete; inspect equivalence_mismatches before use",
+    "direct-receive": "complete; inspect equivalence_mismatches before use",
+    "terminal-queues": "complete; inspect equivalence_mismatches before use",
+    "mtu": "complete; inspect equivalence_mismatches before use",
+    "context-lifecycle": "complete; inspect equivalence_mismatches before use",
+    "scheduler-poll": "complete; inspect equivalence_mismatches before use",
+    "scheduler-poll-empty": "complete; inspect equivalence_mismatches before use",
+    "scheduler-poll-future": "complete; inspect equivalence_mismatches before use",
+    "scheduler-poll-ready": "complete; inspect equivalence_mismatches before use",
+    "scheduler-poll-capped": "complete; inspect equivalence_mismatches before use",
+    "scheduler-churn": "complete; inspect equivalence_mismatches before use"
+  },
+  "cross-usage": {
+    "perf_loopback": "complete; inspect equivalence_mismatches before use",
+    "perf_loopback_multistream": "complete; inspect equivalence_mismatches before use",
+    "datagram-small": "incomplete or not reached; no performance conclusion",
+    "datagram-large": "incomplete or not reached; no performance conclusion",
+    "multipath": "incomplete or not reached; no performance conclusion",
+    "direct-receive": "incomplete or not reached; no performance conclusion",
+    "terminal-queues": "incomplete or not reached; no performance conclusion",
+    "mtu": "incomplete or not reached; no performance conclusion",
+    "context-lifecycle": "incomplete or not reached; no performance conclusion",
+    "scheduler-poll": "incomplete or not reached; no performance conclusion",
+    "scheduler-poll-empty": "incomplete or not reached; no performance conclusion",
+    "scheduler-poll-future": "incomplete or not reached; no performance conclusion",
+    "scheduler-poll-ready": "incomplete or not reached; no performance conclusion",
+    "scheduler-poll-capped": "incomplete or not reached; no performance conclusion",
+    "scheduler-churn": "incomplete or not reached; no performance conclusion"
+  },
+  "heap-update-confirmation": {
+    "timer-monotonic-long": "complete; inspect equivalence_mismatches before use"
+  },
+  "heap-update-remaining": {
+    "timer-query": "complete; inspect equivalence_mismatches before use",
+    "timer-update": "complete; inspect equivalence_mismatches before use",
+    "timer-randomized": "complete; inspect equivalence_mismatches before use",
+    "timer-monotonic": "complete; inspect equivalence_mismatches before use",
+    "timer-ready-only": "complete; inspect equivalence_mismatches before use",
+    "timer-ready-mixed-random": "complete; inspect equivalence_mismatches before use",
+    "persistent-10000-one": "complete; inspect equivalence_mismatches before use",
+    "perf_loopback_multiconn": "complete; inspect equivalence_mismatches before use",
+    "persistent-1000-loss": "incomplete or not reached; no performance conclusion"
+  },
+  "loss-controls": {
+    "send-queue-tail-perf_loopback_loss": "complete; inspect equivalence_mismatches before use",
+    "heap-update-perf_loopback_loss": "complete; inspect equivalence_mismatches before use"
+  },
+  "packet-init-remaining": {
+    "packet-1-64": "complete; inspect equivalence_mismatches before use",
+    "packet-1-1200": "complete; inspect equivalence_mismatches before use",
+    "packet-64-64": "complete; inspect equivalence_mismatches before use",
+    "packet-64-1200": "complete; inspect equivalence_mismatches before use",
+    "packet-1024-64": "complete; inspect equivalence_mismatches before use",
+    "packet-1024-1200": "complete; inspect equivalence_mismatches before use",
+    "persistent-10000-one": "complete; inspect equivalence_mismatches before use",
+    "perf_loopback_multiconn": "complete; inspect equivalence_mismatches before use",
+    "perf_loopback_loss": "complete; inspect equivalence_mismatches before use"
+  },
+  "persistent-aa": {
+    "persistent-1000-aa": "complete; inspect equivalence_mismatches before use",
+    "persistent-1000-loss-aa": "incomplete or not reached; no performance conclusion"
+  },
+  "persistent-baseline": {
+    "persistent-1000-one": "complete; inspect equivalence_mismatches before use",
+    "persistent-10000-one": "complete; inspect equivalence_mismatches before use",
+    "persistent-10000-four": "complete; inspect equivalence_mismatches before use"
+  },
+  "persistent-confirmation": {
+    "persistent-1000-long-aa": "complete; inspect equivalence_mismatches before use",
+    "persistent-10000-four-aa": "complete; inspect equivalence_mismatches before use",
+    "persistent-1000-long-heap": "complete; inspect equivalence_mismatches before use"
+  },
+  "send-queue-tail-remaining": {
+    "perf_loopback_multiconn": "complete; inspect equivalence_mismatches before use",
+    "persistent-1000-loss": "incomplete or not reached; no performance conclusion"
+  },
+  "send-queue-tail": {
+    "queue-1000-depth1": "complete; inspect equivalence_mismatches before use",
+    "queue-1000-depth8": "complete; inspect equivalence_mismatches before use",
+    "queue-1000-depth64": "complete; inspect equivalence_mismatches before use",
+    "queue-1000-depth256": "complete; inspect equivalence_mismatches before use",
+    "persistent-10000-four": "complete; inspect equivalence_mismatches before use",
+    "persistent-1000-loss": "incomplete or not reached; no performance conclusion",
+    "perf_loopback_multiconn": "incomplete or not reached; no performance conclusion"
+  }
+}

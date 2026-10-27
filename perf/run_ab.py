@@ -24,7 +24,7 @@ def measured(command, cwd):
         "stdout": proc.stdout, "stderr": proc.stderr,
     }
     sample.update({key: float(value) if "." in value else int(value)
-                   for key, value in re.findall(r"\b([a-z_]+)=([0-9]+(?:\.[0-9]+)?)", proc.stdout)})
+                   for key, value in re.findall(r"\b([a-z_][a-z_0-9]*)=([0-9]+(?:\.[0-9]+)?)", proc.stdout)})
     match = re.search(r"Perf loopback: (\d+) app bytes, (\d+) wire bytes, (\d+) packets .*? in (\d+) us\.", proc.stdout)
     if match:
         sample.update(dict(zip(("app_bytes", "wire_bytes", "packets", "loopback_us"), map(int, match.groups()))))

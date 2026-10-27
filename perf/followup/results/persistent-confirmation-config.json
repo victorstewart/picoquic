@@ -1,0 +1,92 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "persistent-1000-long-aa",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "32768",
+        "64",
+        "64",
+        "0",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "32768",
+        "64",
+        "64",
+        "0",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "persistent-10000-four-aa",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "10000",
+        "4",
+        "2048",
+        "1024",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "10000",
+        "4",
+        "2048",
+        "1024",
+        "128",
+        "0",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "persistent-1000-long-heap",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/upstream/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "32768",
+        "64",
+        "64",
+        "0",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "32768",
+        "64",
+        "64",
+        "0",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,934 @@
+{
+  "combined/persistent-10000-four": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 176559,
+    "measured_packet_max": 176607,
+    "max_abs_paired_packet_difference_percent": 0.01755419148791182,
+    "packet_difference_percent": [
+      -0.011892357178455715,
+      0.0011326503451813963,
+      0.01699042872516099,
+      0.015292338538386296,
+      0.002831433441485842,
+      -0.006795324816522008,
+      -0.01755419148791182,
+      -0.008494492737209924,
+      0.003964253757549052,
+      0.002831818310533585,
+      0.00679520937738598,
+      -0.008493963623190659
+    ],
+    "cpu_per_message": {
+      "a_median": 16715.0345,
+      "b_median": 15445.854,
+      "median_reduction_percent": 3.0535109083108027,
+      "bootstrap_95_percent": [
+        2.13703587626467,
+        9.562440037303084
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 4458.8417078317125,
+      "b_median": 4120.129693366945,
+      "median_reduction_percent": 3.0455472549054896,
+      "bootstrap_95_percent": [
+        2.1464320989056764,
+        9.55985426759759
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 10029615500.0,
+      "b_median": 10023446500.0,
+      "median_reduction_percent": 0.05518472408788666,
+      "bootstrap_95_percent": [
+        -0.5332325449987296,
+        0.3748175058139902
+      ]
+    },
+    "setup_wall": {
+      "a_median": 10115306000.0,
+      "b_median": 10106103500.0,
+      "median_reduction_percent": 0.05419895917601614,
+      "bootstrap_95_percent": [
+        -0.8681786659436641,
+        0.9726658104270813
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 16774.307999999997,
+      "b_median": 15501.0825,
+      "median_reduction_percent": 3.2011030304138597,
+      "bootstrap_95_percent": [
+        2.004699079781042,
+        10.86932820998527
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 906428416.0,
+      "b_median": 903618560.0,
+      "median_reduction_percent": -0.20539223725857259,
+      "bootstrap_95_percent": [
+        -1.577496849922555,
+        1.7086156551343823
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 127.0,
+      "b_median": 127.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "heap-update-remaining/persistent-10000-one": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 327895,
+    "measured_packet_max": 327930,
+    "max_abs_paired_packet_difference_percent": 0.007929270903539454,
+    "packet_difference_percent": [
+      -0.0009148517025381331,
+      -0.007623810685530863,
+      -0.0045743282598986745,
+      -0.001829759203686443,
+      -0.0027445969559392047,
+      0.004879328116524917,
+      -0.00030496172730432036,
+      -0.0018296978254062068,
+      0.004269503243303774,
+      -0.0006099271746995427,
+      -0.0009148377535295182,
+      0.007929270903539454
+    ],
+    "cpu_per_message": {
+      "a_median": 13608.7065,
+      "b_median": 13218.4475,
+      "median_reduction_percent": 2.6703175800731227,
+      "bootstrap_95_percent": [
+        -0.6242378707702945,
+        4.3625142586734995
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 3909.7529042145593,
+      "b_median": 3797.5918199880725,
+      "median_reduction_percent": 2.66972439511316,
+      "bootstrap_95_percent": [
+        -0.6181081078615591,
+        4.360764320335431
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 9932411000.0,
+      "b_median": 9598371500.0,
+      "median_reduction_percent": 2.7631466948571273,
+      "bootstrap_95_percent": [
+        2.140115349719751,
+        3.845760787278285
+      ]
+    },
+    "setup_wall": {
+      "a_median": 9975519000.0,
+      "b_median": 9624011000.0,
+      "median_reduction_percent": 2.710830640274009,
+      "bootstrap_95_percent": [
+        2.3067710434514446,
+        3.9939087966345213
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 13633.0885,
+      "b_median": 13253.3805,
+      "median_reduction_percent": 2.6392129930366326,
+      "bootstrap_95_percent": [
+        -0.8321936905656746,
+        5.688731088748633
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 841654272.0,
+      "b_median": 847486976.0,
+      "median_reduction_percent": -0.5759836468713697,
+      "bootstrap_95_percent": [
+        -1.692104690235141,
+        -0.05353129598023587
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 127.0,
+      "b_median": 127.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "heap-update-remaining/persistent-1000-loss": {
+    "status": "inconclusive: incomplete 12-pair comparison",
+    "observed_pair_count": 1
+  },
+  "packet-init-remaining/persistent-10000-one": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 327899,
+    "measured_packet_max": 327937,
+    "max_abs_paired_packet_difference_percent": 0.010368920076975208,
+    "packet_difference_percent": [
+      -0.0012198543493879832,
+      0.010368920076975208,
+      0.005184222884979661,
+      -0.0030495056751345118,
+      -0.0003049542873556632,
+      0.003049663774579159,
+      -0.0021347125609527673,
+      0.004269477202512029,
+      -0.0024397161390243838,
+      0.0009148851819018589,
+      -0.003049477776928544,
+      -0.0033545483100749784
+    ],
+    "cpu_per_message": {
+      "a_median": 14731.222,
+      "b_median": 13833.374,
+      "median_reduction_percent": 4.999170663742847,
+      "bootstrap_95_percent": [
+        3.21335167652716,
+        8.568436386012829
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 4232.1914066172485,
+      "b_median": 3974.2627005237946,
+      "median_reduction_percent": 4.9980407835534315,
+      "bootstrap_95_percent": [
+        3.2126145976520304,
+        8.569848753169918
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 10136175000.0,
+      "b_median": 9923023500.0,
+      "median_reduction_percent": 1.9995584694196988,
+      "bootstrap_95_percent": [
+        1.1779332962391975,
+        3.41433811904614
+      ]
+    },
+    "setup_wall": {
+      "a_median": 10235877000.0,
+      "b_median": 9976086500.0,
+      "median_reduction_percent": 1.5767476552980164,
+      "bootstrap_95_percent": [
+        -0.5277040094695207,
+        3.608921943804788
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 14789.301500000001,
+      "b_median": 13904.217,
+      "median_reduction_percent": 4.777778263543025,
+      "bootstrap_95_percent": [
+        2.7506593055774466,
+        8.689027015192346
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 846995456.0,
+      "b_median": 841916416.0,
+      "median_reduction_percent": 0.4109042720826295,
+      "bootstrap_95_percent": [
+        0.03856718536273673,
+        0.6255821303117026
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 127.0,
+      "b_median": 127.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "persistent-aa/persistent-1000-aa": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 52708,
+    "measured_packet_max": 52728,
+    "max_abs_paired_packet_difference_percent": 0.017072291670616746,
+    "packet_difference_percent": [
+      0.0,
+      -0.0018969932656709432,
+      -0.017072291670616746,
+      -0.001897137219930567,
+      0.0,
+      0.005691519635742104,
+      0.015174506828530276,
+      -0.005691411659802803,
+      -0.005690547999770423,
+      -0.01327870096365924,
+      -0.01138217551314158,
+      -0.005691303687960225
+    ],
+    "cpu_per_message": {
+      "a_median": 4050.3779999999997,
+      "b_median": 3518.215,
+      "median_reduction_percent": 6.303448191696187,
+      "bootstrap_95_percent": [
+        1.219783400656188,
+        13.847866488845112
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 1809.6104712078964,
+      "b_median": 1572.0615204125493,
+      "median_reduction_percent": 6.292580864471548,
+      "bootstrap_95_percent": [
+        1.214184759342929,
+        13.847025706949157
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 923125500.0,
+      "b_median": 911345500.0,
+      "median_reduction_percent": 1.0331389090904752,
+      "bootstrap_95_percent": [
+        0.7318625778635512,
+        1.7415229765066598
+      ]
+    },
+    "setup_wall": {
+      "a_median": 924597500.0,
+      "b_median": 912725000.0,
+      "median_reduction_percent": 1.1905415379215245,
+      "bootstrap_95_percent": [
+        0.7595492738333043,
+        1.767939491227194
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 4067.1705,
+      "b_median": 3519.8285,
+      "median_reduction_percent": 6.414146383016184,
+      "bootstrap_95_percent": [
+        1.2150203098294232,
+        14.094189181898336
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 90308608.0,
+      "b_median": 90349568.0,
+      "median_reduction_percent": -0.09961167827998718,
+      "bootstrap_95_percent": [
+        -0.5086887891972092,
+        0.41558327590726085
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 64.0,
+      "b_median": 64.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "persistent-aa/persistent-1000-loss-aa": {
+    "status": "inconclusive: incomplete 12-pair comparison",
+    "observed_pair_count": 1
+  },
+  "persistent-baseline/persistent-1000-one": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 52706,
+    "measured_packet_max": 52722,
+    "max_abs_paired_packet_difference_percent": 0.018967773752398553,
+    "packet_difference_percent": [
+      -0.007587397333030932,
+      -0.011380880121392156,
+      -0.0037940585043805264,
+      0.011383903160933073,
+      -0.015174219001912181,
+      0.0056909797970128295,
+      -0.018967773752398553,
+      0.0075888368210375035,
+      0.015177673642075007,
+      0.0018968853143119802,
+      0.015176521920579056,
+      0.003793626707127018
+    ],
+    "cpu_per_message": {
+      "a_median": 3942.7439999999997,
+      "b_median": 3533.4155,
+      "median_reduction_percent": 10.31831620324245,
+      "bootstrap_95_percent": [
+        7.6978807191071805,
+        13.71431925472879
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 1761.537530567635,
+      "b_median": 1578.6737662202468,
+      "median_reduction_percent": 10.321712373969527,
+      "bootstrap_95_percent": [
+        7.706636852826737,
+        13.714479046185968
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 912155500.0,
+      "b_median": 900670500.0,
+      "median_reduction_percent": 1.4315867832442875,
+      "bootstrap_95_percent": [
+        0.2866130116542742,
+        1.9948092504701365
+      ]
+    },
+    "setup_wall": {
+      "a_median": 913649500.0,
+      "b_median": 902383500.0,
+      "median_reduction_percent": 1.4578520104444825,
+      "bootstrap_95_percent": [
+        0.13884513183320957,
+        2.0282357551248245
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 3944.782,
+      "b_median": 3535.0924999999997,
+      "median_reduction_percent": 10.334556908915138,
+      "bootstrap_95_percent": [
+        7.6799712343690265,
+        13.707717271987846
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 90947584.0,
+      "b_median": 91029504.0,
+      "median_reduction_percent": -0.026816825059239324,
+      "bootstrap_95_percent": [
+        -1.193406969877131,
+        1.0032555931566711
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 64.0,
+      "b_median": 64.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "persistent-baseline/persistent-10000-one": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 327901,
+    "measured_packet_max": 327946,
+    "max_abs_paired_packet_difference_percent": 0.01280862691519502,
+    "packet_difference_percent": [
+      0.003964478274665062,
+      0.0024397459004621425,
+      0.0036596411721934174,
+      0.01280862691519502,
+      0.005184412606040745,
+      0.0006099346150145735,
+      0.003964526635513721,
+      -0.0024395152683154286,
+      0.002744705767532274,
+      0.0003049496375640004,
+      0.00030495614731229637,
+      0.000914882391866989
+    ],
+    "cpu_per_message": {
+      "a_median": 14583.2945,
+      "b_median": 12815.0635,
+      "median_reduction_percent": 13.256740960937424,
+      "bootstrap_95_percent": [
+        11.056832369259496,
+        13.760669858844004
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 4189.520181748916,
+      "b_median": 3681.460231358603,
+      "median_reduction_percent": 13.258196125874278,
+      "bootstrap_95_percent": [
+        11.05751243346461,
+        13.767234735252954
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 10588627000.0,
+      "b_median": 9320164000.0,
+      "median_reduction_percent": 12.000118782395758,
+      "bootstrap_95_percent": [
+        11.843849530097916,
+        12.34014705000363
+      ]
+    },
+    "setup_wall": {
+      "a_median": 10611416500.0,
+      "b_median": 9336720000.0,
+      "median_reduction_percent": 12.033861801622763,
+      "bootstrap_95_percent": [
+        11.746741154101354,
+        12.435200978384287
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 14608.3825,
+      "b_median": 12838.0075,
+      "median_reduction_percent": 13.018438949117133,
+      "bootstrap_95_percent": [
+        11.052138381410355,
+        13.945720541926127
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 841441280.0,
+      "b_median": 850337792.0,
+      "median_reduction_percent": -0.6076060874941946,
+      "bootstrap_95_percent": [
+        -1.26066648519072,
+        0.603040757368406
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 127.0,
+      "b_median": 127.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "persistent-baseline/persistent-10000-four": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 176558,
+    "measured_packet_max": 176617,
+    "max_abs_paired_packet_difference_percent": 0.02718653360369583,
+    "packet_difference_percent": [
+      0.015857194635726657,
+      0.02718653360369583,
+      0.013592112044302773,
+      0.00906202388974986,
+      0.0022651595804834557,
+      0.0033982589586534218,
+      -0.0090605870127769,
+      0.00453072967401269,
+      0.002265262204104168,
+      -0.023780270302409257,
+      0.0005663059297944528,
+      0.015858362171017326
+    ],
+    "cpu_per_message": {
+      "a_median": 31817.202,
+      "b_median": 14444.3575,
+      "median_reduction_percent": 55.14097264808124,
+      "bootstrap_95_percent": [
+        53.682509594494576,
+        56.66104447408284
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 8487.125756906285,
+      "b_median": 3853.126279782645,
+      "median_reduction_percent": 55.14811280960312,
+      "bootstrap_95_percent": [
+        53.689327005780626,
+        56.6631375559739
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 10380995500.0,
+      "b_median": 9205748500.0,
+      "median_reduction_percent": 11.712902867834686,
+      "bootstrap_95_percent": [
+        10.742207578734025,
+        12.530995388453757
+      ]
+    },
+    "setup_wall": {
+      "a_median": 10418068000.0,
+      "b_median": 9230818500.0,
+      "median_reduction_percent": 11.916931294281019,
+      "bootstrap_95_percent": [
+        10.769688545008666,
+        12.54776700359595
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 31872.707000000002,
+      "b_median": 14473.993999999999,
+      "median_reduction_percent": 55.168073866534385,
+      "bootstrap_95_percent": [
+        53.67173188620983,
+        56.737474482612726
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 915660800.0,
+      "b_median": 938901504.0,
+      "median_reduction_percent": -2.135710299014737,
+      "bootstrap_95_percent": [
+        -4.461252277605221,
+        -1.521466098573243
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 127.0,
+      "b_median": 127.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "persistent-confirmation/persistent-1000-long-aa": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 841395,
+    "measured_packet_max": 841500,
+    "max_abs_paired_packet_difference_percent": 0.010102030508130078,
+    "packet_difference_percent": [
+      0.010102030508130078,
+      -0.00166375904966376,
+      -0.0009507646524742341,
+      -0.004872402474709325,
+      0.0,
+      -0.0004753642478538822,
+      0.0013073278100739216,
+      -0.0026146369754842524,
+      0.007487378419246404,
+      0.0008319259918732058,
+      0.002852232941874533,
+      -0.004753732868734151
+    ],
+    "cpu_per_message": {
+      "a_median": 4758.159,
+      "b_median": 4820.4175,
+      "median_reduction_percent": -1.0898135039626444,
+      "bootstrap_95_percent": [
+        -6.209242850556841,
+        8.481654807649337
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 2130.941437403999,
+      "b_median": 2158.8672110359767,
+      "median_reduction_percent": -1.0905317587854624,
+      "bootstrap_95_percent": [
+        -6.213178221637783,
+        8.485163144297857
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 1013964500.0,
+      "b_median": 1009513500.0,
+      "median_reduction_percent": -0.2966884097517164,
+      "bootstrap_95_percent": [
+        -2.216289578705788,
+        1.199093946459523
+      ]
+    },
+    "setup_wall": {
+      "a_median": 1017013500.0,
+      "b_median": 1028313000.0,
+      "median_reduction_percent": -0.32970235675325865,
+      "bootstrap_95_percent": [
+        -5.085236035206631,
+        1.2643698268635484
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 4943.776,
+      "b_median": 4841.3375,
+      "median_reduction_percent": 0.510984245077184,
+      "bootstrap_95_percent": [
+        -5.868696202687551,
+        10.492213881391837
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 93536256.0,
+      "b_median": 93257728.0,
+      "median_reduction_percent": 0.2508839729471857,
+      "bootstrap_95_percent": [
+        -0.0704162925163676,
+        1.5823197447162318
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 64.0,
+      "b_median": 64.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "persistent-confirmation/persistent-10000-four-aa": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 176559,
+    "measured_packet_max": 176620,
+    "max_abs_paired_packet_difference_percent": 0.020388168066465262,
+    "packet_difference_percent": [
+      -0.003398181972646963,
+      0.020388168066465262,
+      -0.011326311020498636,
+      -0.017552998731651392,
+      -0.007928462614470444,
+      0.011326567596947612,
+      -0.00622936522768347,
+      0.010760422035072104,
+      0.015289394256856603,
+      0.014159492523790895,
+      -0.008494781372647697,
+      -0.00906110013082495
+    ],
+    "cpu_per_message": {
+      "a_median": 17728.8765,
+      "b_median": 17581.4265,
+      "median_reduction_percent": 0.6793799947367285,
+      "bootstrap_95_percent": [
+        -1.0303559976157062,
+        4.0862431936150525
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 4729.3336051059305,
+      "b_median": 4689.667048597165,
+      "median_reduction_percent": 0.6676024074675935,
+      "bootstrap_95_percent": [
+        -1.0240202542844634,
+        4.087343526352205
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 10123243500.0,
+      "b_median": 10138778000.0,
+      "median_reduction_percent": 0.38243537069883593,
+      "bootstrap_95_percent": [
+        -0.5394220212604717,
+        0.8922408607832721
+      ]
+    },
+    "setup_wall": {
+      "a_median": 10322982500.0,
+      "b_median": 10237067500.0,
+      "median_reduction_percent": 0.9603355845555162,
+      "bootstrap_95_percent": [
+        -1.7457638650539953,
+        2.59276486358056
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 18185.207000000002,
+      "b_median": 17786.684500000003,
+      "median_reduction_percent": 0.9075799894967596,
+      "bootstrap_95_percent": [
+        -0.8375413048049785,
+        5.211023346292837
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 906846208.0,
+      "b_median": 901808128.0,
+      "median_reduction_percent": 0.46475405185121277,
+      "bootstrap_95_percent": [
+        -1.0761484929232235,
+        1.282616670776332
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 127.0,
+      "b_median": 127.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "persistent-confirmation/persistent-1000-long-heap": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 841381,
+    "measured_packet_max": 841487,
+    "max_abs_paired_packet_difference_percent": 0.0076057646942739865,
+    "packet_difference_percent": [
+      -0.003565320837284336,
+      0.006061067033025225,
+      -0.0011884247430038464,
+      -0.003565422532281204,
+      -0.0076057646942739865,
+      -0.002733285956380005,
+      -0.003802918502271435,
+      -0.00035653166000626513,
+      -0.0008318913882643386,
+      0.0016638598934859417,
+      -0.0033277514264740127,
+      0.00011884600528144773
+    ],
+    "cpu_per_message": {
+      "a_median": 7330.9815,
+      "b_median": 7352.909,
+      "median_reduction_percent": 6.338966046135291,
+      "bootstrap_95_percent": [
+        -0.08521580545017282,
+        12.691916749463894
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 3283.1402836735087,
+      "b_median": 3293.010126499962,
+      "median_reduction_percent": 6.3382104147248715,
+      "bootstrap_95_percent": [
+        -0.08709478693355033,
+        12.691118139157131
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 1010654500.0,
+      "b_median": 1000871000.0,
+      "median_reduction_percent": 0.21755151161457764,
+      "bootstrap_95_percent": [
+        -1.2196319887944118,
+        3.1843295040078767
+      ]
+    },
+    "setup_wall": {
+      "a_median": 1020915500.0,
+      "b_median": 1013099500.0,
+      "median_reduction_percent": 0.4539012236302875,
+      "bootstrap_95_percent": [
+        -0.967505511156308,
+        18.303686829085052
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 7700.43,
+      "b_median": 8261.167000000001,
+      "median_reduction_percent": 9.853354568562228,
+      "bootstrap_95_percent": [
+        -6.75085348454128,
+        15.90522284803827
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 94093312.0,
+      "b_median": 93741056.0,
+      "median_reduction_percent": -0.09497496114659887,
+      "bootstrap_95_percent": [
+        -0.982662572269255,
+        0.8961729069981605
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 64.0,
+      "b_median": 64.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "send-queue-tail/persistent-10000-four": {
+    "pairs": 12,
+    "exact_application_match": true,
+    "measured_packet_min": 176561,
+    "measured_packet_max": 176608,
+    "max_abs_paired_packet_difference_percent": 0.019256364511655022,
+    "packet_difference_percent": [
+      0.019256364511655022,
+      -0.011892289832093894,
+      0.0050966090560988775,
+      0.01132650345174735,
+      0.0028315296489500597,
+      -0.0147218699039664,
+      0.006229259397683151,
+      -0.013590418754783062,
+      0.007362435720281724,
+      0.007929270903539454,
+      -0.004530344815867338,
+      0.013592881860868822
+    ],
+    "cpu_per_message": {
+      "a_median": 15304.9,
+      "b_median": 15077.190999999999,
+      "median_reduction_percent": 1.013679720620747,
+      "bootstrap_95_percent": [
+        -0.4335742188677716,
+        2.6500610375025713
+      ]
+    },
+    "cpu_per_packet": {
+      "a_median": 4082.4618812566687,
+      "b_median": 4021.676148080379,
+      "median_reduction_percent": 1.0128522709717314,
+      "bootstrap_95_percent": [
+        -0.4378308596441616,
+        2.664950416359696
+      ]
+    },
+    "setup_cpu": {
+      "a_median": 9484634500.0,
+      "b_median": 9492594500.0,
+      "median_reduction_percent": -0.482025015912102,
+      "bootstrap_95_percent": [
+        -1.318194715780907,
+        0.29915026770814257
+      ]
+    },
+    "setup_wall": {
+      "a_median": 9517442500.0,
+      "b_median": 9528776000.0,
+      "median_reduction_percent": -0.5582222471444687,
+      "bootstrap_95_percent": [
+        -2.2846330848324214,
+        0.2830698333151971
+      ]
+    },
+    "wall_per_message": {
+      "a_median": 15357.358,
+      "b_median": 15122.9725,
+      "median_reduction_percent": 0.8885857730245639,
+      "bootstrap_95_percent": [
+        -0.5072517605211546,
+        4.385577588020017
+      ]
+    },
+    "rss_high_water": {
+      "a_median": 930086912.0,
+      "b_median": 918020096.0,
+      "median_reduction_percent": 0.8579250118307513,
+      "bootstrap_95_percent": [
+        0.3955874309448548,
+        1.746592409919806
+      ]
+    },
+    "simulated_p99": {
+      "a_median": 127.0,
+      "b_median": 127.0,
+      "median_reduction_percent": 0.0,
+      "bootstrap_95_percent": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

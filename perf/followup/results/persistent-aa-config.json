@@ -1,0 +1,63 @@
+{
+  "cwd": "/Users/victorstewart/.codex/worktrees/ordered-index-perf/picoquic",
+  "cases": [
+    {
+      "name": "persistent-1000-aa",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "0",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "0",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    },
+    {
+      "name": "persistent-1000-loss-aa",
+      "a": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "1",
+        "0xdecafbad"
+      ],
+      "b": [
+        "/Users/victorstewart/.codex/worktrees/ordered-index-perf/perf-artifacts/followup-base/persistent_bench_diagnostic",
+        "1000",
+        "1",
+        "2048",
+        "64",
+        "64",
+        "1",
+        "0xdecafbad"
+      ],
+      "metric": "cpu_ns_op",
+      "equal": [
+        "checksum",
+        "delivered_messages",
+        "delivered_bytes"
+      ]
+    }
+  ]
+}

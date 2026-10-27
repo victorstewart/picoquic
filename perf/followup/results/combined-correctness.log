@@ -1,0 +1,99 @@
+COMMAND ['build-perf/picoquic_ct', '-n', 'create_cnx', 'wake_queue', 'create_quic', 'add_to_stream_fin_only_wakes_cnx', 'getter', 'packet_enc_dec', 'padding_test', 'padding_null', 'padding_zero_min', 'mtu_discovery', 'mtu_required', 'mtu_max', 'stream_retransmit_copy', 'frames_format', 'stream_splay', 'stream_output']
+Starting test number 52, create_cnx
+    Success.
+Starting test number 53, wake_queue
+    Success.
+Starting test number 54, create_quic
+    Success.
+Starting test number 80, frames_format
+    Success.
+Starting test number 91, stream_splay
+    Success.
+Starting test number 92, stream_output
+    Success.
+Starting test number 93, stream_retransmit_copy
+    Success.
+Starting test number 242, mtu_discovery
+    Success.
+Starting test number 245, mtu_required
+    Success.
+Starting test number 246, mtu_max
+    Success.
+Starting test number 294, packet_enc_dec
+    Success.
+Starting test number 350, padding_test
+    Success.
+Starting test number 351, padding_null
+    Success.
+Starting test number 352, padding_zero_min
+    Success.
+Starting test number 449, add_to_stream_fin_only_wakes_cnx
+    Success.
+Starting test number 698, getter
+    Success.
+Tried 16 tests, 0 fails.
+COMMAND ['../perf-artifacts/followup-combined/send_queue_bench', '--correctness']
+correctness=ok
+COMMAND ['../perf-artifacts/followup-combined/packet_bench', '--correctness']
+COMMAND ['../perf-artifacts/followup-combined/persistent_bench_diagnostic', '1000', '4', '32', '1024', '64', '0', '42']
+population=1000 streams=4 rounds=32 payload_bytes=1024 burst=64 loss=0 seed=42 setup_cpu_ns=958047000 setup_wall_ns=961301000 cpu_ns_op=7478.261 wall_ns_op=7524.457 checksum=756120402526754 delivered_messages=368 delivered_bytes=376832 simulated_p99_delivery_us=64 rss_max_bytes=94896128 packets=16089 measured_packets=1080
+COMMAND ['build-perf/picohttp_ct', '-n', '-p', '5000000', 'perf_loopback_multiconn', 'perf_loopback_loss']
+Starting test number 128, perf_loopback_multiconn
+Perf loopback: 5000000 app bytes, 7074677 wire bytes, 6667 packets (1400 client, 5267 server, 0 lost), 2067 batches, 800 stall jumps, in 178273 us.
+Perf loopback: 0.178 seconds, 28.0 MB/s, 37398 packets/s, 26.740 us/packet, 3.23 packets/batch.
+    Success.
+Starting test number 126, perf_loopback_loss
+Perf loopback: 5000000 app bytes, 5216826 wire bytes, 3749 packets (127 client, 3622 server, 59 lost), 356 batches, 227 stall jumps, in 4588 us.
+Perf loopback: 0.005 seconds, 1089.8 MB/s, 817132 packets/s, 1.224 us/packet, 10.53 packets/batch.
+    Success.
+Tried 2 tests, 0 fails.
+COMMAND ['build-perf-sanitize/picoquic_ct', '-n', 'create_cnx', 'wake_queue', 'create_quic', 'add_to_stream_fin_only_wakes_cnx', 'getter', 'packet_enc_dec', 'padding_test', 'padding_null', 'padding_zero_min', 'mtu_discovery', 'mtu_required', 'mtu_max', 'stream_retransmit_copy', 'frames_format', 'stream_splay', 'stream_output']
+Starting test number 52, create_cnx
+    Success.
+Starting test number 53, wake_queue
+    Success.
+Starting test number 54, create_quic
+    Success.
+Starting test number 80, frames_format
+    Success.
+Starting test number 91, stream_splay
+    Success.
+Starting test number 92, stream_output
+    Success.
+Starting test number 93, stream_retransmit_copy
+    Success.
+Starting test number 242, mtu_discovery
+    Success.
+Starting test number 245, mtu_required
+    Success.
+Starting test number 246, mtu_max
+    Success.
+Starting test number 294, packet_enc_dec
+    Success.
+Starting test number 350, padding_test
+    Success.
+Starting test number 351, padding_null
+    Success.
+Starting test number 352, padding_zero_min
+    Success.
+Starting test number 449, add_to_stream_fin_only_wakes_cnx
+    Success.
+Starting test number 698, getter
+    Success.
+Tried 16 tests, 0 fails.
+COMMAND ['build-perf-sanitize/send_queue_bench', '--correctness']
+correctness=ok
+COMMAND ['build-perf-sanitize/packet_bench', '--correctness']
+COMMAND ['build-perf-sanitize/persistent_bench_diagnostic', '1000', '4', '32', '1024', '64', '0', '42']
+population=1000 streams=4 rounds=32 payload_bytes=1024 burst=64 loss=0 seed=42 setup_cpu_ns=1219114000 setup_wall_ns=1260317000 cpu_ns_op=15336.957 wall_ns_op=15347.826 checksum=756120402526754 delivered_messages=368 delivered_bytes=376832 simulated_p99_delivery_us=64 rss_max_bytes=320126976 packets=16089 measured_packets=1080
+COMMAND ['build-perf-sanitize/picohttp_ct', '-n', '-p', '5000000', 'perf_loopback_multiconn', 'perf_loopback_loss']
+Starting test number 128, perf_loopback_multiconn
+Perf loopback: 5000000 app bytes, 7074677 wire bytes, 6667 packets (1400 client, 5267 server, 0 lost), 2067 batches, 800 stall jumps, in 218233 us.
+Perf loopback: 0.218 seconds, 22.9 MB/s, 30550 packets/s, 32.733 us/packet, 3.23 packets/batch.
+    Success.
+Starting test number 126, perf_loopback_loss
+Perf loopback: 5000000 app bytes, 5216837 wire bytes, 3749 packets (127 client, 3622 server, 59 lost), 356 batches, 227 stall jumps, in 7558 us.
+Perf loopback: 0.008 seconds, 661.6 MB/s, 496031 packets/s, 2.016 us/packet, 10.53 packets/batch.
+    Success.
+Tried 2 tests, 0 fails.
+ALL COMBINED CHECKS PASSED

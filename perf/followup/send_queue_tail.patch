@@ -1,0 +1,132 @@
+diff --git a/picoquic/picoquic_internal.h b/picoquic/picoquic_internal.h
+index e59d7057..01df857d 100644
+--- a/picoquic/picoquic_internal.h
++++ b/picoquic/picoquic_internal.h
+@@ -784,6 +784,7 @@ typedef struct st_picoquic_stream_head_t {
+     uint64_t sent_offset; /* Amount of data sent in the stream */
+     uint64_t reliable_size; /* Length guaranteed when sending "reset at" */
+     picoquic_stream_queue_node_t* send_queue; /* if the stream is not "active", list of data segments ready to send */
++    picoquic_stream_queue_node_t* send_queue_last; /* tail of send_queue, or NULL when empty */
+     void * app_stream_ctx;
+     picoquic_stream_direct_receive_fn direct_receive_fn; /* direct receive function, if not NULL */
+     void* direct_receive_ctx; /* direct receive context */
+diff --git a/picoquic/streams.c b/picoquic/streams.c
+index b85a8897..e01328ab 100644
+--- a/picoquic/streams.c
++++ b/picoquic/streams.c
+@@ -127,6 +127,7 @@ void picoquic_clear_stream(picoquic_stream_head_t* stream)
+         free(next);
+     }
+     stream->send_queue = NULL;
++    stream->send_queue_last = NULL;
+     if (stream->is_output_stream) {
+         picoquic_remove_output_stream(stream->cnx, stream);
+     }
+@@ -374,20 +375,16 @@ int picoquic_add_to_stream_with_ctx(picoquic_cnx_t* cnx, uint64_t stream_id,
+                 ret = -1;
+             }
+             else {
+-                picoquic_stream_queue_node_t** pprevious = &stream->send_queue;
+-                picoquic_stream_queue_node_t* next = stream->send_queue;
++                picoquic_stream_queue_node_t** pprevious = (stream->send_queue_last == NULL) ?
++                    &stream->send_queue : &stream->send_queue_last->next_stream_data;
+ 
+                 memcpy(stream_data->bytes, data, length);
+                 stream_data->length = length;
+                 stream_data->offset = 0;
+                 stream_data->next_stream_data = NULL;
+ 
+-                while (next != NULL) {
+-                    pprevious = &next->next_stream_data;
+-                    next = next->next_stream_data;
+-                }
+-
+                 *pprevious = stream_data;
++                stream->send_queue_last = stream_data;
+             }
+         }
+ 
+diff --git a/picoquic/frames.c b/picoquic/frames.c
+index 1bf1106a..30ea6966 100644
+--- a/picoquic/frames.c
++++ b/picoquic/frames.c
+@@ -255,6 +255,7 @@ void picoquic_enforce_reset_stream_frame(picoquic_stream_head_t* stream)
+         free(not_needed);
+     }
+     stream->send_queue = NULL;
++    stream->send_queue_last = NULL;
+ }
+ 
+ uint8_t* picoquic_format_reset_stream_frame(picoquic_stream_head_t* stream,
+@@ -1964,6 +1965,9 @@ uint8_t * picoquic_format_stream_frame(picoquic_cnx_t* cnx, picoquic_stream_head
+                         free(stream->send_queue->bytes);
+                         free(stream->send_queue);
+                         stream->send_queue = next;
++                        if (next == NULL) {
++                            stream->send_queue_last = NULL;
++                        }
+                     }
+ 
+                     stream->sent_offset += length;
+@@ -2588,6 +2592,9 @@ uint8_t* picoquic_format_crypto_hs_frame(picoquic_stream_head_t* stream, uint8_t
+                         free(stream->send_queue->bytes);
+                         free(stream->send_queue);
+                         stream->send_queue = next;
++                        if (next == NULL) {
++                            stream->send_queue_last = NULL;
++                        }
+                     }
+ 
+                     stream->sent_offset += length;
+diff --git a/picoquic/tls_api.c b/picoquic/tls_api.c
+index 217f8bd6..000d4be4 100644
+--- a/picoquic/tls_api.c
++++ b/picoquic/tls_api.c
+@@ -2659,20 +2659,16 @@ static int picoquic_add_to_tls_stream(picoquic_cnx_t* cnx, const uint8_t* data,
+                 ret = -1;
+             }
+             else {
+-                picoquic_stream_queue_node_t** pprevious = &stream->send_queue;
+-                picoquic_stream_queue_node_t* next = stream->send_queue;
++                picoquic_stream_queue_node_t** pprevious = (stream->send_queue_last == NULL) ?
++                    &stream->send_queue : &stream->send_queue_last->next_stream_data;
+ 
+                 memcpy(stream_data->bytes, data, length);
+                 stream_data->length = length;
+                 stream_data->offset = 0;
+                 stream_data->next_stream_data = NULL;
+ 
+-                while (next != NULL) {
+-                    pprevious = &next->next_stream_data;
+-                    next = next->next_stream_data;
+-                }
+-
+                 *pprevious = stream_data;
++                stream->send_queue_last = stream_data;
+             }
+         }
+     }
+diff --git a/picoquic/quicctx.c b/picoquic/quicctx.c
+index 92e0285e..a4934c03 100644
+--- a/picoquic/quicctx.c
++++ b/picoquic/quicctx.c
+@@ -4127,6 +4127,7 @@ picoquic_cnx_t* picoquic_create_cnx_internal(picoquic_quic_t* quic,
+ 
+         for (int epoch = 0; epoch < PICOQUIC_NUMBER_OF_EPOCHS; epoch++) {
+             cnx->tls_stream[epoch].send_queue = NULL;
++            cnx->tls_stream[epoch].send_queue_last = NULL;
+         }
+ 
+         /* Perform different initializations for clients and servers */
+diff --git a/picoquictest/skip_frame_test.c b/picoquictest/skip_frame_test.c
+index 003e83aa..3bf8b113 100644
+--- a/picoquictest/skip_frame_test.c
++++ b/picoquictest/skip_frame_test.c
+@@ -2519,6 +2519,7 @@ int frames_format_test(void)
+             else {
+                 memcpy(crypto_data->bytes, data, sizeof(data));
+                 cnx->tls_stream[picoquic_epoch_1rtt].send_queue = crypto_data;
++                cnx->tls_stream[picoquic_epoch_1rtt].send_queue_last = crypto_data;
+             }
+         }
+         FRAME_FORMAT_TEST(picoquic_format_crypto_hs_frame, &cnx->tls_stream[picoquic_epoch_1rtt], bytes, bytes_max, &more_data, &is_pure_ack);

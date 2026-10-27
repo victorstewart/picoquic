@@ -1,0 +1,77 @@
+--- initial/persistent_bench.c
++++ diagnostic/persistent_bench.c
+@@ -166,6 +166,18 @@
+     bench->failed = 1;
+ }
+ 
++static void record_close(bench_t* bench, picoquic_cnx_t* cnx, const char* side, int event)
++{
++    uint64_t local_reason = 0, remote_reason = 0, local_app_reason = 0, remote_app_reason = 0;
++    picoquic_get_close_reasons(cnx, &local_reason, &remote_reason, &local_app_reason, &remote_app_reason);
++    snprintf(bench->failure, sizeof(bench->failure),
++        "%s callback event=%d close local=%" PRIu64 " remote=%" PRIu64
++        " local_app=%" PRIu64 " remote_app=%" PRIu64 " sim_us=%" PRIu64,
++        side, event, local_reason, remote_reason, local_app_reason, remote_app_reason,
++        bench->simulated_time);
++    bench->failed = 1;
++}
++
+ static int parse_message_header(server_t* server, parser_t* parser)
+ {
+     bench_t* bench = server->bench;
+@@ -257,7 +269,6 @@
+ static int server_callback(picoquic_cnx_t* cnx, uint64_t stream_id, uint8_t* bytes, size_t length,
+     picoquic_call_back_event_t event, void* callback_ctx, void* stream_ctx)
+ {
+-    (void)cnx;
+     (void)stream_ctx;
+     server_t* server = (server_t*)callback_ctx;
+     int ret = 0;
+@@ -271,9 +282,16 @@
+     }
+     if (ret != 0) {
+         if (!server->bench->stopping) {
+-            snprintf(server->bench->failure, sizeof(server->bench->failure),
+-                "server callback event=%d validation=%d", (int)event, ret);
+-            server->bench->failed = 1;
++            if (event == picoquic_callback_close || event == picoquic_callback_application_close ||
++                event == picoquic_callback_stateless_reset) {
++                record_close(server->bench, cnx, "server", (int)event);
++            }
++            else {
++                snprintf(server->bench->failure, sizeof(server->bench->failure),
++                    "server callback event=%d validation=%d sim_us=%" PRIu64,
++                    (int)event, ret, server->bench->simulated_time);
++                server->bench->failed = 1;
++            }
+         }
+     }
+     return ret;
+@@ -298,7 +316,6 @@
+ static int client_callback(picoquic_cnx_t* cnx, uint64_t stream_id, uint8_t* bytes, size_t length,
+     picoquic_call_back_event_t event, void* callback_ctx, void* stream_ctx)
+ {
+-    (void)cnx;
+     (void)stream_id;
+     (void)bytes;
+     (void)length;
+@@ -312,9 +329,16 @@
+         event == picoquic_callback_stateless_reset || event == picoquic_callback_stream_data ||
+         event == picoquic_callback_stream_fin || event == picoquic_callback_stream_reset) {
+         if (!client->bench->stopping) {
+-            snprintf(client->bench->failure, sizeof(client->bench->failure),
+-                "client=%u callback event=%d", client->id, (int)event);
+-            client->bench->failed = 1;
++            if (event == picoquic_callback_close || event == picoquic_callback_application_close ||
++                event == picoquic_callback_stateless_reset) {
++                record_close(client->bench, cnx, "client", (int)event);
++            }
++            else {
++                snprintf(client->bench->failure, sizeof(client->bench->failure),
++                    "client=%u callback event=%d sim_us=%" PRIu64,
++                    client->id, (int)event, client->bench->simulated_time);
++                client->bench->failed = 1;
++            }
+         }
+         return -1;
+     }
